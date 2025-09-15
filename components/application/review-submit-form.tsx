@@ -1,0 +1,183 @@
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { ArrowLeft, Send } from "lucide-react"
+
+interface ReviewSubmitFormProps {
+  onPrevious: () => void
+  onSubmit: () => void
+  formData: any
+}
+
+export function ReviewSubmitForm({ onPrevious, onSubmit, formData }: ReviewSubmitFormProps) {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === "string" ? Number.parseFloat(amount) : amount
+    return isNaN(num) ? "$0" : `$${num.toLocaleString()}`
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-2xl text-foreground">Review & Submit</CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Please review your information before submitting your application
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Loan Details */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-foreground">Loan Details</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Loan Amount:</span>
+                <p className="font-medium text-foreground">{formatCurrency(formData.loanAmount)}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Loan Term:</span>
+                <p className="font-medium text-foreground">{formData.loanTermMonths} months</p>
+              </div>
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Property Type:</span>
+                <p className="font-medium text-foreground">{formData.propertyType}</p>
+              </div>
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Loan Purpose:</span>
+                <p className="font-medium text-foreground">{formData.loanPurpose}</p>
+              </div>
+            </div>
+          </div>
+
+          <Separator className="bg-border" />
+
+          {/* Property Information */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-foreground">Property Information</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Property Address:</span>
+                <p className="font-medium text-foreground">{formData.propertyAddress}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Property Value:</span>
+                <p className="font-medium text-foreground">{formatCurrency(formData.propertyValue)}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Down Payment:</span>
+                <p className="font-medium text-foreground">{formatCurrency(formData.downPayment)}</p>
+              </div>
+            </div>
+          </div>
+
+          <Separator className="bg-border" />
+
+          {/* Financial Information */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-foreground">Financial Information</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Annual Income:</span>
+                <p className="font-medium text-foreground">{formatCurrency(formData.annualIncome)}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Employment Status:</span>
+                <p className="font-medium text-foreground">{formData.employmentStatus}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Employer:</span>
+                <p className="font-medium text-foreground">{formData.employerName}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Credit Score:</span>
+                <p className="font-medium text-foreground">{formData.creditScore || "Not provided"}</p>
+              </div>
+            </div>
+          </div>
+
+          {formData.hasSponsor && (
+            <>
+              <Separator className="bg-border" />
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-foreground">Sponsor Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Sponsor Name:</span>
+                    <p className="font-medium text-foreground">{formData.sponsorName}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Relationship:</span>
+                    <p className="font-medium text-foreground">{formData.sponsorRelationship}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Sponsor Income:</span>
+                    <p className="font-medium text-foreground">{formatCurrency(formData.sponsorIncome)}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Sponsor Credit:</span>
+                    <p className="font-medium text-foreground">{formData.sponsorCreditScore || "Not provided"}</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          <Separator className="bg-border" />
+
+          {/* Liquidity Summary */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-foreground">Assets & Liquidity</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Cash Reserves:</span>
+                <p className="font-medium text-foreground">{formatCurrency(formData.cashReserves)}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Investment Accounts:</span>
+                <p className="font-medium text-foreground">{formatCurrency(formData.investmentAccounts)}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Retirement Accounts:</span>
+                <p className="font-medium text-foreground">{formatCurrency(formData.retirementAccounts)}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Other Assets:</span>
+                <p className="font-medium text-foreground">{formatCurrency(formData.otherAssets)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-muted/50 p-4 rounded-lg border border-border">
+            <p className="text-sm text-foreground mb-4">
+              By submitting this application, I certify that all information provided is true and accurate to the best
+              of my knowledge. I understand that any false information may result in the denial of my loan application.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Your information is secure and will only be used for loan processing purposes. We comply with all
+              applicable privacy and data protection regulations.
+            </p>
+          </div>
+
+          <div className="flex justify-between pt-6">
+            <Button
+              onClick={onPrevious}
+              variant="outline"
+              className="border-border text-foreground hover:bg-muted bg-transparent font-semibold px-8"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Go Back
+            </Button>
+            <Button
+              onClick={onSubmit}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8"
+            >
+              Submit Application
+              <Send className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
