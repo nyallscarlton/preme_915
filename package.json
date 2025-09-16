@@ -7,7 +7,8 @@
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",
-    "smoke": "node --experimental-modules ./scripts/smoke-test.js"
+    "smoke": "node --experimental-modules ./scripts/smoke-test.js",
+    "analyze": "node --experimental-modules ./scripts/analyze-failures.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
