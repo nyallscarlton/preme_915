@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { EntryChoiceModal } from "@/components/entry-choice-modal"
+import { StartChoice } from "@/components/StartChoice"
 import { useRouter, useSearchParams } from "next/navigation"
 
 export default function StartPage() {
@@ -32,7 +32,7 @@ export default function StartPage() {
         <p className="text-lg text-gray-600">Loading application options...</p>
       </div>
 
-      <EntryChoiceModal isOpen={isModalOpen} onClose={handleModalClose} nextUrl={nextUrl} />
+      <StartChoice isOpen={isModalOpen} onClose={handleModalClose} nextUrl={nextUrl} />
     </div>
   )
 }

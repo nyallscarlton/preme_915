@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { LogIn, Clock } from "lucide-react"
 import Link from "next/link"
-import { EntryChoiceModal } from "@/components/entry-choice-modal"
+import { StartChoice } from "@/components/StartChoice"
 
 export default function LuxuryLandingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -44,7 +44,7 @@ export default function LuxuryLandingPage() {
               <Link href="/contact" className="text-foreground hover:text-[#997100] transition-colors font-medium">
                 Contact
               </Link>
-              <Link href="/login" className="text-foreground hover:text-[#997100] transition-colors font-medium">
+              <Link href="/auth" className="text-foreground hover:text-[#997100] transition-colors font-medium">
                 Login
               </Link>
               <Button
@@ -120,7 +120,7 @@ export default function LuxuryLandingPage() {
               className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-white font-semibold text-lg px-12 py-4 bg-transparent rounded-lg"
               asChild
             >
-              <Link href="/login">
+              <Link href="/auth">
                 <LogIn className="mr-2 h-5 w-5" />
                 Login to My Portal
               </Link>
@@ -157,7 +157,7 @@ export default function LuxuryLandingPage() {
         </div>
       </footer>
 
-      <EntryChoiceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} nextUrl="/apply" />
+      <StartChoice isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} nextUrl="/apply" />
     </div>
   )
 }
