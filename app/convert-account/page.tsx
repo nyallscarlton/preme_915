@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CheckCircle, Lock, User, ArrowRight, AlertCircle } from "lucide-react"
 import Link from "next/link"
+import VerifyGuestTokenClient from "@/components/VerifyGuestTokenClient"
 
 interface Application {
   id: string
@@ -172,6 +173,7 @@ export default function ConvertAccountPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <VerifyGuestTokenClient token={token ?? undefined} />
       {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto px-6 py-6">

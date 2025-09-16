@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { CheckCircle, Clock, FileText, DollarSign, Home, AlertCircle, ArrowRight, Star } from "lucide-react"
 import Link from "next/link"
+import VerifyGuestTokenClient from "@/components/VerifyGuestTokenClient"
 
 interface Application {
   id: string
@@ -162,6 +163,7 @@ export default function GuestDashboardPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <VerifyGuestTokenClient token={token ?? undefined} />
       {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto px-6 py-6">
