@@ -119,17 +119,17 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
         <div className="flex items-center justify-between">
           <Button
             variant="outline"
-            className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+            className="border-border text-foreground hover:bg-muted bg-transparent"
             onClick={() => setSelectedApp(null)}
           >
             ← Back to Applications
           </Button>
           <div className="flex space-x-2">
-            <Button variant="outline" className="border-gray-600 text-white hover:bg-gray-800 bg-transparent">
+            <Button variant="outline" className="border-border text-foreground hover:bg-muted bg-transparent">
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
-            <Button variant="outline" className="border-gray-600 text-white hover:bg-gray-800 bg-transparent">
+            <Button variant="outline" className="border-border text-foreground hover:bg-muted bg-transparent">
               <MessageSquare className="mr-2 h-4 w-4" />
               Message Applicant
             </Button>
@@ -139,12 +139,12 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Application Details */}
           <div className="lg:col-span-2 space-y-6">
-            <Card className="bg-gray-900 border-gray-800">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-white text-2xl">{selectedApp.id}</CardTitle>
-                    <CardDescription className="text-gray-400 text-lg">
+                    <CardTitle className="text-foreground text-2xl">{selectedApp.id}</CardTitle>
+                    <CardDescription className="text-muted-foreground text-lg">
                       {selectedApp.applicantName} • {selectedApp.applicantEmail}
                     </CardDescription>
                   </div>
@@ -158,67 +158,67 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
                 {/* Application Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-gray-400">
+                    <div className="flex items-center space-x-2 text-muted-foreground">
                       <DollarSign className="h-4 w-4" />
                       <span className="text-sm">Loan Amount</span>
                     </div>
-                    <p className="text-xl font-semibold text-white">${selectedApp.loanAmount.toLocaleString()}</p>
+                    <p className="text-xl font-semibold text-foreground">${selectedApp.loanAmount.toLocaleString()}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-gray-400">
+                    <div className="flex items-center space-x-2 text-muted-foreground">
                       <FileText className="h-4 w-4" />
                       <span className="text-sm">Property Type</span>
                     </div>
-                    <p className="text-xl font-semibold text-white">{selectedApp.loanType}</p>
+                    <p className="text-xl font-semibold text-foreground">{selectedApp.loanType}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-gray-400">
+                    <div className="flex items-center space-x-2 text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                       <span className="text-sm">Submitted</span>
                     </div>
-                    <p className="text-xl font-semibold text-white">{formatDate(selectedApp.submittedAt)}</p>
+                    <p className="text-xl font-semibold text-foreground">{formatDate(selectedApp.submittedAt)}</p>
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-gray-400">
+                    <div className="flex items-center space-x-2 text-muted-foreground">
                       <User className="h-4 w-4" />
                       <span className="text-sm">Assigned To</span>
                     </div>
-                    <p className="text-xl font-semibold text-white">{selectedApp.assignedTo || "Unassigned"}</p>
+                    <p className="text-xl font-semibold text-foreground">{selectedApp.assignedTo || "Unassigned"}</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-gray-400">
+                  <div className="flex items-center space-x-2 text-muted-foreground">
                     <FileText className="h-4 w-4" />
                     <span className="text-sm">Property Address</span>
                   </div>
-                  <p className="text-lg text-white">{selectedApp.propertyAddress}</p>
+                  <p className="text-lg text-foreground">{selectedApp.propertyAddress}</p>
                 </div>
               </CardContent>
             </Card>
 
             {/* Documents Section */}
-            <Card className="bg-gray-900 border-gray-800">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white">Documents</CardTitle>
-                <CardDescription className="text-gray-400">Uploaded application documents</CardDescription>
+                <CardTitle className="text-foreground">Documents</CardTitle>
+                <CardDescription className="text-muted-foreground">Uploaded application documents</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {["Income Verification", "Bank Statements", "Credit Report", "Property Appraisal"].map((doc) => (
-                    <div key={doc} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                    <div key={doc} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                       <div className="flex items-center space-x-3">
                         <FileText className="h-5 w-5 text-[#997100]" />
-                        <span className="text-white">{doc}</span>
+                        <span className="text-foreground">{doc}</span>
                       </div>
                       <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                           <Download className="h-4 w-4" />
                         </Button>
                       </div>
@@ -231,19 +231,19 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
 
           {/* Review Panel */}
           <div className="space-y-6">
-            <Card className="bg-gray-900 border-gray-800">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white">Review Application</CardTitle>
-                <CardDescription className="text-gray-400">Update status and add notes</CardDescription>
+                <CardTitle className="text-foreground">Review Application</CardTitle>
+                <CardDescription className="text-muted-foreground">Update status and add notes</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Update Status</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">Update Status</label>
                   <Select defaultValue={selectedApp.status}>
-                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                    <SelectTrigger className="bg-card border-border text-foreground">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
+                    <SelectContent className="bg-card border-border">
                       <SelectItem value="submitted">Submitted</SelectItem>
                       <SelectItem value="under_review">Under Review</SelectItem>
                       <SelectItem value="approved">Approved</SelectItem>
@@ -254,11 +254,11 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Review Notes</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">Review Notes</label>
                   <Textarea
                     value={reviewNotes}
                     onChange={(e) => setReviewNotes(e.target.value)}
-                    className="bg-gray-800 border-gray-600 text-white min-h-[120px]"
+                    className="bg-card border-border text-foreground min-h-[120px]"
                     placeholder="Add your review notes here..."
                   />
                 </div>
@@ -291,9 +291,9 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-900 border-gray-800">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white">Application Timeline</CardTitle>
+                <CardTitle className="text-foreground">Application Timeline</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -302,8 +302,8 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-white">Application Submitted</p>
-                      <p className="text-xs text-gray-400">{formatDate(selectedApp.submittedAt)}</p>
+                      <p className="text-sm font-medium text-foreground">Application Submitted</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(selectedApp.submittedAt)}</p>
                     </div>
                   </div>
 
@@ -313,8 +313,8 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
                         <Clock className="h-3 w-3 text-black" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-white">Under Review</p>
-                        <p className="text-xs text-gray-400">Review in progress</p>
+                        <p className="text-sm font-medium text-foreground">Under Review</p>
+                        <p className="text-xs text-muted-foreground">Review in progress</p>
                       </div>
                     </div>
                   )}
@@ -325,8 +325,8 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
                         <CheckCircle className="h-3 w-3 text-white" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-white">Approved</p>
-                        <p className="text-xs text-gray-400">Application approved</p>
+                        <p className="text-sm font-medium text-foreground">Approved</p>
+                        <p className="text-xs text-muted-foreground">Application approved</p>
                       </div>
                     </div>
                   )}
@@ -343,32 +343,32 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Applications Management</h2>
-          <p className="text-gray-400">Review and manage loan applications</p>
+          <h2 className="text-2xl font-bold text-foreground">Applications Management</h2>
+          <p className="text-muted-foreground">Review and manage loan applications</p>
         </div>
       </div>
 
       {/* Filters */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-card border-border">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search applications..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-gray-800 border-gray-600 text-white"
+                  className="pl-10 bg-card border-border text-foreground"
                 />
               </div>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48 bg-gray-800 border-gray-600 text-white">
+              <SelectTrigger className="w-48 bg-card border-border text-foreground">
                 <Filter className="mr-2 h-4 w-4" />
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-600">
+              <SelectContent className="bg-card border-border">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="submitted">Submitted</SelectItem>
                 <SelectItem value="under_review">Under Review</SelectItem>
@@ -384,23 +384,23 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
       {/* Applications List */}
       <div className="grid gap-4">
         {filteredApplications.map((app) => (
-          <Card key={app.id} className="bg-gray-900 border-gray-800 hover:border-gray-600 transition-colors">
+          <Card key={app.id} className="bg-card border-border hover:border-muted-foreground transition-colors">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   {getStatusIcon(app.status)}
                   <div>
-                    <h3 className="font-semibold text-white">{app.id}</h3>
-                    <p className="text-sm text-gray-400">
+                    <h3 className="font-semibold text-foreground">{app.id}</h3>
+                    <p className="text-sm text-muted-foreground">
                       {app.applicantName} • {app.applicantEmail}
                     </p>
-                    <p className="text-sm text-gray-500">{app.propertyAddress}</p>
+                    <p className="text-sm text-muted-foreground">{app.propertyAddress}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="text-right">
-                    <p className="font-semibold text-white">${app.loanAmount.toLocaleString()}</p>
-                    <p className="text-sm text-gray-400">{formatDate(app.submittedAt)}</p>
+                    <p className="font-semibold text-foreground">${app.loanAmount.toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground">{formatDate(app.submittedAt)}</p>
                     <Badge className={getStatusColor(app.status)}>{formatStatus(app.status)}</Badge>
                   </div>
                   <Button
@@ -420,11 +420,11 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
       </div>
 
       {filteredApplications.length === 0 && (
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardContent className="text-center py-8">
-            <FileText className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">No applications found</p>
-            <p className="text-sm text-gray-500">Try adjusting your search or filter criteria</p>
+            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No applications found</p>
+            <p className="text-sm text-muted-foreground">Try adjusting your search or filter criteria</p>
           </CardContent>
         </Card>
       )}

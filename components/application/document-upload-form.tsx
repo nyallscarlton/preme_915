@@ -37,7 +37,7 @@ export function DocumentUploadForm({ onNext, onPrevious, onDataChange, initialDa
     onDataChange({ uploadedDocs: updatedDocs })
   }
 
-  const requiredDocsUploaded = requiredDocuments.every((doc) => uploadedDocs[doc.id])
+  const canProceed = true // Always allow proceeding
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -45,13 +45,29 @@ export function DocumentUploadForm({ onNext, onPrevious, onDataChange, initialDa
         <CardHeader>
           <CardTitle className="text-2xl text-foreground">Document Upload</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Upload the required documents to complete your application
+            Upload documents now or submit them later. You can complete your application without uploading all
+            documents.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <div className="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                i
+              </div>
+              <div>
+                <h4 className="font-medium text-blue-900 mb-1">Documents Can Be Submitted Later</h4>
+                <p className="text-sm text-blue-800">
+                  You can proceed with your application and upload documents later through your application portal.
+                  However, uploading documents now may speed up the review process.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Required Documents */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-foreground">Required Documents</h3>
+            <h3 className="text-lg font-semibold mb-4 text-foreground">Recommended Documents</h3>
             <div className="space-y-4">
               {requiredDocuments.map((doc) => (
                 <div key={doc.id} className="border border-border rounded-lg p-4 bg-muted/20">
@@ -144,14 +160,23 @@ export function DocumentUploadForm({ onNext, onPrevious, onDataChange, initialDa
               <ArrowLeft className="mr-2 h-4 w-4" />
               Go Back
             </Button>
-            <Button
-              onClick={onNext}
-              disabled={!requiredDocsUploaded}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8"
-            >
-              Next Step
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="flex space-x-3">
+              <Button
+                onClick={onNext}
+                variant="outline"
+                className="border-border text-foreground hover:bg-muted bg-transparent font-semibold px-8"
+              >
+                Skip for Now
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button
+                onClick={onNext}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8"
+              >
+                Continue
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

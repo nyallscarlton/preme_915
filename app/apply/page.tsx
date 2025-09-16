@@ -15,7 +15,6 @@ import { SponsorInfoForm } from "@/components/application/sponsor-info-form"
 import { LiquidityInfoForm } from "@/components/application/liquidity-info-form"
 import { DocumentUploadForm } from "@/components/application/document-upload-form"
 import { ReviewSubmitForm } from "@/components/application/review-submit-form"
-import { supabaseBrowser } from "@/lib/supabase/browserClient"
 
 const steps = [
   { id: 1, title: "Contact Info", description: "Your contact information" },
@@ -228,11 +227,10 @@ export default function LoanApplicationPage() {
       }
 
       try {
-        const {
-          data: { session },
-        } = await supabaseBrowser.auth.getSession()
+        // Mock auth check - in production this would check actual auth
+        const mockSession = null // No session for demo purposes
 
-        if (session?.user?.email_confirmed_at) {
+        if (mockSession?.user?.email_confirmed_at) {
           // User is authenticated and verified, start with account flow
           setAuthChoice("account")
           setCurrentStep(1)
@@ -252,12 +250,11 @@ export default function LoanApplicationPage() {
       if (isGuestMode || authChoice) return
 
       try {
-        const {
-          data: { session },
-        } = await supabaseBrowser.auth.getSession()
+        // Mock session check - in production this would check actual auth
+        const mockSession = null // No session for demo purposes
 
         // If no session and not guest mode, redirect to auth
-        if (!session?.user && !isGuestMode && currentStep === 0) {
+        if (!mockSession?.user && !isGuestMode && currentStep === 0) {
           router.push(`/auth?next=${encodeURIComponent("/apply")}`)
         }
       } catch (error) {

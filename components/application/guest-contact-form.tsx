@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowRight, ArrowLeft, Mail, Phone, User } from "lucide-react"
+import { AddressInput } from "@/components/ui/address-input"
 
 interface GuestContactFormProps {
   onNext: () => void
@@ -20,6 +21,7 @@ export function GuestContactForm({ onNext, onPrevious, onDataChange, initialData
     lastName: initialData.lastName || "",
     email: initialData.email || "",
     phone: initialData.phone || "",
+    address: initialData.address || "",
     ...initialData,
   })
 
@@ -111,6 +113,14 @@ export function GuestContactForm({ onNext, onPrevious, onDataChange, initialData
               />
             </div>
           </div>
+
+          <AddressInput
+            id="address"
+            label="Address"
+            placeholder="123 Main Street, Beverly Hills, CA 90210"
+            value={formData.address}
+            onChange={(value) => handleInputChange("address", value)}
+          />
 
           <div className="bg-muted/50 p-4 rounded-lg border border-border">
             <h4 className="font-medium text-foreground mb-2">Guest Application Benefits</h4>

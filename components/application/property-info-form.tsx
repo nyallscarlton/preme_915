@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, ArrowRight } from "lucide-react"
+import { AddressInput } from "@/components/ui/address-input"
 
 interface PropertyInfoFormProps {
   onNext: () => void
@@ -40,18 +41,14 @@ export function PropertyInfoForm({ onNext, onPrevious, onDataChange, initialData
           <CardDescription className="text-muted-foreground">Provide details about the property</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="propertyAddress" className="text-foreground">
-              Property Address *
-            </Label>
-            <Textarea
-              id="propertyAddress"
-              placeholder="123 Main Street, Beverly Hills, CA 90210"
-              value={formData.propertyAddress}
-              onChange={(e) => handleInputChange("propertyAddress", e.target.value)}
-              className="bg-input border-border text-foreground focus:border-primary"
-            />
-          </div>
+          <AddressInput
+            id="propertyAddress"
+            label="Property Address"
+            placeholder="123 Main Street, Beverly Hills, CA 90210"
+            value={formData.propertyAddress}
+            onChange={(value) => handleInputChange("propertyAddress", value)}
+            required
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">

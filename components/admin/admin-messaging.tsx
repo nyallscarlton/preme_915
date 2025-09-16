@@ -106,8 +106,8 @@ export function AdminMessaging({ applications }: AdminMessagingProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Messaging Center</h2>
-          <p className="text-gray-400">Communicate with loan applicants</p>
+          <h2 className="text-2xl font-bold text-foreground">Messaging Center</h2>
+          <p className="text-muted-foreground">Communicate with loan applicants</p>
           {unreadCount > 0 && (
             <Badge className="bg-red-600 text-white mt-2">
               {unreadCount} unread message{unreadCount !== 1 ? "s" : ""}
@@ -122,22 +122,22 @@ export function AdminMessaging({ applications }: AdminMessagingProps) {
 
       {/* Compose New Message */}
       {showCompose && (
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white">Compose New Message</CardTitle>
-            <CardDescription className="text-gray-400">Send a message to a loan applicant</CardDescription>
+            <CardTitle className="text-foreground">Compose New Message</CardTitle>
+            <CardDescription className="text-muted-foreground">Send a message to a loan applicant</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Application</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Application</label>
               <Select
                 value={newMessage.applicationId}
                 onValueChange={(value) => setNewMessage((prev) => ({ ...prev, applicationId: value }))}
               >
-                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                <SelectTrigger className="bg-card border-border text-foreground">
                   <SelectValue placeholder="Select application" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-600">
+                <SelectContent className="bg-card border-border">
                   {applications.map((app) => (
                     <SelectItem key={app.id} value={app.id}>
                       {app.id} - {app.applicantName}
@@ -148,21 +148,21 @@ export function AdminMessaging({ applications }: AdminMessagingProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Subject</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Subject</label>
               <Input
                 value={newMessage.subject}
                 onChange={(e) => setNewMessage((prev) => ({ ...prev, subject: e.target.value }))}
-                className="bg-gray-800 border-gray-600 text-white"
+                className="bg-card border-border text-foreground"
                 placeholder="Enter message subject"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Message</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Message</label>
               <Textarea
                 value={newMessage.message}
                 onChange={(e) => setNewMessage((prev) => ({ ...prev, message: e.target.value }))}
-                className="bg-gray-800 border-gray-600 text-white min-h-[120px]"
+                className="bg-card border-border text-foreground min-h-[120px]"
                 placeholder="Type your message here..."
               />
             </div>
@@ -170,7 +170,7 @@ export function AdminMessaging({ applications }: AdminMessagingProps) {
             <div className="flex justify-end space-x-3">
               <Button
                 variant="outline"
-                className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+                className="border-border text-foreground hover:bg-muted bg-transparent"
                 onClick={() => setShowCompose(false)}
               >
                 Cancel
@@ -185,15 +185,15 @@ export function AdminMessaging({ applications }: AdminMessagingProps) {
       )}
 
       {/* Search */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-card border-border">
         <CardContent className="pt-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search conversations..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-gray-800 border-gray-600 text-white"
+              className="pl-10 bg-card border-border text-foreground"
             />
           </div>
         </CardContent>
@@ -202,18 +202,18 @@ export function AdminMessaging({ applications }: AdminMessagingProps) {
       {/* Messages List */}
       <div className="space-y-4">
         {filteredMessages.length === 0 ? (
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="text-center py-8">
-              <MessageSquare className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">No conversations found</p>
-              <p className="text-sm text-gray-500">Start a conversation with an applicant</p>
+              <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No conversations found</p>
+              <p className="text-sm text-muted-foreground">Start a conversation with an applicant</p>
             </CardContent>
           </Card>
         ) : (
           filteredMessages.map((conversation) => (
             <Card
               key={conversation.id}
-              className={`bg-gray-900 border-gray-800 hover:border-gray-600 transition-colors cursor-pointer ${
+              className={`bg-card border-border hover:border-muted-foreground transition-colors cursor-pointer ${
                 !conversation.isRead ? "border-[#997100]" : ""
               }`}
               onClick={() => setSelectedConversation(conversation.id)}
@@ -221,26 +221,26 @@ export function AdminMessaging({ applications }: AdminMessagingProps) {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
-                      <User className="h-5 w-5 text-gray-300" />
+                    <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                      <User className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
-                        <h3 className="font-semibold text-white">{conversation.applicantName}</h3>
+                        <h3 className="font-semibold text-foreground">{conversation.applicantName}</h3>
                         {!conversation.isRead && <div className="w-2 h-2 bg-[#997100] rounded-full"></div>}
                       </div>
-                      <p className="text-sm text-gray-400">{conversation.applicationId}</p>
-                      <p className="text-lg font-medium text-white mt-1">{conversation.subject}</p>
-                      <p className="text-sm text-gray-400 mt-1">{conversation.lastMessage}</p>
+                      <p className="text-sm text-muted-foreground">{conversation.applicationId}</p>
+                      <p className="text-lg font-medium text-foreground mt-1">{conversation.subject}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{conversation.lastMessage}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
                     <div className="text-right">
-                      <div className="flex items-center text-sm text-gray-400 mb-2">
+                      <div className="flex items-center text-sm text-muted-foreground mb-2">
                         <Clock className="h-4 w-4 mr-1" />
                         {formatDate(conversation.timestamp)}
                       </div>
-                      <Badge className="bg-gray-700 text-gray-300">
+                      <Badge className="bg-muted text-muted-foreground">
                         {conversation.messageCount} message{conversation.messageCount !== 1 ? "s" : ""}
                       </Badge>
                     </div>
@@ -248,12 +248,12 @@ export function AdminMessaging({ applications }: AdminMessagingProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+                        className="border-border text-foreground hover:bg-muted bg-transparent"
                       >
                         <Reply className="h-4 w-4 mr-2" />
                         Reply
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                         <Archive className="h-4 w-4" />
                       </Button>
                     </div>

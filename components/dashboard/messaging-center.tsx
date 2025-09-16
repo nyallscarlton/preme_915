@@ -102,8 +102,8 @@ export function MessagingCenter({ applications }: MessagingCenterProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Messages</h2>
-          <p className="text-gray-400">Communicate with your loan team</p>
+          <h2 className="text-2xl font-bold text-foreground">Messages</h2>
+          <p className="text-muted-foreground">Communicate with your loan team</p>
           {unreadCount > 0 && (
             <Badge className="bg-red-600 text-white mt-2">
               {unreadCount} unread message{unreadCount !== 1 ? "s" : ""}
@@ -112,10 +112,10 @@ export function MessagingCenter({ applications }: MessagingCenterProps) {
         </div>
         <div className="flex items-center space-x-4">
           <Select value={selectedApplication} onValueChange={setSelectedApplication}>
-            <SelectTrigger className="w-64 bg-gray-800 border-gray-600 text-white">
+            <SelectTrigger className="w-64 bg-input border-border text-foreground">
               <SelectValue placeholder="Filter by application" />
             </SelectTrigger>
-            <SelectContent className="bg-gray-800 border-gray-600">
+            <SelectContent className="bg-input border-border">
               <SelectItem value="all">All Applications</SelectItem>
               {applications.map((app) => (
                 <SelectItem key={app.id} value={app.id}>
@@ -133,22 +133,22 @@ export function MessagingCenter({ applications }: MessagingCenterProps) {
 
       {/* Compose New Message */}
       {showCompose && (
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white">Compose New Message</CardTitle>
-            <CardDescription className="text-gray-400">Send a message to your loan team</CardDescription>
+            <CardTitle className="text-foreground">Compose New Message</CardTitle>
+            <CardDescription className="text-muted-foreground">Send a message to your loan team</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Application</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Application</label>
               <Select
                 value={newMessage.applicationId}
                 onValueChange={(value) => setNewMessage((prev) => ({ ...prev, applicationId: value }))}
               >
-                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                <SelectTrigger className="bg-input border-border text-foreground">
                   <SelectValue placeholder="Select application" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-600">
+                <SelectContent className="bg-input border-border">
                   {applications.map((app) => (
                     <SelectItem key={app.id} value={app.id}>
                       {app.id} - {app.propertyAddress.split(",")[0]}
@@ -159,21 +159,21 @@ export function MessagingCenter({ applications }: MessagingCenterProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Subject</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Subject</label>
               <Input
                 value={newMessage.subject}
                 onChange={(e) => setNewMessage((prev) => ({ ...prev, subject: e.target.value }))}
-                className="bg-gray-800 border-gray-600 text-white"
+                className="bg-input border-border text-foreground"
                 placeholder="Enter message subject"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Message</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Message</label>
               <Textarea
                 value={newMessage.message}
                 onChange={(e) => setNewMessage((prev) => ({ ...prev, message: e.target.value }))}
-                className="bg-gray-800 border-gray-600 text-white min-h-[120px]"
+                className="bg-input border-border text-foreground min-h-[120px]"
                 placeholder="Type your message here..."
               />
             </div>
@@ -181,7 +181,7 @@ export function MessagingCenter({ applications }: MessagingCenterProps) {
             <div className="flex justify-end space-x-3">
               <Button
                 variant="outline"
-                className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+                className="border-border text-foreground hover:bg-muted bg-transparent"
                 onClick={() => setShowCompose(false)}
               >
                 Cancel
@@ -198,53 +198,53 @@ export function MessagingCenter({ applications }: MessagingCenterProps) {
       {/* Messages List */}
       <div className="space-y-4">
         {filteredMessages.length === 0 ? (
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="text-center py-8">
-              <MessageSquare className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">No messages yet</p>
-              <p className="text-sm text-gray-500">Start a conversation with your loan team</p>
+              <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No messages yet</p>
+              <p className="text-sm text-muted-foreground">Start a conversation with your loan team</p>
             </CardContent>
           </Card>
         ) : (
           filteredMessages.map((message) => (
             <Card
               key={message.id}
-              className={`bg-gray-900 border-gray-800 ${!message.isRead && message.sender === "admin" ? "border-[#997100]" : ""}`}
+              className={`bg-card border-border ${!message.isRead && message.sender === "admin" ? "border-[#997100]" : ""}`}
             >
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        message.sender === "admin" ? "bg-[#997100] text-black" : "bg-gray-700 text-white"
+                        message.sender === "admin" ? "bg-[#997100] text-black" : "bg-muted text-foreground"
                       }`}
                     >
                       <User className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="font-medium text-white">{message.senderName}</p>
-                      <p className="text-sm text-gray-400">Application: {message.applicationId}</p>
+                      <p className="font-medium text-foreground">{message.senderName}</p>
+                      <p className="text-sm text-muted-foreground">Application: {message.applicationId}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     {!message.isRead && message.sender === "admin" && (
                       <Badge className="bg-red-600 text-white">New</Badge>
                     )}
-                    <div className="flex items-center text-sm text-gray-400">
+                    <div className="flex items-center text-sm text-muted-foreground">
                       <Clock className="h-4 w-4 mr-1" />
                       {formatDate(message.timestamp)}
                     </div>
                   </div>
                 </div>
-                <CardTitle className="text-white text-lg">{message.subject}</CardTitle>
+                <CardTitle className="text-foreground text-lg">{message.subject}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-300 leading-relaxed">{message.message}</p>
+                <p className="text-foreground leading-relaxed">{message.message}</p>
                 <div className="flex justify-end mt-4">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+                    className="border-border text-foreground hover:bg-muted bg-transparent"
                   >
                     Reply
                   </Button>

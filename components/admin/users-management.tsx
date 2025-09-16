@@ -110,8 +110,8 @@ export function UsersManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Users Management</h2>
-          <p className="text-gray-400">Manage system users and permissions</p>
+          <h2 className="text-2xl font-bold text-foreground">Users Management</h2>
+          <p className="text-muted-foreground">Manage system users and permissions</p>
         </div>
         <Button className="bg-[#997100] hover:bg-[#b8850a] text-black">
           <Plus className="mr-2 h-4 w-4" />
@@ -120,37 +120,37 @@ export function UsersManagement() {
       </div>
 
       {/* Filters */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-card border-border">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search users..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-gray-800 border-gray-600 text-white"
+                  className="pl-10 bg-card border-border text-foreground"
                 />
               </div>
             </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-48 bg-gray-800 border-gray-600 text-white">
+              <SelectTrigger className="w-48 bg-card border-border text-foreground">
                 <Filter className="mr-2 h-4 w-4" />
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-600">
+              <SelectContent className="bg-card border-border">
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="applicant">Applicant</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48 bg-gray-800 border-gray-600 text-white">
+              <SelectTrigger className="w-48 bg-card border-border text-foreground">
                 <Filter className="mr-2 h-4 w-4" />
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-600">
+              <SelectContent className="bg-card border-border">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
@@ -164,18 +164,18 @@ export function UsersManagement() {
       {/* Users List */}
       <div className="grid gap-4">
         {filteredUsers.map((user) => (
-          <Card key={user.id} className="bg-gray-900 border-gray-800 hover:border-gray-600 transition-colors">
+          <Card key={user.id} className="bg-card border-border hover:border-muted-foreground transition-colors">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center">
-                    <User className="h-6 w-6 text-gray-300" />
+                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                    <User className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white">
+                    <h3 className="font-semibold text-foreground">
                       {user.firstName} {user.lastName}
                     </h3>
-                    <div className="flex items-center space-x-4 text-sm text-gray-400">
+                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                       <div className="flex items-center space-x-1">
                         <Mail className="h-3 w-3" />
                         <span>{user.email}</span>
@@ -185,7 +185,7 @@ export function UsersManagement() {
                         <span>{user.phone}</span>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
+                    <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-3 w-3" />
                         <span>Joined {formatDate(user.createdAt)}</span>
@@ -213,10 +213,10 @@ export function UsersManagement() {
                     </Badge>
                   </div>
                   <div className="flex space-x-2">
-                    <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-gray-400 hover:text-red-400">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-400">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -228,11 +228,11 @@ export function UsersManagement() {
       </div>
 
       {filteredUsers.length === 0 && (
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardContent className="text-center py-8">
-            <User className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">No users found</p>
-            <p className="text-sm text-gray-500">Try adjusting your search or filter criteria</p>
+            <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No users found</p>
+            <p className="text-sm text-muted-foreground">Try adjusting your search or filter criteria</p>
           </CardContent>
         </Card>
       )}

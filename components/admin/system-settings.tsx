@@ -56,8 +56,8 @@ export function SystemSettings() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">System Settings</h2>
-          <p className="text-gray-400">Configure system-wide settings and preferences</p>
+          <h2 className="text-2xl font-bold text-foreground">System Settings</h2>
+          <p className="text-muted-foreground">Configure system-wide settings and preferences</p>
         </div>
         <Button className="bg-[#997100] hover:bg-[#b8850a] text-black" onClick={handleSaveSettings}>
           <Save className="mr-2 h-4 w-4" />
@@ -67,28 +67,28 @@ export function SystemSettings() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* General Settings */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white flex items-center">
+            <CardTitle className="text-foreground flex items-center">
               <Globe className="mr-2 h-5 w-5" />
               General Settings
             </CardTitle>
-            <CardDescription className="text-gray-400">Basic company and system information</CardDescription>
+            <CardDescription className="text-muted-foreground">Basic company and system information</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="companyName" className="text-gray-300">
+              <Label htmlFor="companyName" className="text-foreground">
                 Company Name
               </Label>
               <Input
                 id="companyName"
                 value={settings.companyName}
                 onChange={(e) => handleSettingChange("companyName", e.target.value)}
-                className="bg-gray-800 border-gray-600 text-white"
+                className="bg-card border-border text-foreground"
               />
             </div>
             <div>
-              <Label htmlFor="companyEmail" className="text-gray-300">
+              <Label htmlFor="companyEmail" className="text-foreground">
                 Company Email
               </Label>
               <Input
@@ -96,46 +96,46 @@ export function SystemSettings() {
                 type="email"
                 value={settings.companyEmail}
                 onChange={(e) => handleSettingChange("companyEmail", e.target.value)}
-                className="bg-gray-800 border-gray-600 text-white"
+                className="bg-card border-border text-foreground"
               />
             </div>
             <div>
-              <Label htmlFor="companyPhone" className="text-gray-300">
+              <Label htmlFor="companyPhone" className="text-foreground">
                 Company Phone
               </Label>
               <Input
                 id="companyPhone"
                 value={settings.companyPhone}
                 onChange={(e) => handleSettingChange("companyPhone", e.target.value)}
-                className="bg-gray-800 border-gray-600 text-white"
+                className="bg-card border-border text-foreground"
               />
             </div>
             <div>
-              <Label htmlFor="companyAddress" className="text-gray-300">
+              <Label htmlFor="companyAddress" className="text-foreground">
                 Company Address
               </Label>
               <Textarea
                 id="companyAddress"
                 value={settings.companyAddress}
                 onChange={(e) => handleSettingChange("companyAddress", e.target.value)}
-                className="bg-gray-800 border-gray-600 text-white"
+                className="bg-card border-border text-foreground"
               />
             </div>
           </CardContent>
         </Card>
 
         {/* Application Settings */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white flex items-center">
+            <CardTitle className="text-foreground flex items-center">
               <FileText className="mr-2 h-5 w-5" />
               Application Settings
             </CardTitle>
-            <CardDescription className="text-gray-400">Configure loan application parameters</CardDescription>
+            <CardDescription className="text-muted-foreground">Configure loan application parameters</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="maxLoanAmount" className="text-gray-300">
+              <Label htmlFor="maxLoanAmount" className="text-foreground">
                 Maximum Loan Amount ($)
               </Label>
               <Input
@@ -143,11 +143,11 @@ export function SystemSettings() {
                 type="number"
                 value={settings.maxLoanAmount}
                 onChange={(e) => handleSettingChange("maxLoanAmount", e.target.value)}
-                className="bg-gray-800 border-gray-600 text-white"
+                className="bg-card border-border text-foreground"
               />
             </div>
             <div>
-              <Label htmlFor="minLoanAmount" className="text-gray-300">
+              <Label htmlFor="minLoanAmount" className="text-foreground">
                 Minimum Loan Amount ($)
               </Label>
               <Input
@@ -155,21 +155,21 @@ export function SystemSettings() {
                 type="number"
                 value={settings.minLoanAmount}
                 onChange={(e) => handleSettingChange("minLoanAmount", e.target.value)}
-                className="bg-gray-800 border-gray-600 text-white"
+                className="bg-card border-border text-foreground"
               />
             </div>
             <div>
-              <Label htmlFor="defaultLoanTerm" className="text-gray-300">
+              <Label htmlFor="defaultLoanTerm" className="text-foreground">
                 Default Loan Term (months)
               </Label>
               <Select
                 value={settings.defaultLoanTerm}
                 onValueChange={(value) => handleSettingChange("defaultLoanTerm", value)}
               >
-                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                <SelectTrigger className="bg-card border-border text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-600">
+                <SelectContent className="bg-card border-border">
                   <SelectItem value="120">10 Years (120 months)</SelectItem>
                   <SelectItem value="180">15 Years (180 months)</SelectItem>
                   <SelectItem value="240">20 Years (240 months)</SelectItem>
@@ -179,7 +179,7 @@ export function SystemSettings() {
               </Select>
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="autoAssign" className="text-gray-300">
+              <Label htmlFor="autoAssign" className="text-foreground">
                 Auto-assign Applications
               </Label>
               <Switch
@@ -189,7 +189,7 @@ export function SystemSettings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="requireVerification" className="text-gray-300">
+              <Label htmlFor="requireVerification" className="text-foreground">
                 Require Document Verification
               </Label>
               <Switch
@@ -202,17 +202,17 @@ export function SystemSettings() {
         </Card>
 
         {/* Notification Settings */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white flex items-center">
+            <CardTitle className="text-foreground flex items-center">
               <Bell className="mr-2 h-5 w-5" />
               Notification Settings
             </CardTitle>
-            <CardDescription className="text-gray-400">Configure notification preferences</CardDescription>
+            <CardDescription className="text-muted-foreground">Configure notification preferences</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="emailNotifications" className="text-gray-300">
+              <Label htmlFor="emailNotifications" className="text-foreground">
                 Email Notifications
               </Label>
               <Switch
@@ -222,7 +222,7 @@ export function SystemSettings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="smsNotifications" className="text-gray-300">
+              <Label htmlFor="smsNotifications" className="text-foreground">
                 SMS Notifications
               </Label>
               <Switch
@@ -232,7 +232,7 @@ export function SystemSettings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="adminNotifications" className="text-gray-300">
+              <Label htmlFor="adminNotifications" className="text-foreground">
                 Admin Notifications
               </Label>
               <Switch
@@ -242,7 +242,7 @@ export function SystemSettings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="applicantNotifications" className="text-gray-300">
+              <Label htmlFor="applicantNotifications" className="text-foreground">
                 Applicant Notifications
               </Label>
               <Switch
@@ -255,17 +255,17 @@ export function SystemSettings() {
         </Card>
 
         {/* Security Settings */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white flex items-center">
+            <CardTitle className="text-foreground flex items-center">
               <Shield className="mr-2 h-5 w-5" />
               Security Settings
             </CardTitle>
-            <CardDescription className="text-gray-400">Configure security and access controls</CardDescription>
+            <CardDescription className="text-muted-foreground">Configure security and access controls</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="sessionTimeout" className="text-gray-300">
+              <Label htmlFor="sessionTimeout" className="text-foreground">
                 Session Timeout (minutes)
               </Label>
               <Input
@@ -273,11 +273,11 @@ export function SystemSettings() {
                 type="number"
                 value={settings.sessionTimeout}
                 onChange={(e) => handleSettingChange("sessionTimeout", e.target.value)}
-                className="bg-gray-800 border-gray-600 text-white"
+                className="bg-card border-border text-foreground"
               />
             </div>
             <div>
-              <Label htmlFor="passwordMinLength" className="text-gray-300">
+              <Label htmlFor="passwordMinLength" className="text-foreground">
                 Minimum Password Length
               </Label>
               <Input
@@ -285,11 +285,11 @@ export function SystemSettings() {
                 type="number"
                 value={settings.passwordMinLength}
                 onChange={(e) => handleSettingChange("passwordMinLength", e.target.value)}
-                className="bg-gray-800 border-gray-600 text-white"
+                className="bg-card border-border text-foreground"
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="requireTwoFactor" className="text-gray-300">
+              <Label htmlFor="requireTwoFactor" className="text-foreground">
                 Require Two-Factor Auth
               </Label>
               <Switch
@@ -299,7 +299,7 @@ export function SystemSettings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="allowPublicRegistration" className="text-gray-300">
+              <Label htmlFor="allowPublicRegistration" className="text-foreground">
                 Allow Public Registration
               </Label>
               <Switch
@@ -313,46 +313,46 @@ export function SystemSettings() {
       </div>
 
       {/* Email Templates */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-white flex items-center">
+          <CardTitle className="text-foreground flex items-center">
             <Mail className="mr-2 h-5 w-5" />
             Email Templates
           </CardTitle>
-          <CardDescription className="text-gray-400">Customize automated email templates</CardDescription>
+          <CardDescription className="text-muted-foreground">Customize automated email templates</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <Label htmlFor="welcomeTemplate" className="text-gray-300">
+            <Label htmlFor="welcomeTemplate" className="text-foreground">
               Welcome Email Template
             </Label>
             <Textarea
               id="welcomeTemplate"
               value={settings.welcomeEmailTemplate}
               onChange={(e) => handleSettingChange("welcomeEmailTemplate", e.target.value)}
-              className="bg-gray-800 border-gray-600 text-white min-h-[100px]"
+              className="bg-card border-border text-foreground min-h-[100px]"
             />
           </div>
           <div>
-            <Label htmlFor="approvalTemplate" className="text-gray-300">
+            <Label htmlFor="approvalTemplate" className="text-foreground">
               Approval Email Template
             </Label>
             <Textarea
               id="approvalTemplate"
               value={settings.approvalEmailTemplate}
               onChange={(e) => handleSettingChange("approvalEmailTemplate", e.target.value)}
-              className="bg-gray-800 border-gray-600 text-white min-h-[100px]"
+              className="bg-card border-border text-foreground min-h-[100px]"
             />
           </div>
           <div>
-            <Label htmlFor="rejectionTemplate" className="text-gray-300">
+            <Label htmlFor="rejectionTemplate" className="text-foreground">
               Rejection Email Template
             </Label>
             <Textarea
               id="rejectionTemplate"
               value={settings.rejectionEmailTemplate}
               onChange={(e) => handleSettingChange("rejectionEmailTemplate", e.target.value)}
-              className="bg-gray-800 border-gray-600 text-white min-h-[100px]"
+              className="bg-card border-border text-foreground min-h-[100px]"
             />
           </div>
         </CardContent>

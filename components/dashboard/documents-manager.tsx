@@ -120,14 +120,14 @@ export function DocumentsManager({ applications }: DocumentsManagerProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Document Management</h2>
-          <p className="text-gray-400">Upload and manage your loan application documents</p>
+          <h2 className="text-2xl font-bold text-foreground">Document Management</h2>
+          <p className="text-muted-foreground">Upload and manage your loan application documents</p>
         </div>
         <Select value={selectedApplication} onValueChange={setSelectedApplication}>
-          <SelectTrigger className="w-64 bg-gray-800 border-gray-600 text-white">
+          <SelectTrigger className="w-64 bg-input border-border text-foreground">
             <SelectValue placeholder="Filter by application" />
           </SelectTrigger>
-          <SelectContent className="bg-gray-800 border-gray-600">
+          <SelectContent className="bg-input border-border">
             <SelectItem value="all">All Applications</SelectItem>
             {applications.map((app) => (
               <SelectItem key={app.id} value={app.id}>
@@ -139,10 +139,12 @@ export function DocumentsManager({ applications }: DocumentsManagerProps) {
       </div>
 
       {/* Upload New Document */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-white">Upload New Document</CardTitle>
-          <CardDescription className="text-gray-400">Select a document type and upload your file</CardDescription>
+          <CardTitle className="text-foreground">Upload New Document</CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Select a document type and upload your file
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -150,7 +152,7 @@ export function DocumentsManager({ applications }: DocumentsManagerProps) {
               <Button
                 key={docType}
                 variant="outline"
-                className="h-auto p-4 border-gray-600 text-white hover:bg-gray-800 flex flex-col items-center space-y-2 bg-transparent"
+                className="h-auto p-4 border-border text-foreground hover:bg-muted flex flex-col items-center space-y-2 bg-transparent"
                 onClick={() => handleFileUpload(docType)}
                 disabled={uploadingDoc === docType}
               >
@@ -167,34 +169,34 @@ export function DocumentsManager({ applications }: DocumentsManagerProps) {
       </Card>
 
       {/* Uploaded Documents */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-white">Uploaded Documents</CardTitle>
-          <CardDescription className="text-gray-400">View and manage your uploaded documents</CardDescription>
+          <CardTitle className="text-foreground">Uploaded Documents</CardTitle>
+          <CardDescription className="text-muted-foreground">View and manage your uploaded documents</CardDescription>
         </CardHeader>
         <CardContent>
           {filteredDocuments.length === 0 ? (
             <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">No documents uploaded yet</p>
-              <p className="text-sm text-gray-500">Upload your first document using the buttons above</p>
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No documents uploaded yet</p>
+              <p className="text-sm text-muted-foreground">Upload your first document using the buttons above</p>
             </div>
           ) : (
             <div className="space-y-4">
               {filteredDocuments.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
+                <div key={doc.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
                   <div className="flex items-center space-x-4">
                     <FileText className="h-8 w-8 text-[#997100]" />
                     <div>
-                      <p className="font-medium text-white">{doc.name}</p>
-                      <div className="flex items-center space-x-2 text-sm text-gray-400">
+                      <p className="font-medium text-foreground">{doc.name}</p>
+                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                         <span>{doc.type}</span>
                         <span>•</span>
                         <span>{doc.size}</span>
                         <span>•</span>
                         <span>{formatDate(doc.uploadedAt)}</span>
                       </div>
-                      <p className="text-xs text-gray-500">Application: {doc.applicationId}</p>
+                      <p className="text-xs text-muted-foreground">Application: {doc.applicationId}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
@@ -203,13 +205,13 @@ export function DocumentsManager({ applications }: DocumentsManagerProps) {
                       <span className="ml-2 capitalize">{doc.status}</span>
                     </Badge>
                     <div className="flex space-x-2">
-                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                         <Download className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-red-400">
+                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-400">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -222,18 +224,18 @@ export function DocumentsManager({ applications }: DocumentsManagerProps) {
       </Card>
 
       {/* Document Requirements */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-white">Document Requirements</CardTitle>
-          <CardDescription className="text-gray-400">Required documents for loan processing</CardDescription>
+          <CardTitle className="text-foreground">Document Requirements</CardTitle>
+          <CardDescription className="text-muted-foreground">Required documents for loan processing</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {requiredDocumentTypes.map((docType) => {
               const hasDoc = mockDocuments.some((doc) => doc.type === docType)
               return (
-                <div key={docType} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                  <span className="text-white">{docType}</span>
+                <div key={docType} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <span className="text-foreground">{docType}</span>
                   {hasDoc ? (
                     <CheckCircle className="h-5 w-5 text-green-400" />
                   ) : (

@@ -1,59 +1,47 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
-import { type User, type AuthState, getCurrentUser, signOut } from "@/lib/auth"
-import { supabase } from "@/lib/supabase"
+import { createContext, useContext, useState, type ReactNode } from "react"
+
+interface User {
+  id: string
+  email: string
+  role: string
+  name?: string
+}
+
+interface AuthState {
+  user: User | null
+  loading: boolean
+}
 
 interface AuthContextType extends AuthState {
   signOut: () => Promise<void>
   refreshUser: () => Promise<void>
+  setUser: (user: User | null) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   const refreshUser = async () => {
-    try {
-      const currentUser = await getCurrentUser()
-      setUser(currentUser)
-    } catch (error) {
-      console.error("Error fetching user:", error)
-      setUser(null)
-    } finally {
-      setLoading(false)
-    }
+    console.log("[v0] refreshUser called")
+    setLoading(false)
   }
 
   const handleSignOut = async () => {
-    await signOut()
+    console.log("[v0] signOut called")
     setUser(null)
   }
-
-  useEffect(() => {
-    refreshUser()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        await refreshUser()
-      } else if (event === "SIGNED_OUT") {
-        setUser(null)
-        setLoading(false)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
 
   const value: AuthContextType = {
     user,
     loading,
     signOut: handleSignOut,
     refreshUser,
+    setUser,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

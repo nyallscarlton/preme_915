@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { refreshUser } = useAuth()
+  const { refreshUser, setUser } = useAuth()
 
   const converted = searchParams.get("converted")
 
@@ -28,6 +28,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("[v0] Login form submitted", { email, password })
 
     if (!email || !password) {
       setError("Please enter both email and password")
@@ -38,19 +39,27 @@ export default function LoginPage() {
     setError("")
 
     try {
+      console.log("[v0] Calling signIn function")
       const { user, error: authError } = await signIn(email, password)
+      console.log("[v0] signIn result", { user, authError })
 
       if (authError) {
+        console.log("[v0] Auth error:", authError)
         setError(authError)
       } else if (user) {
+        console.log("[v0] Login successful, updating user state")
+        setUser(user)
         await refreshUser()
         if (user.role === "admin") {
+          console.log("[v0] Redirecting to admin")
           router.push("/admin")
         } else {
+          console.log("[v0] Redirecting to portal")
           router.push("/portal")
         }
       }
     } catch (err) {
+      console.log("[v0] Unexpected error:", err)
       setError("An unexpected error occurred")
     } finally {
       setLoading(false)

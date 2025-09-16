@@ -2,37 +2,36 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { supabaseBrowser } from "@/lib/supabase/browserClient"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, XCircle, Loader2, ArrowRight } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function AuthCallbackPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
   const [error, setError] = useState("")
   const router = useRouter()
   const searchParams = useSearchParams()
-  const nextUrl = searchParams.get("next") || "/apply"
+  const nextUrl = searchParams.get("next") || "/portal"
+  const { user, loading } = useAuth()
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const { data, error } = await supabaseBrowser.auth.getSession()
+        console.log("[v0] Auth callback - checking user state")
 
-        if (error) {
-          console.error("Auth callback error:", error)
-          setError(error.message)
-          setStatus("error")
-          return
-        }
+        // Simulate verification delay
+        await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        if (data.session?.user) {
+        if (user) {
+          console.log("[v0] User found in callback:", user)
           setStatus("success")
 
           setTimeout(() => {
             router.push(nextUrl)
           }, 2000)
         } else {
+          console.log("[v0] No user found in callback")
           setError("No session found. Please try signing in again.")
           setStatus("error")
         }
@@ -43,8 +42,28 @@ export default function AuthCallbackPage() {
       }
     }
 
-    handleAuthCallback()
-  }, [router, nextUrl])
+    if (!loading) {
+      handleAuthCallback()
+    }
+  }, [router, nextUrl, user, loading])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="border-2">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+              </div>
+              <CardTitle className="text-2xl">Loading...</CardTitle>
+              <CardDescription>Please wait...</CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -110,7 +129,7 @@ export default function AuthCallbackPage() {
                   <p>Please try signing in again or contact support if the problem persists.</p>
                 </div>
                 <Button
-                  onClick={() => router.push(`/auth?next=${encodeURIComponent(nextUrl)}`)}
+                  onClick={() => router.push(`/login?next=${encodeURIComponent(nextUrl)}`)}
                   className="w-full bg-transparent"
                   variant="outline"
                 >

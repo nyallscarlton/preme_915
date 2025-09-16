@@ -2,14 +2,14 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-// import { AuthProvider } from "@/hooks/use-auth"
+import { AuthProvider } from "@/hooks/use-auth"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "PREME - Funding for Modern Real Estate Investors",
   description: "DSCR loans, business credit, and private capital—without the bank headaches.",
-    generator: 'v0.app'
+  generator: "v0.app",
 }
 
 export default function RootLayout({
@@ -27,8 +27,7 @@ export default function RootLayout({
         ></script>
       </head>
       <body className={inter.className}>
-        {/* <AuthProvider>{children}</AuthProvider> */}
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   )

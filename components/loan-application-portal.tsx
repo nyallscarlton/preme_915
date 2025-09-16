@@ -113,7 +113,7 @@ export function LoanApplicationPortal() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="border-b border-border bg-background">
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <img src="/PremeLogo_TextWhite_Transparent.png" alt="PREME Home Loans" className="h-12 w-auto" />
@@ -129,7 +129,7 @@ export function LoanApplicationPortal() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-6 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-foreground mb-2">Loan Application Portal</h2>
           <p className="text-muted-foreground">Manage your loan applications and submit new requests</p>
