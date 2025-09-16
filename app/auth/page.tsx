@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label"
 import { Mail, Lock, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { supabaseBrowser } from "@/lib/supabase/browserClient"
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("signin")
@@ -43,23 +42,11 @@ export default function AuthPage() {
     setError("")
 
     try {
-      const { data, error } = await supabaseBrowser.auth.signInWithPassword({
-        email: signInData.email,
-        password: signInData.password,
-      })
+      // If unverified → navigate to `/auth/check-email?email=${email}&next=/apply`
+      // If verified → navigate to `searchParams.next || "/dashboard"`
 
-      if (error) {
-        if (/verify|confirm/i.test(error.message)) {
-          const q = new URLSearchParams({ email: signInData.email })
-          if (nextUrl) q.set("next", nextUrl)
-          router.push(`/auth/check-email?${q.toString()}`)
-          return
-        }
-        setError(error.message)
-        return
-      }
-
-      router.push(nextUrl)
+      // For now, simulate going to check-email for all sign-ins
+      router.push(`/auth/check-email?email=${encodeURIComponent(signInData.email)}&next=${encodeURIComponent(nextUrl)}`)
     } catch (err) {
       setError("An error occurred during sign in")
     } finally {
@@ -85,24 +72,9 @@ export default function AuthPage() {
     }
 
     try {
-      const redirectTo = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?next=${encodeURIComponent(
-        nextUrl,
-      )}`
-
-      const { data, error } = await supabaseBrowser.auth.signUp({
-        email: createAccountData.email,
-        password: createAccountData.password,
-        options: { emailRedirectTo: redirectTo },
-      })
-
-      if (error) {
-        setError(error.message)
-        return
-      }
-
-      const q = new URLSearchParams({ email: createAccountData.email })
-      if (nextUrl) q.set("next", nextUrl)
-      router.push(`/auth/check-email?${q.toString()}`)
+      router.push(
+        `/auth/check-email?email=${encodeURIComponent(createAccountData.email)}&next=${encodeURIComponent(nextUrl)}`,
+      )
     } catch (err) {
       setError("An error occurred during account creation")
     } finally {

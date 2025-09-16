@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { redirect } from "next/navigation"
-import { supabaseBrowser } from "@/lib/supabase/browserClient"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -229,8 +227,11 @@ export default function LoanApplicationPage() {
       }
 
       try {
-        const { data } = await supabaseBrowser.auth.getUser()
-        if (data.user?.email_confirmed_at) {
+        // Mock auth check - in production this would check actual auth
+        const mockSession = null // No session for demo purposes
+
+        if (mockSession?.user?.email_confirmed_at) {
+          // User is authenticated and verified, start with account flow
           setAuthChoice("account")
           setCurrentStep(1)
         }
@@ -249,15 +250,12 @@ export default function LoanApplicationPage() {
       if (isGuestMode || authChoice) return
 
       try {
-        const { data } = await supabaseBrowser.auth.getUser()
-        if (!data.user && currentStep === 0) {
+        // Mock session check - in production this would check actual auth
+        const mockSession = null // No session for demo purposes
+
+        // If no session and not guest mode, redirect to auth
+        if (!mockSession?.user && !isGuestMode && currentStep === 0) {
           router.push(`/auth?next=${encodeURIComponent("/apply")}`)
-          return
-        }
-        if (data.user && !data.user.email_confirmed_at) {
-          await supabaseBrowser.auth.signOut()
-          router.push(`/auth/check-email?next=${encodeURIComponent("/apply")}`)
-          return
         }
       } catch (error) {
         console.error("Error in auth guard:", error)

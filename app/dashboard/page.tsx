@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { supabaseBrowser } from "@/lib/supabase/browserClient"
-import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { FileText, Plus } from "lucide-react"
@@ -20,23 +18,10 @@ interface Application {
 export default function DashboardPage() {
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
 
   useEffect(() => {
     const fetchApplications = async () => {
       try {
-        // Simple client-side guard for now
-        const { data } = await supabaseBrowser.auth.getUser()
-        if (!data.user) {
-          router.replace("/auth")
-          return
-        }
-        if (!data.user.email_confirmed_at) {
-          await supabaseBrowser.auth.signOut()
-          router.replace("/auth/check-email")
-          return
-        }
-
         const response = await api.get<Application[]>("/applications")
 
         // Mock empty state for now - in production this would use real data
