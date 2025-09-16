@@ -139,8 +139,8 @@ export default function LoginPage() {
         <div className="text-center mt-8">
           <p className="text-muted-foreground text-sm">
             Don't have an account?{" "}
-            <Link href="/apply" className="text-[#997100] hover:text-[#b8850a] font-medium">
-              Apply for a loan
+            <Link href="/signup" className="text-[#997100] hover:text-[#b8850a] font-medium">
+              Create an account
             </Link>
           </p>
           <p className="text-muted-foreground text-sm mt-2">

@@ -63,6 +63,43 @@ export async function checkEmailVerification(): Promise<{ needsVerification: boo
   return { needsVerification: false }
 }
 
+export async function signUp(
+  email: string,
+  password: string,
+  firstName: string,
+  lastName: string,
+): Promise<{ user: User | null; error: string | null }> {
+  await new Promise((resolve) => setTimeout(resolve, 500)) // Simulate API delay
+
+  // Check if user already exists
+  const existingUser = mockUsers.find((u) => u.email === email)
+  if (existingUser) {
+    return { user: null, error: "An account with this email already exists" }
+  }
+
+  // Create new user
+  const newUser = {
+    id: `user-${Date.now()}`,
+    email,
+    password,
+    role: "applicant" as const,
+    firstName,
+    lastName,
+  }
+
+  mockUsers.push(newUser)
+
+  const user: User = {
+    id: newUser.id,
+    email: newUser.email,
+    role: newUser.role,
+    firstName: newUser.firstName,
+    lastName: newUser.lastName,
+  }
+
+  return { user, error: null }
+}
+
 export function requireAuth(allowedRoles?: ("admin" | "applicant")[]): (user: User | null) => boolean {
   return (user: User | null) => {
     if (!user) return false

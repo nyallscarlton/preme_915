@@ -1,7 +1,12 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
-import { supabase } from "@/lib/supabase"
+import { signUp } from "@/lib/auth"
+import { useAuth } from "@/hooks/use-auth"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 export default function SignupPage() {
   const [email, setEmail] = useState("")
@@ -10,15 +15,19 @@ export default function SignupPage() {
   const [lastName, setLastName] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const router = useRouter()
+  const { setUser } = useAuth()
 
-  const handleSignup = async () => {
-    console.log("=== SIGNUP ATTEMPT ===")
-    console.log("Email:", email)
-    console.log("Password length:", password.length)
-    console.log("Name:", firstName, lastName)
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault()
 
     if (!email || !password || !firstName || !lastName) {
-      alert("Please fill in all fields")
+      setError("Please fill in all fields")
+      return
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters")
       return
     }
 
@@ -26,139 +35,109 @@ export default function SignupPage() {
     setError("")
 
     try {
-      console.log("Calling Supabase signup...")
+      const { user, error: authError } = await signUp(email, password, firstName, lastName)
 
-      const { data, error } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          },
-        },
-      })
-
-      console.log("Supabase signup response:", { data, error })
-
-      if (error) {
-        console.error("Signup error:", error)
-        setError(error.message)
-        alert("Signup failed: " + error.message)
-      } else if (data.user) {
-        console.log("Signup successful!")
-        alert("Account created successfully! You can now login.")
-        window.location.href = "/login"
-      } else {
-        setError("Signup failed - no user returned")
-        alert("Signup failed - no user returned")
+      if (authError) {
+        setError(authError)
+      } else if (user) {
+        setUser(user)
+        router.push("/portal")
       }
     } catch (err) {
-      console.error("Exception during signup:", err)
-      setError("Signup error: " + err.message)
-      alert("Signup error: " + err.message)
+      setError("An unexpected error occurred")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "black", color: "white", padding: "40px" }}>
-      <div style={{ maxWidth: "400px", margin: "0 auto" }}>
-        <h1 style={{ fontSize: "32px", marginBottom: "30px", textAlign: "center" }}>Create PREME Account</h1>
-
-        <div style={{ marginBottom: "20px" }}>
-          <input
-            type="text"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px",
-              backgroundColor: "#333",
-              color: "white",
-              border: "1px solid #666",
-              borderRadius: "4px",
-            }}
-            placeholder="First Name"
-          />
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-8">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-block">
+            <div className="relative">
+              <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-[#997100]"></div>
+              <span className="text-3xl font-bold tracking-wide text-foreground">PREME</span>
+            </div>
+          </Link>
+          <h1 className="text-2xl font-bold text-foreground mt-6">Create Your Account</h1>
+          <p className="text-muted-foreground mt-2">Join PREME to get started</p>
         </div>
 
-        <div style={{ marginBottom: "20px" }}>
-          <input
-            type="text"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px",
-              backgroundColor: "#333",
-              color: "white",
-              border: "1px solid #666",
-              borderRadius: "4px",
-            }}
-            placeholder="Last Name"
-          />
-        </div>
+        {error && <div className="bg-destructive text-destructive-foreground p-3 rounded-lg mb-6 text-sm">{error}</div>}
 
-        <div style={{ marginBottom: "20px" }}>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px",
-              backgroundColor: "#333",
-              color: "white",
-              border: "1px solid #666",
-              borderRadius: "4px",
-            }}
-            placeholder="Email Address"
-          />
-        </div>
+        <form onSubmit={handleSignup} className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">First Name</label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full px-4 py-3 bg-background border border-input rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#997100] focus:border-transparent"
+                placeholder="First name"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Last Name</label>
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full px-4 py-3 bg-background border border-input rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#997100] focus:border-transparent"
+                placeholder="Last name"
+                required
+              />
+            </div>
+          </div>
 
-        <div style={{ marginBottom: "20px" }}>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px",
-              backgroundColor: "#333",
-              color: "white",
-              border: "1px solid #666",
-              borderRadius: "4px",
-            }}
-            placeholder="Password (min 6 characters)"
-          />
-        </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Email Address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 bg-background border border-input rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#997100] focus:border-transparent"
+              placeholder="Enter your email"
+              required
+            />
+          </div>
 
-        <button
-          onClick={handleSignup}
-          disabled={loading}
-          style={{
-            width: "100%",
-            padding: "15px",
-            backgroundColor: loading ? "#666" : "#997100",
-            color: "black",
-            border: "none",
-            borderRadius: "4px",
-            fontSize: "16px",
-            fontWeight: "bold",
-            cursor: loading ? "not-allowed" : "pointer",
-          }}
-        >
-          {loading ? "Creating Account..." : "Create Account"}
-        </button>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 bg-background border border-input rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#997100] focus:border-transparent"
+              placeholder="Minimum 6 characters"
+              required
+            />
+          </div>
 
-        <div style={{ textAlign: "center", marginTop: "20px" }}>
-          <p style={{ color: "#ccc" }}>
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-colors ${
+              loading ? "bg-muted cursor-not-allowed" : "bg-[#997100] hover:bg-[#b8850a]"
+            }`}
+          >
+            {loading ? "Creating Account..." : "Create Account"}
+          </button>
+        </form>
+
+        <div className="text-center mt-8">
+          <p className="text-muted-foreground text-sm">
             Already have an account?{" "}
-            <a href="/login" style={{ color: "#997100" }}>
+            <Link href="/login" className="text-[#997100] hover:text-[#b8850a] font-medium">
               Sign in here
-            </a>
+            </Link>
+          </p>
+          <p className="text-muted-foreground text-sm mt-2">
+            <Link href="/" className="text-[#997100] hover:text-[#b8850a] font-medium">
+              ← Back to Home
+            </Link>
           </p>
         </div>
       </div>
