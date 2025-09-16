@@ -317,7 +317,7 @@ export function CustomerDashboard() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Button className="bg-[#997100] hover:bg-[#b8850a] text-black font-semibold" asChild>
-                    <Link href="/apply">
+                    <Link href="/start?next=/apply">
                       <FileText className="mr-2 h-4 w-4" />
                       New Application
                     </Link>

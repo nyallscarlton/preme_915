@@ -12,7 +12,7 @@ export default function AuthCallbackPage() {
   const [error, setError] = useState("")
   const router = useRouter()
   const searchParams = useSearchParams()
-  const nextUrl = searchParams.get("next") || "/portal"
+  const nextUrl = searchParams.get("next") || "/dashboard"
   const { user, loading } = useAuth()
 
   useEffect(() => {

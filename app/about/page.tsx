@@ -37,8 +37,8 @@ export default function AboutPage() {
               <Link href="/login" className="text-foreground hover:text-primary transition-colors font-medium">
                 Login
               </Link>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6">
-                Start Application
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6" asChild>
+                <Link href="/start?next=/apply">Start Application</Link>
               </Button>
             </div>
           </div>
@@ -156,8 +156,9 @@ export default function AboutPage() {
             <Button
               size="lg"
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xl px-12 py-6 rounded-lg mb-6"
+              asChild
             >
-              Join the Collective
+              <Link href="/start?next=/apply">Join the Collective</Link>
             </Button>
             <p className="text-xl text-muted-foreground font-medium">Let's build. Together.</p>
           </div>

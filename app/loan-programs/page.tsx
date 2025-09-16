@@ -100,8 +100,8 @@ export default function LoanProgramsPage() {
               <Link href="/login" className="text-white hover:text-[#997100] transition-colors font-medium">
                 Login
               </Link>
-              <Button className="bg-[#997100] hover:bg-[#b8850a] text-black font-semibold px-6">
-                Start Application
+              <Button className="bg-[#997100] hover:bg-[#b8850a] text-black font-semibold px-6" asChild>
+                <Link href="/start?next=/apply">Start Application</Link>
               </Button>
             </div>
           </div>
@@ -154,8 +154,8 @@ export default function LoanProgramsPage() {
                     ))}
                   </div>
 
-                  <Button className="w-full bg-[#997100] hover:bg-[#b8850a] text-black font-semibold">
-                    Apply for {program.title}
+                  <Button className="w-full bg-[#997100] hover:bg-[#b8850a] text-black font-semibold" asChild>
+                    <Link href="/start?next=/apply">Apply for {program.title}</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -173,8 +173,8 @@ export default function LoanProgramsPage() {
               Our lending specialists are standing by to help you choose the right program for your investment goals.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-black font-semibold px-8">
-                Start My Application
+              <Button size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-black font-semibold px-8" asChild>
+                <Link href="/start?next=/apply">Start My Application</Link>
               </Button>
               <Button
                 size="lg"

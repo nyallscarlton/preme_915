@@ -148,7 +148,7 @@ export default function GuestAccessPage() {
               <div className="mt-6 text-center">
                 <p className="text-sm text-muted-foreground">
                   Don't have a guest application?{" "}
-                  <Link href="/apply" className="text-primary hover:text-primary/80 font-medium">
+                  <Link href="/start?next=/apply" className="text-primary hover:text-primary/80 font-medium">
                     Start your application
                   </Link>
                 </p>

@@ -267,15 +267,15 @@ export default function LoanApplicationPage() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="min-h-screen bg-white text-gray-900">
         {/* Header */}
-        <header className="border-b border-border">
+        <header className="border-b border-gray-200">
           <div className="container mx-auto px-6 py-6">
             <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center">
                 <div className="relative">
-                  <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-primary"></div>
-                  <span className="text-3xl font-bold tracking-wide text-foreground">PREME</span>
+                  <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-[#997100]"></div>
+                  <span className="text-3xl font-bold tracking-wide text-gray-900">PREME</span>
                 </div>
               </Link>
             </div>
@@ -286,37 +286,37 @@ export default function LoanApplicationPage() {
         <div className="container mx-auto px-6 py-24">
           <div className="max-w-2xl mx-auto text-center">
             <div className="mb-8">
-              <CheckCircle className="h-20 w-20 text-primary mx-auto mb-6" />
-              <h1 className="text-4xl font-bold mb-4 text-foreground">Application Submitted Successfully!</h1>
-              <p className="text-xl text-muted-foreground mb-8">
+              <CheckCircle className="h-20 w-20 text-[#997100] mx-auto mb-6" />
+              <h1 className="text-4xl font-bold mb-4 text-gray-900">Application Submitted Successfully!</h1>
+              <p className="text-xl text-gray-600 mb-8">
                 Thank you for your loan application. We've received your information and will review it within 24-48
                 hours.
               </p>
             </div>
 
-            <Card className="bg-card border-border text-left">
+            <Card className="bg-white border-gray-200 text-left">
               <CardHeader>
-                <CardTitle className="text-primary">What's Next?</CardTitle>
+                <CardTitle className="text-[#997100]">What's Next?</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold mt-0.5">
+                  <div className="w-6 h-6 bg-[#997100] text-white rounded-full flex items-center justify-center text-sm font-bold mt-0.5">
                     1
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground">Initial Review</h3>
-                    <p className="text-muted-foreground">Our team will review your application within 24-48 hours.</p>
+                    <h3 className="font-semibold text-gray-900">Initial Review</h3>
+                    <p className="text-gray-600">Our team will review your application within 24-48 hours.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold mt-0.5">
+                  <div className="w-6 h-6 bg-[#997100] text-white rounded-full flex items-center justify-center text-sm font-bold mt-0.5">
                     2
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground">
+                    <h3 className="font-semibold text-gray-900">
                       {authChoice === "guest" ? "Magic Link Email" : "Document Verification"}
                     </h3>
-                    <p className="text-muted-foreground">
+                    <p className="text-gray-600">
                       {authChoice === "guest"
                         ? "Check your email for a secure link to track your application status."
                         : "We may request additional documents or clarification."}
@@ -324,21 +324,21 @@ export default function LoanApplicationPage() {
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold mt-0.5">
+                  <div className="w-6 h-6 bg-[#997100] text-white rounded-full flex items-center justify-center text-sm font-bold mt-0.5">
                     3
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground">Final Approval</h3>
-                    <p className="text-muted-foreground">Receive your loan decision and terms.</p>
+                    <h3 className="font-semibold text-gray-900">Final Approval</h3>
+                    <p className="text-gray-600">Receive your loan decision and terms.</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <div className="mt-8 space-y-4">
-              <p className="text-muted-foreground">
+              <p className="text-gray-600">
                 Application Reference:{" "}
-                <span className="text-primary font-mono">
+                <span className="text-[#997100] font-mono">
                   PREME-2024-
                   {Math.floor(Math.random() * 1000)
                     .toString()
@@ -346,12 +346,12 @@ export default function LoanApplicationPage() {
                 </span>
               </p>
               {authChoice === "guest" && (
-                <div className="bg-muted/50 p-4 rounded-lg border border-border">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    <strong className="text-foreground">Important:</strong> Check your email ({formData.email}) for a
+                <div className="bg-gray-50/50 p-4 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-600 mb-2">
+                    <strong className="text-gray-900">Important:</strong> Check your email ({formData.email}) for a
                     secure magic link to access your application.
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-600">
                     If approved, you'll have the option to create a full account for enhanced features.
                   </p>
                   <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
@@ -368,18 +368,18 @@ export default function LoanApplicationPage() {
               )}
               <div className="flex justify-center space-x-4">
                 {authChoice === "account" ? (
-                  <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Button asChild className="bg-[#997100] hover:bg-[#997100]/90 text-white">
                     <Link href="/login">Access Portal</Link>
                   </Button>
                 ) : (
-                  <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Button asChild className="bg-[#997100] hover:bg-[#997100]/90 text-white">
                     <Link href="/guest-access">Check Application Status</Link>
                   </Button>
                 )}
                 <Button
                   variant="outline"
                   asChild
-                  className="border-border text-foreground hover:bg-muted bg-transparent"
+                  className="border-gray-200 text-gray-900 hover:bg-gray-50 bg-transparent"
                 >
                   <Link href="/">Return Home</Link>
                 </Button>
@@ -393,15 +393,15 @@ export default function LoanApplicationPage() {
 
   if (currentStep === 0) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="min-h-screen bg-white text-gray-900">
         {/* Header */}
-        <header className="border-b border-border">
+        <header className="border-b border-gray-200">
           <div className="container mx-auto px-6 py-6">
             <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center">
                 <div className="relative">
-                  <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-primary"></div>
-                  <span className="text-3xl font-bold tracking-wide text-foreground">PREME</span>
+                  <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-[#997100]"></div>
+                  <span className="text-3xl font-bold tracking-wide text-gray-900">PREME</span>
                 </div>
               </Link>
             </div>
@@ -410,17 +410,13 @@ export default function LoanApplicationPage() {
 
         <main className="container mx-auto px-6 py-16">
           <div className="max-w-2xl mx-auto text-center">
-            <h1 className="text-4xl font-bold mb-4 text-foreground">Start Your Loan Application</h1>
-            <p className="text-xl text-muted-foreground mb-8">
-              Choose how you'd like to proceed with your application.
-            </p>
+            <h1 className="text-4xl font-bold mb-4 text-gray-900">Start Your Loan Application</h1>
+            <p className="text-xl text-gray-600 mb-8">Choose how you'd like to proceed with your application.</p>
             <div className="space-y-4">
-              <Button asChild className="w-full max-w-md bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button asChild className="w-full max-w-md bg-[#997100] hover:bg-[#997100]/90 text-white">
                 <Link href="/start?next=/apply">Get Started</Link>
               </Button>
-              <p className="text-sm text-muted-foreground">
-                You can create an account or apply as a guest on the next page.
-              </p>
+              <p className="text-sm text-gray-600">You can create an account or apply as a guest on the next page.</p>
             </div>
           </div>
         </main>
@@ -429,22 +425,22 @@ export default function LoanApplicationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-white text-gray-900">
       {/* Header */}
-      <header className="border-b border-border">
+      <header className="border-b border-gray-200">
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center">
               <div className="relative">
-                <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-primary"></div>
-                <span className="text-3xl font-bold tracking-wide text-foreground">PREME</span>
+                <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-[#997100]"></div>
+                <span className="text-3xl font-bold tracking-wide text-gray-900">PREME</span>
               </div>
             </Link>
             <div className="flex items-center space-x-4">
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-gray-600">
                 {authChoice === "account" ? "Creating Account" : "Guest Application"}
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-gray-600">
                 Step {currentStep} of {currentSteps.length}
               </div>
             </div>
@@ -452,19 +448,35 @@ export default function LoanApplicationPage() {
         </div>
       </header>
 
+      {/* Sign-in Banner for Guest Users */}
+      {isGuestMode && currentStep > 0 && (
+        <div className="bg-blue-50 border-b border-blue-200">
+          <div className="container mx-auto px-6 py-3">
+            <div className="text-center">
+              <span className="text-sm text-blue-800">
+                Prefer to save progress?{" "}
+                <Link href="/auth?next=/apply" className="font-medium text-blue-600 hover:text-blue-500 underline">
+                  Sign in to apply
+                </Link>
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Progress Bar */}
-      <div className="border-b border-border">
+      <div className="border-b border-gray-200">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-2xl font-bold text-foreground">Loan Application</h1>
-            <span className="text-sm text-muted-foreground">{Math.round(progress)}% Complete</span>
+            <h1 className="text-2xl font-bold text-gray-900">Loan Application</h1>
+            <span className="text-sm text-gray-600">{Math.round(progress)}% Complete</span>
           </div>
           <Progress value={progress} className="h-2" />
         </div>
       </div>
 
       {/* Step Navigation */}
-      <div className="border-b border-border">
+      <div className="border-b border-gray-200">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center space-x-4 overflow-x-auto">
             {currentSteps.map((step, index) => (
@@ -472,30 +484,28 @@ export default function LoanApplicationPage() {
                 key={step.id}
                 className={`flex items-center space-x-2 whitespace-nowrap ${
                   step.id === currentStep
-                    ? "text-primary"
+                    ? "text-[#997100]"
                     : step.id < currentStep
                       ? "text-green-500"
-                      : "text-muted-foreground"
+                      : "text-gray-600"
                 }`}
               >
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                     step.id === currentStep
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-[#997100] text-white"
                       : step.id < currentStep
                         ? "bg-green-500 text-white"
-                        : "bg-muted text-muted-foreground"
+                        : "bg-gray-200 text-gray-600"
                   }`}
                 >
                   {step.id < currentStep ? "✓" : step.id}
                 </div>
                 <div className="hidden md:block">
                   <div className="font-medium">{step.title}</div>
-                  <div className="text-xs text-muted-foreground">{step.description}</div>
+                  <div className="text-xs text-gray-600">{step.description}</div>
                 </div>
-                {index < currentSteps.length - 1 && (
-                  <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
-                )}
+                {index < currentSteps.length - 1 && <ArrowRight className="h-4 w-4 text-gray-600 hidden md:block" />}
               </div>
             ))}
           </div>

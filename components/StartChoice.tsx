@@ -14,9 +14,9 @@ interface StartChoiceProps {
 export function StartChoice({ isOpen, onClose, nextUrl = "/apply" }: StartChoiceProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-card border-border">
+      <DialogContent className="sm:max-w-md bg-white border-gray-200">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center text-foreground">
+          <DialogTitle className="text-2xl font-bold text-center text-gray-900">
             How would you like to proceed?
           </DialogTitle>
         </DialogHeader>
@@ -36,15 +36,15 @@ export function StartChoice({ isOpen, onClose, nextUrl = "/apply" }: StartChoice
             asChild
             size="lg"
             variant="outline"
-            className="w-full h-16 border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-white font-semibold text-lg bg-transparent"
+            className="w-full h-16 border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-white font-semibold text-lg bg-white"
           >
             <Link href={`/auth?next=${nextUrl}`} onClick={onClose}>
               <UserPlus className="mr-3 h-6 w-6" />
-              Sign up / Log in
+              Sign up to Apply
             </Link>
           </Button>
 
-          <p className="text-sm text-muted-foreground text-center mt-4">
+          <p className="text-sm text-gray-600 text-center mt-4">
             Create an account to save progress and manage documents later.
           </p>
         </div>

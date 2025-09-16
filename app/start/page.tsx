@@ -12,13 +12,11 @@ export default function StartPage() {
   const nextUrl = searchParams.get("next") || "/apply"
 
   useEffect(() => {
-    // Open modal immediately when page loads
     setIsModalOpen(true)
   }, [])
 
   const handleModalClose = () => {
     setIsModalOpen(false)
-    // Redirect to home if modal is closed without selection
     router.push("/")
   }
 
