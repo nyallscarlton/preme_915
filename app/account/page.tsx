@@ -22,11 +22,18 @@ export default function AccountSettingsPage() {
     const load = async () => {
       try {
         setLoading(true)
-        const { data: sessionRes, error: sErr } = await supabaseBrowser.auth.getSession()
-        if (sErr) throw sErr
-        const user = sessionRes.session?.user
+        // Force a real check against auth API
+        let { data: userRes, error: uErr } = await supabaseBrowser.auth.getUser()
+        if (uErr) {
+          // Try refreshing session then re-check
+          await supabaseBrowser.auth.refreshSession()
+          const retry = await supabaseBrowser.auth.getUser()
+          userRes = retry.data
+        }
+        const user = userRes?.user
         if (!user) {
-          router.push("/auth?next=/account")
+          // Stay on page; show sign-in prompt instead of redirect loop
+          setLoading(false)
           return
         }
         setEmail(user.email || "")
@@ -37,11 +44,9 @@ export default function AccountSettingsPage() {
           .select("full_name")
           .eq("user_id", user.id)
           .maybeSingle()
-        if (pErr) {
-          // Allow page to load even if table is missing; user can still see email
-          console.warn("profiles load error", pErr.message)
+        if (!pErr && prof) {
+          setFullName(prof.full_name || "")
         }
-        setFullName(prof?.full_name || "")
       } catch (e: any) {
         setError(e?.message || "Failed to load account")
       } finally {
@@ -49,7 +54,7 @@ export default function AccountSettingsPage() {
       }
     }
     load()
-  }, [router])
+  }, [])
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -108,6 +113,14 @@ export default function AccountSettingsPage() {
           <CardContent>
             {loading ? (
               <div className="text-gray-600">Loading...</div>
+            ) : !email ? (
+              <div className="space-y-4">
+                {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</div>}
+                <p className="text-gray-700">You're not signed in.</p>
+                <Button asChild className="bg-[#997100] hover:bg-[#b8850a] text-white">
+                  <Link href="/auth?next=/account">Sign in to manage your account</Link>
+                </Button>
+              </div>
             ) : (
               <form onSubmit={handleSave} className="space-y-4">
                 {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</div>}
