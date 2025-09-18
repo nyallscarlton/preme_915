@@ -425,8 +425,11 @@ export default function LoanApplicationPage() {
             </Link>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-600">
-                {authChoice === "account" ? "Creating Account" : "Guest Application"}
+                {authChoice === "account" ? "Account Application" : "Guest Application"}
               </div>
+              <Link href="/dashboard" className="text-sm text-[#997100] hover:text-[#b8850a] underline">
+                Go to Dashboard
+              </Link>
               <div className="text-sm text-gray-600">
                 Step {currentStep} of {currentSteps.length}
               </div>
