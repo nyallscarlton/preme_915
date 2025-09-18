@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { ArrowRight, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import { supabaseBrowser } from "@/lib/supabase/browserClient"
 import { GuestContactForm } from "@/components/application/guest-contact-form"
 import { LoanDetailsForm } from "@/components/application/loan-details-form"
 import { PropertyInfoForm } from "@/components/application/property-info-form"
@@ -227,13 +228,18 @@ export default function LoanApplicationPage() {
       }
 
       try {
-        // Mock auth check - in production this would check actual auth
-        const mockSession = null // No session for demo purposes
+        const {
+          data: { session },
+          error,
+        } = await supabaseBrowser.auth.getSession()
+        if (error) throw error
 
-        if (mockSession?.user?.email_confirmed_at) {
-          // User is authenticated and verified, start with account flow
+        if (session?.user?.email_confirmed_at) {
           setAuthChoice("account")
           setCurrentStep(1)
+        } else {
+          // No verified session → route to auth with next
+          router.push(`/auth?next=${encodeURIComponent("/apply")}`)
         }
       } catch (error) {
         console.error("Error checking auth:", error)
@@ -242,28 +248,9 @@ export default function LoanApplicationPage() {
     }
 
     checkAuth()
-  }, [isGuestMode])
+  }, [isGuestMode, router])
 
-  useEffect(() => {
-    const checkAuthGuard = async () => {
-      // Skip guard if guest mode or already have auth choice
-      if (isGuestMode || authChoice) return
-
-      try {
-        // Mock session check - in production this would check actual auth
-        const mockSession = null // No session for demo purposes
-
-        // If no session and not guest mode, redirect to auth
-        if (!mockSession?.user && !isGuestMode && currentStep === 0) {
-          router.push(`/auth?next=${encodeURIComponent("/apply")}`)
-        }
-      } catch (error) {
-        console.error("Error in auth guard:", error)
-      }
-    }
-
-    checkAuthGuard()
-  }, [isGuestMode, authChoice, currentStep, router])
+  // Remove secondary mock guard to prevent conflicting redirects
 
   if (isSubmitted) {
     return (

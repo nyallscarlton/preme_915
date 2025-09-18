@@ -15,7 +15,7 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  console.log("[v0] Middleware running but auth checks disabled for testing")
+  console.log("[v1] Middleware running in pass-through mode (no auth redirects)")
 
   // TODO: Re-enable once Supabase packages are available
   try {
@@ -23,17 +23,8 @@ export async function middleware(request: NextRequest) {
       data: { session },
     } = await supabaseServer().auth.getSession()
 
-    // Apply routing guards
-    if (url.pathname === "/apply") {
-      const isGuestMode = url.searchParams.get("guest") === "1"
-
-      // If not guest mode and no authenticated session, redirect to auth
-      if (!isGuestMode && !session?.user?.email_confirmed_at) {
-        const redirectUrl = new URL("/auth", request.url)
-        redirectUrl.searchParams.set("next", "/apply")
-        return NextResponse.redirect(redirectUrl)
-      }
-    }
+    // Temporarily disable auth-based redirects to avoid re-login loops
+    // We'll rely on page-level guards instead.
 
     // Refresh session if needed
     if (session) {
