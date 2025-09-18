@@ -17,6 +17,7 @@ export default function AccountSettingsPage() {
 
   const [email, setEmail] = useState("")
   const [fullName, setFullName] = useState("")
+  const [phone, setPhone] = useState("")
 
   useEffect(() => {
     const load = async () => {
@@ -41,11 +42,12 @@ export default function AccountSettingsPage() {
         // Load profile from public profiles table if exists
         const { data: prof, error: pErr } = await supabaseBrowser
           .from("profiles")
-          .select("full_name")
+          .select("full_name, phone")
           .eq("user_id", user.id)
           .maybeSingle()
         if (!pErr && prof) {
           setFullName(prof.full_name || "")
+          setPhone(prof.phone || "")
         }
       } catch (e: any) {
         setError(e?.message || "Failed to load account")
@@ -74,6 +76,7 @@ export default function AccountSettingsPage() {
           user_id: user.id,
           email: email,
           full_name: fullName,
+          phone: phone,
         },
         { onConflict: "id" },
       )
@@ -134,6 +137,11 @@ export default function AccountSettingsPage() {
                 <div>
                   <label className="block text-sm text-gray-700 mb-1">Full Name</label>
                   <Input value={fullName} onChange={(e) => setFullName(e.target.value)} type="text" />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Phone</label>
+                  <Input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" />
                 </div>
 
                 <div className="pt-2">

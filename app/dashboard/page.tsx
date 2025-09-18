@@ -75,7 +75,7 @@ export default function DashboardPage() {
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">Dashboard</span>
               <Button variant="outline" asChild size="sm">
-                <Link href="/auth">Account Settings</Link>
+                <Link href="/account">Account Settings</Link>
               </Button>
             </div>
           </div>

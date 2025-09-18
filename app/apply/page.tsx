@@ -240,11 +240,16 @@ export default function LoanApplicationPage() {
           // Load profile to prefill
           const { data: prof } = await supabaseBrowser
             .from("profiles")
-            .select("full_name, email")
+            .select("full_name, email, phone")
             .eq("user_id", session.user.id)
             .maybeSingle()
           if (prof) {
-            setFormData((prev: any) => ({ ...prev, email: prof.email || session.user.email, fullName: prof.full_name }))
+            setFormData((prev: any) => ({
+              ...prev,
+              email: prof.email || session.user.email,
+              fullName: prof.full_name,
+              phone: prof.phone || prev.phone,
+            }))
           } else {
             setFormData((prev: any) => ({ ...prev, email: session.user.email }))
           }
