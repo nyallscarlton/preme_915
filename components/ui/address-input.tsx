@@ -41,34 +41,6 @@ export function AddressInput({
   const inputRef = useRef<HTMLInputElement>(null)
   const timeoutRef = useRef<NodeJS.Timeout>()
 
-  // Mock address suggestions - in production, this would use Google Places API
-  const mockSuggestions = [
-    {
-      place_id: "1",
-      description: "123 Main Street, Beverly Hills, CA 90210, USA",
-      structured_formatting: {
-        main_text: "123 Main Street",
-        secondary_text: "Beverly Hills, CA 90210, USA",
-      },
-    },
-    {
-      place_id: "2",
-      description: "456 Oak Avenue, Manhattan Beach, CA 90266, USA",
-      structured_formatting: {
-        main_text: "456 Oak Avenue",
-        secondary_text: "Manhattan Beach, CA 90266, USA",
-      },
-    },
-    {
-      place_id: "3",
-      description: "789 Pine Road, Santa Monica, CA 90401, USA",
-      structured_formatting: {
-        main_text: "789 Pine Road",
-        secondary_text: "Santa Monica, CA 90401, USA",
-      },
-    },
-  ]
-
   const fetchSuggestions = async (input: string) => {
     if (input.length < 3) {
       setSuggestions([])
@@ -77,32 +49,33 @@ export function AddressInput({
 
     setIsLoading(true)
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 300))
-
-    // Filter mock suggestions based on input
-    const filtered = mockSuggestions.filter((suggestion) =>
-      suggestion.description.toLowerCase().includes(input.toLowerCase()),
-    )
-
-    setSuggestions(filtered)
-    setIsLoading(false)
-    setShowSuggestions(true)
+    try {
+      const res = await fetch(`/api/places/search?q=${encodeURIComponent(input)}`, { cache: "no-store" })
+      if (!res.ok) {
+        setSuggestions([])
+      } else {
+        const data = await res.json()
+        setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : [])
+      }
+    } catch {
+      setSuggestions([])
+    } finally {
+      setIsLoading(false)
+      setShowSuggestions(true)
+    }
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value
     onChange(newValue)
 
-    // Clear existing timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
     }
 
-    // Debounce the API call
     timeoutRef.current = setTimeout(() => {
       fetchSuggestions(newValue)
-    }, 300)
+    }, 250)
   }
 
   const handleSuggestionClick = (suggestion: AddressSuggestion) => {
@@ -112,10 +85,9 @@ export function AddressInput({
   }
 
   const handleBlur = () => {
-    // Delay hiding suggestions to allow for clicks
     setTimeout(() => {
       setShowSuggestions(false)
-    }, 200)
+    }, 150)
   }
 
   useEffect(() => {
