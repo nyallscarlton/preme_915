@@ -372,7 +372,7 @@ export default function LoanApplicationPage() {
               <div className="flex justify-center space-x-4">
                 {authChoice === "account" ? (
                   <Button asChild className="bg-[#997100] hover:bg-[#997100]/90 text-white">
-                    <Link href="/login">Access Portal</Link>
+                    <Link href="/portal">Go back to Portal</Link>
                   </Button>
                 ) : (
                   <Button asChild className="bg-[#997100] hover:bg-[#997100]/90 text-white">
