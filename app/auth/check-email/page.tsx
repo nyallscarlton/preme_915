@@ -54,12 +54,21 @@ export default function CheckEmailPage() {
     setError("")
 
     try {
+      // Force a refresh from the server: getUser hits the auth endpoint
+      const { data, error } = await supabaseBrowser.auth.getUser()
+      if (error) throw error
+
+      const user = data.user
+      if (user?.email_confirmed_at) {
+        router.push(nextUrl)
+        return
+      }
+
+      // As a fallback, refresh the session (especially after clicking the email link)
+      await supabaseBrowser.auth.refreshSession()
       const {
         data: { session },
-        error,
       } = await supabaseBrowser.auth.getSession()
-
-      if (error) throw error
 
       if (session?.user?.email_confirmed_at) {
         router.push(nextUrl)
@@ -75,6 +84,13 @@ export default function CheckEmailPage() {
 
   const handleUseDifferentEmail = () => {
     router.push(`/auth?next=${encodeURIComponent(nextUrl)}`)
+  }
+
+  const handleRetrySignIn = () => {
+    const target = new URL(`/auth`, window.location.origin)
+    target.searchParams.set("next", nextUrl)
+    if (email) target.searchParams.set("email", email)
+    router.push(target.toString())
   }
 
   if (!email) {
@@ -158,6 +174,10 @@ export default function CheckEmailPage() {
               <Button onClick={handleUseDifferentEmail} variant="ghost" className="w-full">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Use a different email
+              </Button>
+
+              <Button onClick={handleRetrySignIn} variant="outline" className="w-full">
+                Re-try sign in
               </Button>
             </div>
 

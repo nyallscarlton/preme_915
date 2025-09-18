@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, XCircle, Loader2, ArrowRight } from "lucide-react"
-import { useAuth } from "@/hooks/use-auth"
+import { supabaseBrowser } from "@/lib/supabase/browserClient"
 
 export default function AuthCallbackPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
@@ -13,25 +13,24 @@ export default function AuthCallbackPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const nextUrl = searchParams.get("next") || "/dashboard"
-  const { user, loading } = useAuth()
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log("[v0] Auth callback - checking user state")
+        setLoading(true)
+        // Exchange code for session is handled automatically by supabase-js via URL parsing
+        // We explicitly refresh the session and fetch the user so email_confirmed_at is available
+        await supabaseBrowser.auth.refreshSession()
+        const { data, error } = await supabaseBrowser.auth.getUser()
+        if (error) throw error
 
-        // Simulate verification delay
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        if (user) {
-          console.log("[v0] User found in callback:", user)
+        if (data.user) {
           setStatus("success")
-
           setTimeout(() => {
             router.push(nextUrl)
-          }, 2000)
+          }, 800)
         } else {
-          console.log("[v0] No user found in callback")
           setError("No session found. Please try signing in again.")
           setStatus("error")
         }
@@ -39,13 +38,13 @@ export default function AuthCallbackPage() {
         console.error("Callback processing error:", error)
         setError(error.message || "An unexpected error occurred")
         setStatus("error")
+      } finally {
+        setLoading(false)
       }
     }
 
-    if (!loading) {
-      handleAuthCallback()
-    }
-  }, [router, nextUrl, user, loading])
+    handleAuthCallback()
+  }, [router, nextUrl])
 
   if (loading) {
     return (

@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Mail, Lock, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import { supabaseBrowser } from "@/lib/supabase/browserClient"
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("signin")
@@ -24,8 +25,9 @@ export default function AuthPage() {
   const nextUrl = searchParams.get("next") || "/dashboard"
 
   // Sign In Form State
+  const initialEmail = typeof window !== "undefined" ? (new URLSearchParams(window.location.search)).get("email") || "" : ""
   const [signInData, setSignInData] = useState({
-    email: "",
+    email: initialEmail,
     password: "",
   })
 
@@ -42,11 +44,34 @@ export default function AuthPage() {
     setError("")
 
     try {
-      // If unverified → navigate to `/auth/check-email?email=${email}&next=/apply`
-      // If verified → navigate to `searchParams.next || "/dashboard"`
+      const { data, error: signInError } = await supabaseBrowser.auth.signInWithPassword({
+        email: signInData.email,
+        password: signInData.password,
+      })
 
-      // For now, simulate going to check-email for all sign-ins
-      router.push(`/auth/check-email?email=${encodeURIComponent(signInData.email)}&next=${encodeURIComponent(nextUrl)}`)
+      if (signInError) {
+        // If email not confirmed, route to check-email flow
+        if (
+          signInError.message?.toLowerCase().includes("confirm") ||
+          signInError.message?.toLowerCase().includes("verify") ||
+          (signInError as any)?.status === 400
+        ) {
+          router.push(
+            `/auth/check-email?email=${encodeURIComponent(signInData.email)}&next=${encodeURIComponent(nextUrl)}`,
+          )
+          return
+        }
+        setError(signInError.message || "Failed to sign in")
+        return
+      }
+
+      // Successful sign-in
+      const user = data.session?.user
+      if (user?.email_confirmed_at) {
+        router.push(nextUrl)
+      } else {
+        router.push(`/auth/check-email?email=${encodeURIComponent(signInData.email)}&next=${encodeURIComponent(nextUrl)}`)
+      }
     } catch (err) {
       setError("An error occurred during sign in")
     } finally {
@@ -72,9 +97,24 @@ export default function AuthPage() {
     }
 
     try {
-      router.push(
-        `/auth/check-email?email=${encodeURIComponent(createAccountData.email)}&next=${encodeURIComponent(nextUrl)}`,
-      )
+      const emailRedirectTo = `${process.env.NEXT_PUBLIC_BASE_URL || window.location.origin}/auth/callback?next=${encodeURIComponent(
+        nextUrl,
+      )}`
+
+      const { data, error: signUpError } = await supabaseBrowser.auth.signUp({
+        email: createAccountData.email,
+        password: createAccountData.password,
+        options: { emailRedirectTo },
+      })
+
+      if (signUpError) {
+        setError(signUpError.message || "Failed to create account")
+        return
+      }
+
+      // Navigate to check-email for verification
+      const email = data.user?.email || createAccountData.email
+      router.push(`/auth/check-email?email=${encodeURIComponent(email)}&next=${encodeURIComponent(nextUrl)}`)
     } catch (err) {
       setError("An error occurred during account creation")
     } finally {
