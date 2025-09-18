@@ -104,7 +104,7 @@ export default function DashboardPage() {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button asChild className="bg-[#997100] hover:bg-[#b8850a] text-white">
-                    <Link href="/start?next=/apply">
+                    <Link href="/apply">
                       <Plus className="mr-2 h-4 w-4" />
                       Start an Application
                     </Link>
@@ -125,7 +125,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900">Your Applications</h2>
                 <Button asChild className="bg-[#997100] hover:bg-[#b8850a] text-white">
-                  <Link href="/start?next=/apply">
+                  <Link href="/apply">
                     <Plus className="mr-2 h-4 w-4" />
                     New Application
                   </Link>

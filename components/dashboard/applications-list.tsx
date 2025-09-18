@@ -216,7 +216,7 @@ export function ApplicationsList({ applications }: ApplicationsListProps) {
           <p className="text-muted-foreground">Track the status of your loan applications</p>
         </div>
         <Button className="bg-[#997100] hover:bg-[#b8850a] text-white" asChild>
-          <a href="/start?next=/apply">
+          <a href="/apply">
             <FileText className="mr-2 h-4 w-4" />
             New Application
           </a>

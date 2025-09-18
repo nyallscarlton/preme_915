@@ -37,8 +37,8 @@ export function Navigation({ currentPage }: NavigationProps) {
                 {item.label}
               </Link>
             ))}
-            <Link href="/auth" className="font-medium text-gray-900 hover:text-[#997100] transition-colors">
-              Log in
+            <Link href="/account" className="font-medium text-gray-900 hover:text-[#997100] transition-colors">
+              Account Settings
             </Link>
             <Button asChild className="bg-[#997100] hover:bg-[#b8850a] text-white font-semibold px-6">
               <Link href="/start?next=/apply">Start Application</Link>

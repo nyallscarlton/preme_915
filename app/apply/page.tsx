@@ -237,6 +237,17 @@ export default function LoanApplicationPage() {
         if (session?.user?.email_confirmed_at) {
           setAuthChoice("account")
           setCurrentStep(1)
+          // Load profile to prefill
+          const { data: prof } = await supabaseBrowser
+            .from("profiles")
+            .select("full_name, email")
+            .eq("user_id", session.user.id)
+            .maybeSingle()
+          if (prof) {
+            setFormData((prev: any) => ({ ...prev, email: prof.email || session.user.email, fullName: prof.full_name }))
+          } else {
+            setFormData((prev: any) => ({ ...prev, email: session.user.email }))
+          }
         } else {
           // No verified session → route to auth with next
           router.push(`/auth?next=${encodeURIComponent("/apply")}`)

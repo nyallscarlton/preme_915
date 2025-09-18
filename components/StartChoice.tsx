@@ -58,9 +58,9 @@ export function StartChoice({ isOpen, onClose, nextUrl = "/apply" }: StartChoice
             size="lg"
             className="w-full h-16 bg-[#997100] hover:bg-[#b8850a] text-white font-semibold text-lg"
           >
-            <Link href={`${nextUrl}?guest=1`} onClick={onClose}>
+            <Link href={hasSession ? "/apply" : `${nextUrl}?guest=1`} onClick={onClose}>
               <User className="mr-3 h-6 w-6" />
-              Continue as Guest
+              Continue as {hasSession ? "Account" : "Guest"}
             </Link>
           </Button>
 
