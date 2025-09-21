@@ -124,17 +124,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-8 p-4 bg-muted rounded-lg border border-border">
-          <h3 className="text-sm font-medium text-foreground mb-3">Demo Accounts:</h3>
-          <div className="space-y-2 text-xs text-muted-foreground">
-            <div>
-              <strong className="text-foreground">Admin:</strong> admin@preme.com / demo123
-            </div>
-            <div>
-              <strong className="text-foreground">Applicant:</strong> demo@example.com / demo123
-            </div>
-          </div>
-        </div>
+        
 
         <div className="text-center mt-8">
           <p className="text-muted-foreground text-sm">

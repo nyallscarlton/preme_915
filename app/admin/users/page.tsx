@@ -1,0 +1,44 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { supabaseBrowser } from "@/lib/supabase/browserClient"
+import { UsersManagement } from "@/components/admin/users-management"
+
+export default function AdminUsersPage() {
+  const router = useRouter()
+  const [authorized, setAuthorized] = useState<boolean>(false)
+
+  useEffect(() => {
+    const check = async () => {
+      const { data: { session } } = await supabaseBrowser.auth.getSession()
+      const user = session?.user
+      if (!user) {
+        router.replace("/admin/login")
+        return
+      }
+      const { data: profile } = await supabaseBrowser
+        .from("profiles")
+        .select("is_admin, role")
+        .eq("id", user.id)
+        .maybeSingle()
+      if (!profile || !(profile as any).is_admin) {
+        router.replace("/")
+        return
+      }
+      setAuthorized(true)
+    }
+    check()
+  }, [router])
+
+  if (!authorized) return null
+
+  return (
+    <div className="min-h-screen bg-background text-foreground container mx-auto px-6 py-8">
+      <h1 className="text-3xl font-bold mb-6">Users</h1>
+      <UsersManagement />
+    </div>
+  )
+}
+
+

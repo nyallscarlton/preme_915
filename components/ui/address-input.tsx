@@ -55,7 +55,12 @@ export function AddressInput({
         setSuggestions([])
       } else {
         const data = await res.json()
-        setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : [])
+        const rawSuggestions: AddressSuggestion[] = Array.isArray(data.suggestions) ? data.suggestions : []
+        const usOnly = rawSuggestions.filter((s) => {
+          const d = s.description || ""
+          return /United States/i.test(d) || /,\s*USA$/i.test(d) || /,\s*US$/i.test(d)
+        })
+        setSuggestions(usOnly)
       }
     } catch {
       setSuggestions([])

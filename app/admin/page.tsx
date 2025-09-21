@@ -2,29 +2,41 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/hooks/use-auth"
 import { AdminDashboard } from "@/components/admin-dashboard"
+import { supabaseBrowser } from "@/lib/supabase/browserClient"
 
 export default function AdminPage() {
-  const { user, loading } = useAuth()
   const router = useRouter()
-  const [isClient, setIsClient] = useState(false)
+  const [authorized, setAuthorized] = useState<boolean>(false)
+  const [checking, setChecking] = useState<boolean>(true)
 
   useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  useEffect(() => {
-    if (!loading && isClient) {
-      if (!user) {
-        router.push("/login")
-      } else if (user.role !== "admin") {
-        router.push("/portal")
+    const check = async () => {
+      try {
+        const { data: { session } } = await supabaseBrowser.auth.getSession()
+        const user = session?.user
+        if (!user) {
+          router.replace("/admin/login")
+          return
+        }
+        const { data: profile } = await supabaseBrowser
+          .from("profiles")
+          .select("is_admin, role")
+          .eq("id", user.id)
+          .maybeSingle()
+        if (!profile || !(profile as any).is_admin) {
+          router.replace("/")
+          return
+        }
+        setAuthorized(true)
+      } finally {
+        setChecking(false)
       }
     }
-  }, [user, loading, router, isClient])
+    check()
+  }, [router])
 
-  if (loading || !isClient) {
+  if (checking) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="text-center">
@@ -35,9 +47,7 @@ export default function AdminPage() {
     )
   }
 
-  if (!user || user.role !== "admin") {
-    return null
-  }
+  if (!authorized) return null
 
   return <AdminDashboard />
 }

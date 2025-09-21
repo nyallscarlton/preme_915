@@ -17,6 +17,8 @@ export async function GET(request: Request) {
     url.searchParams.set("format", "jsonv2")
     url.searchParams.set("addressdetails", "0")
     url.searchParams.set("limit", "8")
+    // Restrict results to United States only
+    url.searchParams.set("countrycodes", "us")
 
     const res = await fetch(url.toString(), {
       headers: {

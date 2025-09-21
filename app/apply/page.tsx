@@ -14,7 +14,6 @@ import { PropertyInfoForm } from "@/components/application/property-info-form"
 import { FinancialInfoForm } from "@/components/application/financial-info-form"
 import { SponsorInfoForm } from "@/components/application/sponsor-info-form"
 import { LiquidityInfoForm } from "@/components/application/liquidity-info-form"
-import { DocumentUploadForm } from "@/components/application/document-upload-form"
 import { ReviewSubmitForm } from "@/components/application/review-submit-form"
 
 const steps = [
@@ -24,8 +23,7 @@ const steps = [
   { id: 4, title: "Financial Info", description: "Income and employment" },
   { id: 5, title: "Sponsor Info", description: "Sponsor details (if applicable)" },
   { id: 6, title: "Liquidity", description: "Assets and reserves" },
-  { id: 7, title: "Documents", description: "Upload required documents" },
-  { id: 8, title: "Review & Submit", description: "Final review" },
+  { id: 7, title: "Review & Submit", description: "Final review" },
 ]
 
 const accountSteps = [
@@ -34,8 +32,7 @@ const accountSteps = [
   { id: 3, title: "Financial Info", description: "Income and employment" },
   { id: 4, title: "Sponsor Info", description: "Sponsor details (if applicable)" },
   { id: 5, title: "Liquidity", description: "Assets and reserves" },
-  { id: 6, title: "Documents", description: "Upload required documents" },
-  { id: 7, title: "Review & Submit", description: "Final review" },
+  { id: 6, title: "Review & Submit", description: "Final review" },
 ]
 
 export default function LoanApplicationPage() {
@@ -141,15 +138,6 @@ export default function LoanApplicationPage() {
             />
           )
         case 7:
-          return (
-            <DocumentUploadForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 8:
           return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
         default:
           return null
@@ -203,15 +191,6 @@ export default function LoanApplicationPage() {
             />
           )
         case 6:
-          return (
-            <DocumentUploadForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 7:
           return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
         default:
           return null

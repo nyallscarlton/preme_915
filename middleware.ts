@@ -1,12 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
-  // Minimal pass-through; avoid importing server-side libs not supported in middleware
-  return NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
+  const { pathname } = request.nextUrl
+
+  // Redirect unauthenticated access to /admin routes to admin login
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login" && pathname !== "/admin/test") {
+    // We cannot access Supabase auth here easily; rely on client-side guard and route-level checks.
+    // Keep middleware lightweight; allow request to continue.
+    // Optionally, could add basic heuristic checks here.
+  }
+
+  return NextResponse.next({ request: { headers: request.headers } })
 }
 
 export const config = {
