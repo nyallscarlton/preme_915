@@ -1,6 +1,6 @@
 import Link from "next/link"
 
-export default function PrivacyPage() {
+export default function NMLSPage() {
   return (
     <div className="min-h-screen bg-white text-black">
       <nav className="border-b border-gray-200">
@@ -18,31 +18,15 @@ export default function PrivacyPage() {
 
       <section className="py-16">
         <div className="container mx-auto px-6 max-w-4xl">
-          <h1 className="text-4xl font-bold mb-6">Privacy Policy</h1>
+          <h1 className="text-4xl font-bold mb-6">NMLS Disclosure</h1>
           <div className="space-y-6 text-gray-700 leading-relaxed">
-            <p>
-              We respect your privacy. This page outlines how PREME collects, uses, and protects your information.
-            </p>
-            <p>
-              We collect only the data necessary to process your applications and provide services. We never sell your
-              data.
-            </p>
+            <p>NMLS ID: 123456. PREME complies with all applicable lending regulations.</p>
+            <p>State-specific disclosures available upon request.</p>
             <p>For questions, contact: funding@preme.com</p>
           </div>
         </div>
       </section>
     </div>
-  )
-}
-
-export default function PrivacyPage() {
-  return (
-    <main className="container mx-auto px-6 py-16">
-      <h1 className="text-3xl font-bold mb-4">Privacy Policy</h1>
-      <p className="text-muted-foreground">
-        Our detailed privacy policy will be published here. Your data is handled with care.
-      </p>
-    </main>
   )
 }
 

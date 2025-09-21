@@ -20,9 +20,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="canonical" href="https://www.premerealestate.com" />
+        <meta property="og:title" content="PREME - Funding for Modern Real Estate Investors" />
+        <meta property="og:description" content="DSCR loans, business credit, and private capital—without the bank headaches." />
+        <meta property="og:image" content="/PremeLogoBlackBG.png" />
         <script
           async
           defer
+          loading="async"
           src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dQHuMoWEFeXkOI&libraries=places"
         ></script>
       </head>

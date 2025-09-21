@@ -21,7 +21,10 @@ import {
   User,
   Calendar,
   DollarSign,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react"
+import { supabaseBrowser } from "@/lib/supabase/browserClient"
 
 interface Application {
   id: string
@@ -34,6 +37,7 @@ interface Application {
   loanType: string
   progress: number
   assignedTo: string | null
+  archived?: boolean
 }
 
 interface ApplicationsManagementProps {
@@ -45,6 +49,8 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [reviewNotes, setReviewNotes] = useState("")
+  const [archivedFilter, setArchivedFilter] = useState<string>("active")
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   const filteredApplications = applications.filter((app) => {
     const matchesStatus = statusFilter === "all" || app.status === statusFilter
@@ -52,7 +58,9 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
       app.applicantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.propertyAddress.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesStatus && matchesSearch
+    const isArchived = !!app.archived
+    const matchesArchived = archivedFilter === "all" || (archivedFilter === "active" ? !isArchived : isArchived)
+    return matchesStatus && matchesSearch && matchesArchived
   })
 
   const getStatusColor = (status: string) => {
@@ -107,10 +115,32 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
   }
 
   const handleStatusUpdate = (appId: string, newStatus: string) => {
-    // In a real app, this would update the application status in the database
     console.log(`Updating application ${appId} to status: ${newStatus}`)
     console.log(`Review notes: ${reviewNotes}`)
     setReviewNotes("")
+  }
+
+  const toggleArchive = async (appId: string, archived: boolean) => {
+    try {
+      setUpdatingId(appId)
+      const { error } = await supabaseBrowser
+        .from("applications")
+        .update({ archived })
+        .eq("id", appId)
+      if (error) throw error
+      // Optimistic local update
+      if (selectedApp && selectedApp.id === appId) {
+        setSelectedApp({ ...selectedApp, archived })
+      }
+      const idx = applications.findIndex((a) => a.id === appId)
+      if (idx !== -1) {
+        applications[idx] = { ...applications[idx], archived }
+      }
+    } catch (e) {
+      console.error("Failed to update archive state", e)
+    } finally {
+      setUpdatingId(null)
+    }
   }
 
   if (selectedApp) {
@@ -133,6 +163,27 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
               <MessageSquare className="mr-2 h-4 w-4" />
               Message Applicant
             </Button>
+            {selectedApp.archived ? (
+              <Button
+                variant="outline"
+                disabled={updatingId === selectedApp.id}
+                className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white bg-transparent"
+                onClick={() => toggleArchive(selectedApp.id, false)}
+              >
+                <ArchiveRestore className="mr-2 h-4 w-4" />
+                Unarchive
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                disabled={updatingId === selectedApp.id}
+                className="border-gray-600 text-gray-300 hover:bg-gray-700 bg-transparent"
+                onClick={() => toggleArchive(selectedApp.id, true)}
+              >
+                <Archive className="mr-2 h-4 w-4" />
+                Archive
+              </Button>
+            )}
           </div>
         </div>
 
@@ -188,14 +239,6 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
                     </div>
                     <p className="text-xl font-semibold text-foreground">{selectedApp.assignedTo || "Unassigned"}</p>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-muted-foreground">
-                    <FileText className="h-4 w-4" />
-                    <span className="text-sm">Property Address</span>
-                  </div>
-                  <p className="text-lg text-foreground">{selectedApp.propertyAddress}</p>
                 </div>
               </CardContent>
             </Card>
@@ -290,49 +333,6 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
                 </div>
               </CardContent>
             </Card>
-
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle className="text-foreground">Application Timeline</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                      <CheckCircle className="h-3 w-3 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Application Submitted</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(selectedApp.submittedAt)}</p>
-                    </div>
-                  </div>
-
-                  {selectedApp.status !== "submitted" && (
-                    <div className="flex items-start space-x-3">
-                      <div className="w-6 h-6 bg-yellow-600 rounded-full flex items-center justify-center">
-                        <Clock className="h-3 w-3 text-black" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">Under Review</p>
-                        <p className="text-xs text-muted-foreground">Review in progress</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedApp.status === "approved" && (
-                    <div className="flex items-start space-x-3">
-                      <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                        <CheckCircle className="h-3 w-3 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">Approved</p>
-                        <p className="text-xs text-muted-foreground">Application approved</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
@@ -377,6 +377,17 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
                 <SelectItem value="on_hold">On Hold</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={archivedFilter} onValueChange={setArchivedFilter}>
+              <SelectTrigger className="w-48 bg-card border-border text-foreground">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Archived" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -401,17 +412,45 @@ export function ApplicationsManagement({ applications }: ApplicationsManagementP
                   <div className="text-right">
                     <p className="font-semibold text-foreground">${app.loanAmount.toLocaleString()}</p>
                     <p className="text-sm text-muted-foreground">{formatDate(app.submittedAt)}</p>
-                    <Badge className={getStatusColor(app.status)}>{formatStatus(app.status)}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className={getStatusColor(app.status)}>{formatStatus(app.status)}</Badge>
+                      {app.archived && <Badge className="bg-gray-700 text-white">Archived</Badge>}
+                    </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
-                    onClick={() => setSelectedApp(app)}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Review
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+                      onClick={() => setSelectedApp(app)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Review
+                    </Button>
+                    {app.archived ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={updatingId === app.id}
+                        className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white bg-transparent"
+                        onClick={() => toggleArchive(app.id, false)}
+                      >
+                        <ArchiveRestore className="h-4 w-4 mr-1" />
+                        Unarchive
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={updatingId === app.id}
+                        className="border-gray-600 text-gray-300 hover:bg-gray-700 bg-transparent"
+                        onClick={() => toggleArchive(app.id, true)}
+                      >
+                        <Archive className="h-4 w-4 mr-1" />
+                        Archive
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>

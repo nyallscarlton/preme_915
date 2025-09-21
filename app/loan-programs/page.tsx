@@ -69,9 +69,9 @@ export default function LoanProgramsPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-white text-black">
       {/* Navigation Bar */}
-      <nav className="border-b border-gray-800">
+      <nav className="border-b border-gray-200">
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center">
@@ -82,22 +82,22 @@ export default function LoanProgramsPage() {
             </Link>
 
             <div className="hidden md:flex items-center space-x-8">
-              <Link href="/" className="text-white hover:text-[#997100] transition-colors font-medium">
+              <Link href="/" className="text-black hover:text-[#997100] transition-colors font-medium">
                 Home
               </Link>
               <Link href="/loan-programs" className="text-[#997100] font-medium">
                 Loan Programs
               </Link>
-              <Link href="/how-it-works" className="text-white hover:text-[#997100] transition-colors font-medium">
+              <Link href="/how-it-works" className="text-black hover:text-[#997100] transition-colors font-medium">
                 How It Works
               </Link>
-              <Link href="/about" className="text-white hover:text-[#997100] transition-colors font-medium">
+              <Link href="/about" className="text-black hover:text-[#997100] transition-colors font-medium">
                 About
               </Link>
-              <Link href="/contact" className="text-white hover:text-[#997100] transition-colors font-medium">
+              <Link href="/contact" className="text-black hover:text-[#997100] transition-colors font-medium">
                 Contact
               </Link>
-              <Link href="/login" className="text-white hover:text-[#997100] transition-colors font-medium">
+              <Link href="/auth" className="text-black hover:text-[#997100] transition-colors font-medium">
                 Login
               </Link>
               <Button className="bg-[#997100] hover:bg-[#b8850a] text-black font-semibold px-6" asChild>
@@ -128,7 +128,7 @@ export default function LoanProgramsPage() {
         <div className="container mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
             {programs.map((program, index) => (
-              <Card key={index} className="bg-gray-900 border-gray-800 hover:border-[#997100] transition-colors">
+              <Card key={index} className="bg-white border-gray-200 hover:border-[#997100] transition-colors">
                 <CardContent className="p-8">
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex items-center">
@@ -136,20 +136,20 @@ export default function LoanProgramsPage() {
                         <program.icon className="h-6 w-6 text-black" />
                       </div>
                       <div>
-                        <h3 className="text-2xl font-bold text-white mb-1">{program.title}</h3>
+                        <h3 className="text-2xl font-bold text-black mb-1">{program.title}</h3>
                         <p className="text-[#997100] font-semibold">{program.rates}</p>
                       </div>
                     </div>
                     <Badge className="bg-[#997100] text-black font-semibold">{program.badge}</Badge>
                   </div>
 
-                  <p className="text-gray-300 mb-6 leading-relaxed">{program.description}</p>
+                  <p className="text-gray-700 mb-6 leading-relaxed">{program.description}</p>
 
                   <div className="space-y-3 mb-8">
                     {program.features.map((feature, featureIndex) => (
                       <div key={featureIndex} className="flex items-center">
                         <CheckCircle className="h-5 w-5 text-[#997100] mr-3 flex-shrink-0" />
-                        <span className="text-gray-300">{feature}</span>
+                        <span className="text-gray-700">{feature}</span>
                       </div>
                     ))}
                   </div>
@@ -165,22 +165,18 @@ export default function LoanProgramsPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 border-t border-gray-800">
+      <section className="py-20 border-t border-gray-200">
         <div className="container mx-auto px-6">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Get Started?</h2>
-            <p className="text-xl text-gray-300 mb-8">
+            <p className="text-xl text-gray-700 mb-8">
               Our lending specialists are standing by to help you choose the right program for your investment goals.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-black font-semibold px-8" asChild>
                 <Link href="/start?next=/apply">Start My Application</Link>
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white hover:text-black bg-transparent"
-              >
+              <Button size="lg" variant="outline" className="border-black text-black hover:bg-black hover:text-white bg-transparent">
                 Schedule a Consultation
               </Button>
             </div>
@@ -189,7 +185,7 @@ export default function LoanProgramsPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800 py-12 mt-12">
+      <footer className="border-t border-gray-200 py-12 mt-12">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
@@ -198,14 +194,14 @@ export default function LoanProgramsPage() {
                 <span className="text-xl font-bold tracking-wide">PREME</span>
               </div>
             </div>
-            <div className="flex space-x-8 text-gray-400">
-              <Link href="#" className="hover:text-[#997100] transition-colors">
+            <div className="flex space-x-8 text-gray-600">
+              <Link href="/privacy" className="hover:text-[#997100] transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="#" className="hover:text-[#997100] transition-colors">
+              <Link href="/terms" className="hover:text-[#997100] transition-colors">
                 Terms of Service
               </Link>
-              <Link href="#" className="hover:text-[#997100] transition-colors">
+              <Link href="/nmls" className="hover:text-[#997100] transition-colors">
                 NMLS Disclosure
               </Link>
             </div>

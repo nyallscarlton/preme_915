@@ -68,9 +68,9 @@ export default function HowItWorksPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-white text-black">
       {/* Navigation Bar */}
-      <nav className="border-b border-gray-800">
+      <nav className="border-b border-gray-200">
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center">
@@ -81,22 +81,22 @@ export default function HowItWorksPage() {
             </Link>
 
             <div className="hidden md:flex items-center space-x-8">
-              <Link href="/" className="text-white hover:text-[#997100] transition-colors font-medium">
+              <Link href="/" className="text-black hover:text-[#997100] transition-colors font-medium">
                 Home
               </Link>
-              <Link href="/loan-programs" className="text-white hover:text-[#997100] transition-colors font-medium">
+              <Link href="/loan-programs" className="text-black hover:text-[#997100] transition-colors font-medium">
                 Loan Programs
               </Link>
               <Link href="/how-it-works" className="text-[#997100] font-medium">
                 How It Works
               </Link>
-              <Link href="/about" className="text-white hover:text-[#997100] transition-colors font-medium">
+              <Link href="/about" className="text-black hover:text-[#997100] transition-colors font-medium">
                 About
               </Link>
-              <Link href="/contact" className="text-white hover:text-[#997100] transition-colors font-medium">
+              <Link href="/contact" className="text-black hover:text-[#997100] transition-colors font-medium">
                 Contact
               </Link>
-              <Link href="/login" className="text-white hover:text-[#997100] transition-colors font-medium">
+              <Link href="/auth" className="text-black hover:text-[#997100] transition-colors font-medium">
                 Login
               </Link>
               <Button className="bg-[#997100] hover:bg-[#b8850a] text-black font-semibold px-6" asChild>
@@ -114,7 +114,7 @@ export default function HowItWorksPage() {
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight tracking-tight">
               How PREME Works
             </h1>
-            <p className="text-xl md:text-2xl text-gray-300 mb-10 leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-700 mb-10 leading-relaxed">
               Get funded in as little as 7 days with our streamlined, technology-driven process.
             </p>
           </div>
@@ -128,15 +128,15 @@ export default function HowItWorksPage() {
             <div className="grid lg:grid-cols-2 gap-12">
               {steps.map((step, index) => (
                 <div key={index} className="relative">
-                  <Card className="bg-gray-900 border-gray-800 hover:border-[#997100] transition-colors h-full">
+                  <Card className="bg-white border-gray-200 hover:border-[#997100] transition-colors h-full">
                     <CardContent className="p-8">
                       <div className="flex items-start mb-6">
                         <div className="bg-[#997100] text-black w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg mr-4 flex-shrink-0">
                           {step.number}
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-2xl font-bold text-white mb-2">{step.title}</h3>
-                          <p className="text-gray-300 leading-relaxed">{step.description}</p>
+                          <h3 className="text-2xl font-bold text-black mb-2">{step.title}</h3>
+                          <p className="text-gray-700 leading-relaxed">{step.description}</p>
                         </div>
                       </div>
 
@@ -144,7 +144,7 @@ export default function HowItWorksPage() {
                         {step.details.map((detail, detailIndex) => (
                           <div key={detailIndex} className="flex items-center">
                             <CheckCircle className="h-4 w-4 text-[#997100] mr-3 flex-shrink-0" />
-                            <span className="text-gray-400 text-sm">{detail}</span>
+                            <span className="text-gray-600 text-sm">{detail}</span>
                           </div>
                         ))}
                       </div>
@@ -165,7 +165,7 @@ export default function HowItWorksPage() {
       </section>
 
       {/* Why Choose PREME */}
-      <section className="py-20 bg-gray-900">
+      <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Why Choose PREME?</h2>
@@ -175,8 +175,8 @@ export default function HowItWorksPage() {
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {benefits.map((benefit, index) => (
               <div key={index} className="text-center">
-                <h3 className="text-xl font-bold text-white mb-4">{benefit.title}</h3>
-                <p className="text-gray-300 leading-relaxed">{benefit.description}</p>
+                <h3 className="text-xl font-bold text-black mb-4">{benefit.title}</h3>
+                <p className="text-gray-700 leading-relaxed">{benefit.description}</p>
               </div>
             ))}
           </div>
@@ -198,11 +198,11 @@ export default function HowItWorksPage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gray-900 border-gray-800">
+              <Card className="bg-white border-gray-200">
                 <CardContent className="p-8 text-center">
-                  <h3 className="text-2xl font-bold text-white mb-4">Traditional Banks</h3>
-                  <div className="text-4xl font-bold text-gray-400 mb-2">30-60 Days</div>
-                  <p className="text-gray-400 font-medium">From application to funding</p>
+                  <h3 className="text-2xl font-bold text-black mb-4">Traditional Banks</h3>
+                  <div className="text-4xl font-bold text-gray-600 mb-2">30-60 Days</div>
+                  <p className="text-gray-600 font-medium">From application to funding</p>
                 </CardContent>
               </Card>
             </div>
@@ -211,22 +211,18 @@ export default function HowItWorksPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 border-t border-gray-800">
+      <section className="py-20 border-t border-gray-200">
         <div className="container mx-auto px-6">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Experience the Difference?</h2>
-            <p className="text-xl text-gray-300 mb-8">
+            <p className="text-xl text-gray-700 mb-8">
               Join thousands of investors who've chosen PREME for faster, smarter real estate financing.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-black font-semibold px-8" asChild>
                 <Link href="/start?next=/apply">Start My Application</Link>
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white hover:text-black bg-transparent"
-              >
+              <Button size="lg" variant="outline" className="border-black text-black hover:bg-black hover:text-white bg-transparent">
                 <Phone className="mr-2 h-5 w-5" />
                 Call (555) 123-PREME
               </Button>
@@ -236,7 +232,7 @@ export default function HowItWorksPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800 py-12 mt-12">
+      <footer className="border-t border-gray-200 py-12 mt-12">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
@@ -245,14 +241,14 @@ export default function HowItWorksPage() {
                 <span className="text-xl font-bold tracking-wide">PREME</span>
               </div>
             </div>
-            <div className="flex space-x-8 text-gray-400">
-              <Link href="#" className="hover:text-[#997100] transition-colors">
+            <div className="flex space-x-8 text-gray-600">
+              <Link href="/privacy" className="hover:text-[#997100] transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="#" className="hover:text-[#997100] transition-colors">
+              <Link href="/terms" className="hover:text-[#997100] transition-colors">
                 Terms of Service
               </Link>
-              <Link href="#" className="hover:text-[#997100] transition-colors">
+              <Link href="/nmls" className="hover:text-[#997100] transition-colors">
                 NMLS Disclosure
               </Link>
             </div>

@@ -132,15 +132,19 @@ export default function ContactPage() {
                     <form className="space-y-6">
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">First Name *</label>
+                          <label htmlFor="firstName" className="block text-sm font-medium text-gray-300 mb-2">First Name *</label>
                           <Input
+                            id="firstName"
+                            name="firstName"
                             placeholder="John"
                             className="bg-black border-gray-700 text-white placeholder-gray-500"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">Last Name *</label>
+                          <label htmlFor="lastName" className="block text-sm font-medium text-gray-300 mb-2">Last Name *</label>
                           <Input
+                            id="lastName"
+                            name="lastName"
                             placeholder="Doe"
                             className="bg-black border-gray-700 text-white placeholder-gray-500"
                           />
@@ -148,8 +152,10 @@ export default function ContactPage() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Email Address *</label>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">Email Address *</label>
                         <Input
+                          id="email"
+                          name="email"
                           type="email"
                           placeholder="john@example.com"
                           className="bg-black border-gray-700 text-white placeholder-gray-500"
@@ -157,8 +163,10 @@ export default function ContactPage() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Phone Number *</label>
+                        <label htmlFor="phone" className="block text-sm font-medium text-gray-300 mb-2">Phone Number *</label>
                         <Input
+                          id="phone"
+                          name="phone"
                           type="tel"
                           placeholder="(555) 123-4567"
                           className="bg-black border-gray-700 text-white placeholder-gray-500"
@@ -166,8 +174,8 @@ export default function ContactPage() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Loan Type</label>
-                        <select className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white">
+                        <label htmlFor="loanType" className="block text-sm font-medium text-gray-300 mb-2">Loan Type</label>
+                        <select id="loanType" name="loanType" className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white">
                           <option value="">Select loan type</option>
                           <option value="dscr">DSCR Loan</option>
                           <option value="business">Business Credit</option>
@@ -178,16 +186,20 @@ export default function ContactPage() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Loan Amount</label>
+                        <label htmlFor="loanAmount" className="block text-sm font-medium text-gray-300 mb-2">Loan Amount</label>
                         <Input
+                          id="loanAmount"
+                          name="loanAmount"
                           placeholder="$500,000"
                           className="bg-black border-gray-700 text-white placeholder-gray-500"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Message</label>
+                        <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">Message</label>
                         <Textarea
+                          id="message"
+                          name="message"
                           placeholder="Tell us about your project and financing needs..."
                           rows={4}
                           className="bg-black border-gray-700 text-white placeholder-gray-500"
