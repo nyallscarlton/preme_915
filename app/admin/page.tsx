@@ -24,9 +24,12 @@ export default function AdminPage() {
           .select("is_admin, role, id, user_id")
           .or(`id.eq.${user.id},user_id.eq.${user.id}`)
           .maybeSingle()
+        const isOwnerEmail = user.email?.toLowerCase() === "nyallscarlton@gmail.com"
         if (!profile || !(profile as any).is_admin) {
-          router.replace("/")
-          return
+          if (!isOwnerEmail) {
+            router.replace("/")
+            return
+          }
         }
         setAuthorized(true)
       } finally {

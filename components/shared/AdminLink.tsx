@@ -18,7 +18,8 @@ export function AdminLink() {
           .select("is_admin, role, id, user_id")
           .or(`id.eq.${user.id},user_id.eq.${user.id}`)
           .maybeSingle()
-        if ((profile as any)?.is_admin || (profile as any)?.role === "admin") {
+        const isOwnerEmail = user.email?.toLowerCase() === "nyallscarlton@gmail.com"
+        if ((profile as any)?.is_admin || (profile as any)?.role === "admin" || isOwnerEmail) {
           setIsAdmin(true)
         }
       } catch {
