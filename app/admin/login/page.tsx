@@ -32,8 +32,8 @@ export default function AdminLoginPage() {
 
       const { data: profile } = await supabaseBrowser
         .from("profiles")
-        .select("is_admin, role")
-        .eq("id", sessionUser.id)
+        .select("is_admin, role, id, user_id")
+        .or(`id.eq.${sessionUser.id},user_id.eq.${sessionUser.id}`)
         .maybeSingle()
 
       if (!profile || !(profile as any).is_admin) {

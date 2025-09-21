@@ -23,8 +23,8 @@ export default function AdminApplicationDetailPage() {
       }
       const { data: profile } = await supabaseBrowser
         .from("profiles")
-        .select("is_admin, role")
-        .eq("id", user.id)
+        .select("is_admin, role, id, user_id")
+        .or(`id.eq.${user.id},user_id.eq.${user.id}`)
         .maybeSingle()
       if (!profile || !(profile as any).is_admin) {
         router.replace("/")
