@@ -1,16 +1,8 @@
 import { createClient } from "@supabase/supabase-js"
 
 export const supabaseBrowser = (() => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(`Missing Supabase environment variables:
-    - NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? "Set" : "Missing"}
-    - NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? "Set" : "Missing"}
-    
-    Please add these to your Vercel project environment variables.`)
-  }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://hriipovloelnqrlwtswy.supabase.co"
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyaWlwb3Zsb2VsbnFybHd0c3d5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0NjIwNzUsImV4cCI6MjA3MTAzODA3NX0.t2ym8L4t-m5NuIcorSomRqfpjvFEpyXxAvoqmvvuO5c"
 
   return createClient(supabaseUrl, supabaseAnonKey)
 })()
