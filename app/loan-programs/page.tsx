@@ -115,7 +115,7 @@ export default function LoanProgramsPage() {
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight tracking-tight">
               Loan Programs Built for Investors
             </h1>
-            <p className="text-xl md:text-2xl text-gray-300 mb-10 leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-600 mb-10 leading-relaxed">
               From DSCR loans to commercial financing — we have the capital solutions to scale your real estate
               portfolio.
             </p>

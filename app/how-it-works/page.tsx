@@ -169,7 +169,7 @@ export default function HowItWorksPage() {
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Why Choose PREME?</h2>
-            <p className="text-xl text-gray-300">We've reimagined real estate financing for the modern investor</p>
+            <p className="text-xl text-gray-600">We've reimagined real estate financing for the modern investor</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">

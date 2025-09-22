@@ -45,7 +45,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight tracking-tight">About PREME</h1>
-            <p className="text-xl md:text-2xl text-gray-300 mb-10 leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-600 mb-10 leading-relaxed">
               Funding for modern real estate investors. Built by investors, for investors.
             </p>
           </div>
@@ -54,7 +54,7 @@ export default function AboutPage() {
 
       <section className="py-16">
         <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto space-y-6 text-gray-300 leading-relaxed">
+          <div className="max-w-4xl mx-auto space-y-6 text-gray-600 leading-relaxed">
             <p>
               PREME delivers fast, technology-driven lending solutions tailored for real estate investors. We combine
               private capital with modern underwriting to move as quickly as your deals do.
