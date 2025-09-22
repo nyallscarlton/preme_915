@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { MobileNav } from "@/components/MobileNav"
 
-// Trigger deployment update
+// Force deployment to premerealestate.com
 
 export default function AboutPage() {
   return (
