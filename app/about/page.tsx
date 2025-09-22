@@ -2,6 +2,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { MobileNav } from "@/components/MobileNav"
 
+// Trigger deployment update
+
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white text-black">
