@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Home, CreditCard, Hammer, Building2, CheckCircle } from "lucide-react"
 import Link from "next/link"
+import { MobileNav } from "@/components/MobileNav"
 
 export default function LoanProgramsPage() {
   const programs = [
@@ -104,6 +105,9 @@ export default function LoanProgramsPage() {
                 <Link href="/start?next=/apply">Start Application</Link>
               </Button>
             </div>
+
+            {/* Mobile Navigation */}
+            <MobileNav currentPage="loan-programs" />
           </div>
         </div>
       </nav>

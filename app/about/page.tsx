@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { MobileNav } from "@/components/MobileNav"
 
 export default function AboutPage() {
   return (
@@ -37,6 +38,9 @@ export default function AboutPage() {
                 <Link href="/start?next=/apply">Start Application</Link>
               </Button>
             </div>
+
+            {/* Mobile Navigation */}
+            <MobileNav currentPage="about" />
           </div>
         </div>
       </nav>

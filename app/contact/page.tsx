@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Phone, Mail, Clock, MapPin, Calendar } from "lucide-react"
 import Link from "next/link"
+import { MobileNav } from "@/components/MobileNav"
 
 export default function ContactPage() {
   return (
@@ -42,6 +43,9 @@ export default function ContactPage() {
                 <Link href="/start?next=/apply">Start Application</Link>
               </Button>
             </div>
+
+            {/* Mobile Navigation */}
+            <MobileNav currentPage="contact" />
           </div>
         </div>
       </nav>

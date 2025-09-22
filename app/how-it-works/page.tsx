@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowRight, FileText, Clock, Shield, CheckCircle, Phone } from "lucide-react"
 import Link from "next/link"
+import { MobileNav } from "@/components/MobileNav"
 
 export default function HowItWorksPage() {
   const steps = [
@@ -103,6 +104,9 @@ export default function HowItWorksPage() {
                 <Link href="/start?next=/apply">Start Application</Link>
               </Button>
             </div>
+
+            {/* Mobile Navigation */}
+            <MobileNav currentPage="how-it-works" />
           </div>
         </div>
       </nav>
