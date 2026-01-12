@@ -4,42 +4,47 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { ArrowRight, CheckCircle } from "lucide-react"
+import { CheckCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { supabaseBrowser } from "@/lib/supabase/browserClient"
 import { GuestContactForm } from "@/components/application/guest-contact-form"
 import { LoanDetailsForm } from "@/components/application/loan-details-form"
 import { PropertyInfoForm } from "@/components/application/property-info-form"
 import { FinancialInfoForm } from "@/components/application/financial-info-form"
 import { SponsorInfoForm } from "@/components/application/sponsor-info-form"
 import { LiquidityInfoForm } from "@/components/application/liquidity-info-form"
+import { DocumentUploadForm } from "@/components/application/document-upload-form"
 import { ReviewSubmitForm } from "@/components/application/review-submit-form"
 
 const steps = [
   { id: 1, title: "Contact Info", description: "Your contact information" },
-  { id: 2, title: "Loan Details", description: "Basic loan information" },
-  { id: 3, title: "Property Info", description: "Property details" },
+  { id: 2, title: "Property Info", description: "Property details" },
+  { id: 3, title: "Loan Details", description: "Basic loan information" },
   { id: 4, title: "Financial Info", description: "Income and employment" },
   { id: 5, title: "Sponsor Info", description: "Sponsor details (if applicable)" },
   { id: 6, title: "Liquidity", description: "Assets and reserves" },
-  { id: 7, title: "Review & Submit", description: "Final review" },
+  { id: 7, title: "Documents", description: "Upload required documents" },
+  { id: 8, title: "Review & Submit", description: "Final review" },
 ]
 
 const accountSteps = [
-  { id: 1, title: "Loan Details", description: "Basic loan information" },
-  { id: 2, title: "Property Info", description: "Property details" },
+  { id: 1, title: "Property Info", description: "Property details" },
+  { id: 2, title: "Loan Details", description: "Basic loan information" },
   { id: 3, title: "Financial Info", description: "Income and employment" },
   { id: 4, title: "Sponsor Info", description: "Sponsor details (if applicable)" },
   { id: 5, title: "Liquidity", description: "Assets and reserves" },
-  { id: 6, title: "Review & Submit", description: "Final review" },
+  { id: 6, title: "Documents", description: "Upload required documents" },
+  { id: 7, title: "Review & Submit", description: "Final review" },
 ]
 
 export default function LoanApplicationPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [authChoice, setAuthChoice] = useState<"account" | "guest" | null>(null)
-  const [formData, setFormData] = useState({})
+  const [formData, setFormData] = useState<any>({})
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
+  const [applicationNumber, setApplicationNumber] = useState<string | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -70,21 +75,86 @@ export default function LoanApplicationPage() {
   }
 
   const handleSubmit = async () => {
-    console.log("Submitting application:", { ...formData, authChoice })
+    setIsSubmitting(true)
+    setSubmissionError(null)
 
-    if (authChoice === "guest") {
-      // Generate guest token for tracking
-      const guestToken = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      console.log("Generated guest token:", guestToken)
+    try {
+      // Prepare the application data for the API
+      const applicationData = {
+        // Contact info
+        applicant_email: formData.email || "",
+        applicant_name: `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
+        applicant_phone: formData.phone || "",
+        contact_address: formData.address || "",
+        contact_city: formData.city || "",
+        contact_state: formData.state || "",
+        contact_zip: formData.zipCode || "",
 
-      // In a real app, this would:
-      // 1. Save application to database with guest token
-      // 2. Send magic link email to user
-      // 3. Store token for later access
-      setFormData((prev) => ({ ...prev, guestToken }))
+        // Loan details
+        loan_amount: Number.parseFloat(formData.loanAmount) || 0,
+        loan_purpose: formData.loanPurpose || "",
+        loan_type: formData.propertyType || "",
+
+        // Property info
+        property_address: formData.propertyAddress || "",
+        property_city: formData.propertyCity || "",
+        property_state: formData.propertyState || "",
+        property_zip: formData.propertyZip || "",
+        property_type: formData.propertyType || "",
+        property_value: Number.parseFloat(formData.propertyValue) || 0,
+
+        // Financial info
+        annual_income: Number.parseFloat(formData.annualIncome) || 0,
+        employment_status: formData.employmentStatus || "",
+        employer_name: formData.employerName || "",
+        credit_score_range: formData.creditScore || "",
+
+        // Sponsor info
+        has_sponsor: formData.hasSponsor || false,
+        sponsor_name: formData.sponsorName || "",
+        sponsor_email: formData.sponsorEmail || "",
+        sponsor_phone: formData.sponsorPhone || "",
+
+        // Liquidity info
+        cash_reserves: Number.parseFloat(formData.cashReserves) || 0,
+        investment_accounts: Number.parseFloat(formData.investmentAccounts) || 0,
+        retirement_accounts: Number.parseFloat(formData.retirementAccounts) || 0,
+
+        // Guest flag
+        is_guest: authChoice === "guest",
+      }
+
+      console.log("[v0] Submitting application to API:", applicationData)
+
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(applicationData),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to submit application")
+      }
+
+      console.log("[v0] Application submitted successfully:", result)
+
+      // Store the application number for display
+      setApplicationNumber(result.application?.application_number || null)
+      setFormData((prev: any) => ({
+        ...prev,
+        guestToken: result.application?.guest_token,
+      }))
+      setIsSubmitted(true)
+    } catch (error) {
+      console.error("[v0] Error submitting application:", error)
+      setSubmissionError(error instanceof Error ? error.message : "Failed to submit application")
+    } finally {
+      setIsSubmitting(false)
     }
-
-    setIsSubmitted(true)
   }
 
   const renderStepContent = () => {
@@ -100,10 +170,17 @@ export default function LoanApplicationPage() {
             />
           )
         case 2:
-          return <LoanDetailsForm onNext={handleNext} onDataChange={handleStepData} initialData={formData} />
-        case 3:
           return (
             <PropertyInfoForm
+              onNext={handleNext}
+              onPrevious={handlePrevious}
+              onDataChange={handleStepData}
+              initialData={formData}
+            />
+          )
+        case 3:
+          return (
+            <LoanDetailsForm
               onNext={handleNext}
               onPrevious={handlePrevious}
               onDataChange={handleStepData}
@@ -138,16 +215,25 @@ export default function LoanApplicationPage() {
             />
           )
         case 7:
+          return (
+            <DocumentUploadForm
+              onNext={handleNext}
+              onPrevious={handlePrevious}
+              onDataChange={handleStepData}
+              initialData={formData}
+            />
+          )
+        case 8:
           return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
         default:
           return null
       }
     } else {
-      // Account creation flow (existing logic)
+      // Account creation flow
       switch (currentStep) {
         case 1:
           return (
-            <LoanDetailsForm
+            <PropertyInfoForm
               onNext={handleNext}
               onPrevious={handlePrevious}
               onDataChange={handleStepData}
@@ -156,7 +242,7 @@ export default function LoanApplicationPage() {
           )
         case 2:
           return (
-            <PropertyInfoForm
+            <LoanDetailsForm
               onNext={handleNext}
               onPrevious={handlePrevious}
               onDataChange={handleStepData}
@@ -191,6 +277,15 @@ export default function LoanApplicationPage() {
             />
           )
         case 6:
+          return (
+            <DocumentUploadForm
+              onNext={handleNext}
+              onPrevious={handlePrevious}
+              onDataChange={handleStepData}
+              initialData={formData}
+            />
+          )
+        case 7:
           return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
         default:
           return null
@@ -207,34 +302,13 @@ export default function LoanApplicationPage() {
       }
 
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabaseBrowser.auth.getSession()
-        if (error) throw error
+        // Mock auth check - in production this would check actual auth
+        const mockSession = null // No session for demo purposes
 
-        if (session?.user?.email_confirmed_at) {
+        if (mockSession?.user?.email_confirmed_at) {
+          // User is authenticated and verified, start with account flow
           setAuthChoice("account")
           setCurrentStep(1)
-          // Load profile to prefill
-          const { data: prof } = await supabaseBrowser
-            .from("profiles")
-            .select("full_name, email, phone")
-            .eq("user_id", session.user.id)
-            .maybeSingle()
-          if (prof) {
-            setFormData((prev: any) => ({
-              ...prev,
-              email: prof.email || session.user.email,
-              fullName: prof.full_name,
-              phone: prof.phone || prev.phone,
-            }))
-          } else {
-            setFormData((prev: any) => ({ ...prev, email: session.user.email }))
-          }
-        } else {
-          // No verified session → route to auth with next
-          router.push(`/auth?next=${encodeURIComponent("/apply")}`)
         }
       } catch (error) {
         console.error("Error checking auth:", error)
@@ -243,9 +317,28 @@ export default function LoanApplicationPage() {
     }
 
     checkAuth()
-  }, [isGuestMode, router])
+  }, [isGuestMode])
 
-  // Remove secondary mock guard to prevent conflicting redirects
+  useEffect(() => {
+    const checkAuthGuard = async () => {
+      // Skip guard if guest mode or already have auth choice
+      if (isGuestMode || authChoice) return
+
+      try {
+        // Mock session check - in production this would check actual auth
+        const mockSession = null // No session for demo purposes
+
+        // If no session and not guest mode, redirect to auth
+        if (!mockSession?.user && !isGuestMode && currentStep === 0) {
+          router.push(`/auth?next=${encodeURIComponent("/apply")}`)
+        }
+      } catch (error) {
+        console.error("Error in auth guard:", error)
+      }
+    }
+
+    checkAuthGuard()
+  }, [isGuestMode, authChoice, currentStep, router])
 
   if (isSubmitted) {
     return (
@@ -321,10 +414,7 @@ export default function LoanApplicationPage() {
               <p className="text-gray-600">
                 Application Reference:{" "}
                 <span className="text-[#997100] font-mono">
-                  PREME-2024-
-                  {Math.floor(Math.random() * 1000)
-                    .toString()
-                    .padStart(3, "0")}
+                  {applicationNumber || `PREME-${Date.now().toString(36).toUpperCase()}`}
                 </span>
               </p>
               {authChoice === "guest" && (
@@ -351,7 +441,7 @@ export default function LoanApplicationPage() {
               <div className="flex justify-center space-x-4">
                 {authChoice === "account" ? (
                   <Button asChild className="bg-[#997100] hover:bg-[#997100]/90 text-white">
-                    <Link href="/portal">Go back to Portal</Link>
+                    <Link href="/login">Access Portal</Link>
                   </Button>
                 ) : (
                   <Button asChild className="bg-[#997100] hover:bg-[#997100]/90 text-white">
@@ -420,11 +510,8 @@ export default function LoanApplicationPage() {
             </Link>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-600">
-                {authChoice === "account" ? "Account Application" : "Guest Application"}
+                {authChoice === "account" ? "Creating Account" : "Guest Application"}
               </div>
-              <Link href="/dashboard" className="text-sm text-[#997100] hover:text-[#b8850a] underline">
-                Go to Dashboard
-              </Link>
               <div className="text-sm text-gray-600">
                 Step {currentStep} of {currentSteps.length}
               </div>
@@ -439,21 +526,22 @@ export default function LoanApplicationPage() {
           <div className="container mx-auto px-6 py-3">
             <div className="text-center">
               <span className="text-sm text-blue-800">
-                Prefer to save progress?{" "}
-                <Link href="/auth?next=/apply" className="font-medium text-blue-600 hover:text-blue-500 underline">
-                  Sign in to apply
-                </Link>
+                Have an account?{" "}
+                <Link href="/login" className="font-semibold underline hover:text-blue-900">
+                  Sign in
+                </Link>{" "}
+                to save your progress and access more features.
               </span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Progress Bar */}
+      {/* Progress */}
       <div className="border-b border-gray-200">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-2xl font-bold text-gray-900">Loan Application</h1>
+            <span className="text-sm font-medium text-gray-900">{currentSteps[currentStep - 1]?.title}</span>
             <span className="text-sm text-gray-600">{Math.round(progress)}% Complete</span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -461,44 +549,45 @@ export default function LoanApplicationPage() {
       </div>
 
       {/* Step Navigation */}
-      <div className="border-b border-gray-200">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center space-x-4 overflow-x-auto">
+      <div className="border-b border-gray-200 overflow-x-auto">
+        <div className="container mx-auto px-6">
+          <div className="flex space-x-1">
             {currentSteps.map((step, index) => (
-              <div
+              <button
                 key={step.id}
-                className={`flex items-center space-x-2 whitespace-nowrap ${
-                  step.id === currentStep
-                    ? "text-[#997100]"
-                    : step.id < currentStep
-                      ? "text-green-500"
-                      : "text-gray-600"
+                onClick={() => index + 1 < currentStep && setCurrentStep(index + 1)}
+                disabled={index + 1 > currentStep}
+                className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                  index + 1 === currentStep
+                    ? "text-[#997100] border-b-2 border-[#997100]"
+                    : index + 1 < currentStep
+                      ? "text-gray-600 hover:text-gray-900 cursor-pointer"
+                      : "text-gray-400 cursor-not-allowed"
                 }`}
               >
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                    step.id === currentStep
-                      ? "bg-[#997100] text-white"
-                      : step.id < currentStep
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-200 text-gray-600"
-                  }`}
-                >
-                  {step.id < currentStep ? "✓" : step.id}
-                </div>
-                <div className="hidden md:block">
-                  <div className="font-medium">{step.title}</div>
-                  <div className="text-xs text-gray-600">{step.description}</div>
-                </div>
-                {index < currentSteps.length - 1 && <ArrowRight className="h-4 w-4 text-gray-600 hidden md:block" />}
-              </div>
+                {step.title}
+              </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Form Content */}
-      <main className="container mx-auto px-6 py-8">{renderStepContent()}</main>
+      {/* Main Content */}
+      <main className="container mx-auto px-6 py-8">
+        {submissionError && (
+          <div className="max-w-2xl mx-auto mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+            <strong>Error:</strong> {submissionError}
+          </div>
+        )}
+        {isSubmitting ? (
+          <div className="max-w-2xl mx-auto text-center py-12">
+            <Loader2 className="h-12 w-12 animate-spin text-[#997100] mx-auto mb-4" />
+            <p className="text-lg text-gray-600">Submitting your application...</p>
+          </div>
+        ) : (
+          renderStepContent()
+        )}
+      </main>
     </div>
   )
 }

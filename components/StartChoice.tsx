@@ -4,8 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { User, UserPlus } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useState } from "react"
-import { supabaseBrowser } from "@/lib/supabase/browserClient"
 
 interface StartChoiceProps {
   isOpen: boolean
@@ -14,25 +12,6 @@ interface StartChoiceProps {
 }
 
 export function StartChoice({ isOpen, onClose, nextUrl = "/apply" }: StartChoiceProps) {
-  const [hasSession, setHasSession] = useState<boolean>(false)
-
-  useEffect(() => {
-    let mounted = true
-    const check = async () => {
-      try {
-        const { data } = await supabaseBrowser.auth.getSession()
-        if (!mounted) return
-        setHasSession(Boolean(data.session?.user?.email_confirmed_at))
-      } catch {
-        setHasSession(false)
-      }
-    }
-    check()
-    return () => {
-      mounted = false
-    }
-  }, [])
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md bg-white border-gray-200">
@@ -42,25 +21,14 @@ export function StartChoice({ isOpen, onClose, nextUrl = "/apply" }: StartChoice
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-6">
-          {hasSession && (
-            <Button
-              asChild
-              size="lg"
-              className="w-full h-16 bg-[#0f766e] hover:bg-[#115e59] text-white font-semibold text-lg"
-            >
-              <Link href="/dashboard" onClick={onClose}>
-                Go to Dashboard
-              </Link>
-            </Button>
-          )}
           <Button
             asChild
             size="lg"
             className="w-full h-16 bg-[#997100] hover:bg-[#b8850a] text-white font-semibold text-lg"
           >
-            <Link href={hasSession ? "/apply" : `${nextUrl}?guest=1`} onClick={onClose}>
+            <Link href={`${nextUrl}?guest=1`} onClick={onClose}>
               <User className="mr-3 h-6 w-6" />
-              Continue as {hasSession ? "Account" : "Guest"}
+              Continue as Guest
             </Link>
           </Button>
 

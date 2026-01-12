@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,8 @@ import {
   CheckCircle,
   AlertCircle,
   Eye,
+  Loader2,
+  RefreshCw,
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
@@ -25,59 +27,82 @@ import { UsersManagement } from "@/components/admin/users-management"
 import { AdminMessaging } from "@/components/admin/admin-messaging"
 import { SystemSettings } from "@/components/admin/system-settings"
 
-// Mock data for admin dashboard
-const mockApplications = [
-  {
-    id: "PREME-2024-001",
-    applicantName: "John Smith",
-    applicantEmail: "john.smith@email.com",
-    propertyAddress: "123 Main Street, Beverly Hills, CA 90210",
-    loanAmount: 450000,
-    status: "under_review",
-    submittedAt: "2024-01-15T10:30:00Z",
-    loanType: "Single Family Home",
-    progress: 65,
-    assignedTo: "Sarah Johnson",
-  },
-  {
-    id: "PREME-2024-002",
-    applicantName: "Jane Doe",
-    applicantEmail: "jane.doe@email.com",
-    propertyAddress: "456 Oak Avenue, Manhattan Beach, CA 90266",
-    loanAmount: 750000,
-    status: "approved",
-    submittedAt: "2024-01-10T14:20:00Z",
-    loanType: "Condominium",
-    progress: 100,
-    assignedTo: "Mike Chen",
-  },
-  {
-    id: "PREME-2024-003",
-    applicantName: "Robert Wilson",
-    applicantEmail: "robert.wilson@email.com",
-    propertyAddress: "789 Pine Street, Santa Monica, CA 90401",
-    loanAmount: 625000,
-    status: "submitted",
-    submittedAt: "2024-01-16T09:15:00Z",
-    loanType: "Townhouse",
-    progress: 25,
-    assignedTo: null,
-  },
-]
-
-const mockStats = {
-  totalApplications: 15,
-  pendingReview: 8,
-  approved: 5,
-  rejected: 2,
-  totalLoanVolume: 12500000,
-  avgProcessingTime: 7.5,
-  approvalRate: 71.4,
+interface Application {
+  id: string
+  applicantName: string
+  applicantEmail: string
+  propertyAddress: string
+  loanAmount: number
+  status: string
+  submittedAt: string
+  loanType: string
+  progress: number
+  assignedTo: string | null
 }
 
 export function AdminDashboard() {
   const { user, signOut } = useAuth()
   const [activeTab, setActiveTab] = useState("dashboard")
+  const [applications, setApplications] = useState<Application[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchApplications = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      console.log("[v0] Fetching applications from API...")
+      const response = await fetch("/api/applications")
+      const result = await response.json()
+
+      console.log("[v0] API response:", result)
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to fetch applications")
+      }
+
+      // Transform API data to match component interface
+      const transformedApps = (result.applications || []).map((app: any) => ({
+        id: app.application_number || app.id,
+        applicantName: app.applicant_name || "Unknown",
+        applicantEmail: app.applicant_email || "",
+        propertyAddress:
+          [app.property_address, app.property_city, app.property_state].filter(Boolean).join(", ") || "N/A",
+        loanAmount: app.loan_amount || 0,
+        status: app.status || "submitted",
+        submittedAt: app.submitted_at || app.created_at || new Date().toISOString(),
+        loanType: app.loan_type || app.property_type || "N/A",
+        progress: app.status === "approved" ? 100 : app.status === "under_review" ? 65 : 25,
+        assignedTo: null,
+      }))
+
+      console.log("[v0] Transformed applications:", transformedApps)
+      setApplications(transformedApps)
+    } catch (err) {
+      console.error("[v0] Error fetching applications:", err)
+      setError(err instanceof Error ? err.message : "Failed to fetch applications")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchApplications()
+  }, [fetchApplications])
+
+  const stats = {
+    totalApplications: applications.length,
+    pendingReview: applications.filter((a) => a.status === "submitted" || a.status === "under_review").length,
+    approved: applications.filter((a) => a.status === "approved").length,
+    rejected: applications.filter((a) => a.status === "rejected").length,
+    totalLoanVolume: applications.reduce((sum, a) => sum + (a.loanAmount || 0), 0),
+    avgProcessingTime: 7.5,
+    approvalRate:
+      applications.length > 0
+        ? Math.round((applications.filter((a) => a.status === "approved").length / applications.length) * 100 * 10) / 10
+        : 0,
+  }
 
   const handleSignOut = async () => {
     await signOut()
@@ -96,6 +121,8 @@ export function AdminDashboard() {
         return "bg-red-600 text-white"
       case "on_hold":
         return "bg-orange-600 text-white"
+      case "archived":
+        return "bg-gray-500 text-white"
       default:
         return "bg-gray-600 text-white"
     }
@@ -123,14 +150,6 @@ export function AdminDashboard() {
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ")
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
   }
 
   return (
@@ -168,10 +187,30 @@ export function AdminDashboard() {
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage loan applications and system operations</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
+            <p className="text-muted-foreground">Manage loan applications and system operations</p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={fetchApplications}
+            disabled={isLoading}
+            className="border-border text-foreground hover:bg-muted bg-transparent"
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            Refresh
+          </Button>
         </div>
+
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+            <p className="text-sm font-medium">Error: {error}</p>
+            <Button variant="link" className="text-red-800 underline p-0 h-auto" onClick={fetchApplications}>
+              Try again
+            </Button>
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-5 bg-muted border border-border">
@@ -222,7 +261,9 @@ export function AdminDashboard() {
                   <FileText className="h-4 w-4 text-[#997100]" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-foreground">{mockStats.totalApplications}</div>
+                  <div className="text-2xl font-bold text-foreground">
+                    {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats.totalApplications}
+                  </div>
                   <p className="text-xs text-muted-foreground">All time applications</p>
                 </CardContent>
               </Card>
@@ -233,7 +274,9 @@ export function AdminDashboard() {
                   <Clock className="h-4 w-4 text-yellow-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-foreground">{mockStats.pendingReview}</div>
+                  <div className="text-2xl font-bold text-foreground">
+                    {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats.pendingReview}
+                  </div>
                   <p className="text-xs text-muted-foreground">Awaiting review</p>
                 </CardContent>
               </Card>
@@ -245,7 +288,13 @@ export function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-foreground">
-                    ${(mockStats.totalLoanVolume / 1000000).toFixed(1)}M
+                    {isLoading ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : stats.totalLoanVolume >= 1000000 ? (
+                      `$${(stats.totalLoanVolume / 1000000).toFixed(1)}M`
+                    ) : (
+                      `$${stats.totalLoanVolume.toLocaleString()}`
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">Total processed</p>
                 </CardContent>
@@ -257,8 +306,10 @@ export function AdminDashboard() {
                   <TrendingUp className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-foreground">{mockStats.approvalRate}%</div>
-                  <p className="text-xs text-muted-foreground">Last 30 days</p>
+                  <div className="text-2xl font-bold text-foreground">
+                    {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : `${stats.approvalRate}%`}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Overall rate</p>
                 </CardContent>
               </Card>
             </div>
@@ -283,36 +334,47 @@ export function AdminDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {mockApplications.slice(0, 5).map((app) => (
-                    <div key={app.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        {getStatusIcon(app.status)}
-                        <div>
-                          <p className="font-medium text-foreground">{app.id}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {app.applicantName} • {app.propertyAddress}
-                          </p>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : applications.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No applications yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {applications.slice(0, 5).map((app) => (
+                      <div key={app.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                        <div className="flex items-center space-x-4">
+                          {getStatusIcon(app.status)}
+                          <div>
+                            <p className="font-medium text-foreground">{app.id}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {app.applicantName} • {app.propertyAddress}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="text-right">
+                            <p className="font-medium text-foreground">${app.loanAmount.toLocaleString()}</p>
+                            <Badge className={getStatusColor(app.status)}>{formatStatus(app.status)}</Badge>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-border text-foreground hover:bg-muted bg-transparent"
+                            onClick={() => setActiveTab("applications")}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Review
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <p className="font-medium text-foreground">${app.loanAmount.toLocaleString()}</p>
-                          <Badge className={getStatusColor(app.status)}>{formatStatus(app.status)}</Badge>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-border text-foreground hover:bg-muted bg-transparent"
-                          onClick={() => setActiveTab("applications")}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Review
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -373,7 +435,7 @@ export function AdminDashboard() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Avg Processing Time</span>
-                      <span className="text-foreground font-medium">{mockStats.avgProcessingTime} days</span>
+                      <span className="text-foreground font-medium">{stats.avgProcessingTime} days</span>
                     </div>
                   </div>
                 </CardContent>
@@ -381,9 +443,9 @@ export function AdminDashboard() {
             </div>
           </TabsContent>
 
-          {/* Applications Tab */}
+          {/* Applications Tab - Pass real applications and refresh callback */}
           <TabsContent value="applications" className="mt-6">
-            <ApplicationsManagement applications={mockApplications} />
+            <ApplicationsManagement applications={applications} onRefresh={fetchApplications} />
           </TabsContent>
 
           {/* Users Tab */}
@@ -393,7 +455,7 @@ export function AdminDashboard() {
 
           {/* Messages Tab */}
           <TabsContent value="messages" className="mt-6">
-            <AdminMessaging applications={mockApplications} />
+            <AdminMessaging applications={applications} />
           </TabsContent>
 
           {/* Settings Tab */}

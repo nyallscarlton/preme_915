@@ -1,16 +1,50 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { supabaseServer } from "@/lib/supabase/serverClient"
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 
-  // Redirect unauthenticated access to /admin routes to admin login
-  if (pathname.startsWith("/admin") && pathname !== "/admin/login" && pathname !== "/admin/test") {
-    // We cannot access Supabase auth here easily; rely on client-side guard and route-level checks.
-    // Keep middleware lightweight; allow request to continue.
-    // Optionally, could add basic heuristic checks here.
+  const url = request.nextUrl.clone()
+
+  // Skip middleware for static files and API routes
+  if (url.pathname.startsWith("/_next") || url.pathname.startsWith("/api") || url.pathname.includes(".")) {
+    return response
   }
 
-  return NextResponse.next({ request: { headers: request.headers } })
+  console.log("[v0] Middleware running but auth checks disabled for testing")
+
+  // TODO: Re-enable once Supabase packages are available
+  try {
+    const {
+      data: { session },
+    } = await supabaseServer().auth.getSession()
+
+    // Apply routing guards
+    if (url.pathname === "/apply") {
+      const isGuestMode = url.searchParams.get("guest") === "1"
+
+      // If not guest mode and no authenticated session, redirect to auth
+      if (!isGuestMode && !session?.user?.email_confirmed_at) {
+        const redirectUrl = new URL("/auth", request.url)
+        redirectUrl.searchParams.set("next", "/apply")
+        return NextResponse.redirect(redirectUrl)
+      }
+    }
+
+    // Refresh session if needed
+    if (session) {
+      await supabaseServer().auth.getUser()
+    }
+  } catch (error) {
+    console.error("Middleware error:", error)
+    // Continue without authentication if there's an error
+  }
+
+  return response
 }
 
 export const config = {

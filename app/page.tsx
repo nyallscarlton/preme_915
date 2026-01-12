@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { LogIn, Clock } from "lucide-react"
 import Link from "next/link"
 import { StartChoice } from "@/components/StartChoice"
-import { MobileNav } from "@/components/MobileNav"
 
 export default function LuxuryLandingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -49,15 +48,12 @@ export default function LuxuryLandingPage() {
                 Login
               </Link>
               <Button
-                className="bg-[#997100] hover:bg-[#b8850a] text-black font-semibold px-6"
+                className="bg-[#997100] hover:bg-[#b8850a] text-white font-semibold px-6"
                 onClick={handleStartApplication}
               >
                 Start Application
               </Button>
             </div>
-
-            {/* Mobile Navigation */}
-            <MobileNav currentPage="home" />
           </div>
         </div>
       </nav>

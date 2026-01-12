@@ -2,44 +2,29 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
 import { AdminDashboard } from "@/components/admin-dashboard"
-import { supabaseBrowser } from "@/lib/supabase/browserClient"
 
 export default function AdminPage() {
+  const { user, loading } = useAuth()
   const router = useRouter()
-  const [authorized, setAuthorized] = useState<boolean>(false)
-  const [checking, setChecking] = useState<boolean>(true)
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    const check = async () => {
-      try {
-        const { data: { session } } = await supabaseBrowser.auth.getSession()
-        const user = session?.user
-        if (!user) {
-          router.replace("/admin/login")
-          return
-        }
-        const { data: profile } = await supabaseBrowser
-          .from("profiles")
-          .select("is_admin, role, id, user_id")
-          .or(`id.eq.${user.id},user_id.eq.${user.id}`)
-          .maybeSingle()
-        const isOwnerEmail = user.email?.toLowerCase() === "nyallscarlton@gmail.com"
-        if (!profile || !(profile as any).is_admin) {
-          if (!isOwnerEmail) {
-            router.replace("/")
-            return
-          }
-        }
-        setAuthorized(true)
-      } finally {
-        setChecking(false)
+    setIsClient(true)
+  }, [])
+
+  useEffect(() => {
+    if (!loading && isClient) {
+      if (!user) {
+        router.push("/login")
+      } else if (user.role !== "admin") {
+        router.push("/portal")
       }
     }
-    check()
-  }, [router])
+  }, [user, loading, router, isClient])
 
-  if (checking) {
+  if (loading || !isClient) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="text-center">
@@ -50,7 +35,9 @@ export default function AdminPage() {
     )
   }
 
-  if (!authorized) return null
+  if (!user || user.role !== "admin") {
+    return null
+  }
 
   return <AdminDashboard />
 }

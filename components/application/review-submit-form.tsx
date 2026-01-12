@@ -3,15 +3,23 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Send } from "lucide-react"
+import { ArrowLeft, Send, Loader2 } from "lucide-react"
 
 interface ReviewSubmitFormProps {
   onPrevious: () => void
   onSubmit: () => void
   formData: any
+  isSubmitting?: boolean
+  submissionError?: string | null
 }
 
-export function ReviewSubmitForm({ onPrevious, onSubmit, formData }: ReviewSubmitFormProps) {
+export function ReviewSubmitForm({
+  onPrevious,
+  onSubmit,
+  formData,
+  isSubmitting,
+  submissionError,
+}: ReviewSubmitFormProps) {
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === "string" ? Number.parseFloat(amount) : amount
     return isNaN(num) ? "$0" : `$${num.toLocaleString()}`
@@ -148,6 +156,13 @@ export function ReviewSubmitForm({ onPrevious, onSubmit, formData }: ReviewSubmi
             </div>
           </div>
 
+          {submissionError && (
+            <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">
+              <p className="text-sm font-medium">Error submitting application:</p>
+              <p className="text-sm">{submissionError}</p>
+            </div>
+          )}
+
           <div className="bg-muted/50 p-4 rounded-lg border border-border">
             <p className="text-sm text-foreground mb-4">
               By submitting this application, I certify that all information provided is true and accurate to the best
@@ -164,6 +179,7 @@ export function ReviewSubmitForm({ onPrevious, onSubmit, formData }: ReviewSubmi
               onClick={onPrevious}
               variant="outline"
               className="border-border text-foreground hover:bg-muted bg-transparent font-semibold px-8"
+              disabled={isSubmitting}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Go Back
@@ -171,9 +187,19 @@ export function ReviewSubmitForm({ onPrevious, onSubmit, formData }: ReviewSubmi
             <Button
               onClick={onSubmit}
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8"
+              disabled={isSubmitting}
             >
-              Submit Application
-              <Send className="ml-2 h-4 w-4" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  Submit Application
+                  <Send className="ml-2 h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         </CardContent>

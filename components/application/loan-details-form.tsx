@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { ArrowRight, ArrowLeft } from "lucide-react"
 
 interface LoanDetailsFormProps {
@@ -105,13 +104,23 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
             <Label htmlFor="loanPurpose" className="text-foreground">
               Loan Purpose *
             </Label>
-            <Textarea
-              id="loanPurpose"
-              placeholder="Describe the purpose of this loan (e.g., purchase primary residence, investment property, refinance, etc.)"
-              value={formData.loanPurpose}
-              onChange={(e) => handleInputChange("loanPurpose", e.target.value)}
-              className="bg-input border-border text-foreground focus:border-primary min-h-[100px]"
-            />
+            <Select value={formData.loanPurpose} onValueChange={(value) => handleInputChange("loanPurpose", value)}>
+              <SelectTrigger className="bg-input border-border text-foreground focus:border-primary">
+                <SelectValue placeholder="Select loan purpose" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="purchase">Purchase</SelectItem>
+                <SelectItem value="refinance">Refinance</SelectItem>
+                <SelectItem value="cash-out-refinance">Cash-Out Refinance</SelectItem>
+                <SelectItem value="construction">Construction</SelectItem>
+                <SelectItem value="renovation">Renovation</SelectItem>
+                <SelectItem value="investment">Investment Property</SelectItem>
+                <SelectItem value="bridge-loan">Bridge Loan</SelectItem>
+                <SelectItem value="debt-consolidation">Debt Consolidation</SelectItem>
+                <SelectItem value="home-equity">Home Equity</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex justify-between pt-6">
