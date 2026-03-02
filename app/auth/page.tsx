@@ -12,7 +12,6 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signUp, signInWithMagicLink } from "@/lib/auth"
 import { useAuth } from "@/hooks/use-auth"
-import { createClient } from "@/lib/supabase/client"
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("signin")
@@ -81,15 +80,19 @@ export default function AuthPage() {
 
       setStatus("Setting up session...")
 
-      // Set the session on the Supabase client so cookies are written
-      const supabase = createClient()
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
+      // Set session via server-side API route — bypasses client navigator.locks
+      const sessionRes = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        }),
       })
 
-      if (sessionError) {
-        setError(sessionError.message)
+      if (!sessionRes.ok) {
+        const sessionData = await sessionRes.json()
+        setError(sessionData.error || "Failed to set up session")
         return
       }
 
