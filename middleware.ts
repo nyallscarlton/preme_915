@@ -60,7 +60,7 @@ export async function middleware(request: NextRequest) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single()
 
     if (!profile || !["lender", "admin"].includes(profile.role)) {
@@ -87,7 +87,7 @@ export async function middleware(request: NextRequest) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single()
 
     if (!profile || profile.role !== "admin") {

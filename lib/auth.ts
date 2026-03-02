@@ -18,6 +18,7 @@ export interface AuthState {
 
 export interface Profile {
   id: string
+  user_id: string
   email: string
   first_name: string | null
   last_name: string | null
@@ -28,13 +29,53 @@ export interface Profile {
 
 function mapProfileToUser(profile: Profile): User {
   return {
-    id: profile.id,
+    id: profile.user_id,
     email: profile.email,
     role: profile.role,
     firstName: profile.first_name || undefined,
     lastName: profile.last_name || undefined,
     phone: profile.phone || undefined,
   }
+}
+
+async function ensureProfile(
+  userId: string,
+  email: string,
+  firstName?: string,
+  lastName?: string,
+  role?: string
+): Promise<Profile | null> {
+  const supabase = createClient()
+
+  // Try to fetch existing profile
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("user_id", userId)
+    .single()
+
+  if (existing) return existing
+
+  // Create profile if it doesn't exist
+  const { data: created, error } = await supabase
+    .from("profiles")
+    .insert({
+      user_id: userId,
+      email,
+      first_name: firstName || null,
+      last_name: lastName || null,
+      role: role || "applicant",
+    })
+    .select()
+    .single()
+
+  if (error) {
+    // RLS might block insert — profile will be created via API route fallback
+    console.warn("Could not create profile client-side:", error.message)
+    return null
+  }
+
+  return created
 }
 
 export async function signIn(
@@ -56,18 +97,20 @@ export async function signIn(
     return { user: null, error: "Sign in failed" }
   }
 
-  // Fetch profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", data.user.id)
-    .single()
+  // Ensure profile exists
+  const profile = await ensureProfile(
+    data.user.id,
+    data.user.email!,
+    data.user.user_metadata?.first_name,
+    data.user.user_metadata?.last_name,
+    data.user.user_metadata?.role
+  )
 
   if (profile) {
     return { user: mapProfileToUser(profile), error: null }
   }
 
-  // Fallback if profile not yet created
+  // Fallback if profile creation failed (RLS)
   return {
     user: {
       id: data.user.id,
@@ -121,6 +164,24 @@ export async function signUp(
   })
 
   if (error) {
+    // Handle the broken trigger error gracefully
+    if (error.message.includes("profiles") && error.message.includes("not-null")) {
+      // Trigger failed but user was created — fix profile via API
+      const { data: retryData } = await supabase.auth.signInWithPassword({ email, password })
+      if (retryData?.user) {
+        await ensureProfile(retryData.user.id, email, firstName, lastName, "applicant")
+        return {
+          user: {
+            id: retryData.user.id,
+            email,
+            role: "applicant",
+            firstName,
+            lastName,
+          },
+          error: null,
+        }
+      }
+    }
     return { user: null, error: error.message }
   }
 
@@ -136,6 +197,9 @@ export async function signUp(
       needsVerification: true,
     }
   }
+
+  // Create profile for the new user
+  await ensureProfile(data.user.id, email, firstName, lastName, "applicant")
 
   return {
     user: {
@@ -163,11 +227,13 @@ export async function getCurrentUser(): Promise<User | null> {
 
   if (!authUser) return null
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", authUser.id)
-    .single()
+  const profile = await ensureProfile(
+    authUser.id,
+    authUser.email!,
+    authUser.user_metadata?.first_name,
+    authUser.user_metadata?.last_name,
+    authUser.user_metadata?.role
+  )
 
   if (profile) {
     return mapProfileToUser(profile)

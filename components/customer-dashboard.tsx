@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
+import { PortalToggle } from "@/components/portal-toggle"
 import { ApplicationsList } from "@/components/dashboard/applications-list"
 import { DocumentsManager } from "@/components/dashboard/documents-manager"
 import { MessagingCenter } from "@/components/dashboard/messaging-center"
@@ -157,9 +158,10 @@ export function CustomerDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <PortalToggle />
               <Button
                 variant="outline"
-                className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+                className="border-border text-muted-foreground hover:bg-muted bg-transparent"
                 onClick={handleSignOut}
               >
                 Sign Out

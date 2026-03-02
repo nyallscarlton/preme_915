@@ -23,8 +23,10 @@ import {
   Users,
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
+import { PortalToggle } from "@/components/portal-toggle"
 
 interface Application {
   id: string
@@ -43,11 +45,22 @@ interface Application {
 }
 
 export default function LenderDashboard() {
-  const { user, signOut } = useAuth()
+  const { user, loading: authLoading, signOut } = useAuth()
+  const router = useRouter()
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Protect lender route — redirect non-lender/admin users
+  useEffect(() => {
+    if (!authLoading && user && user.role !== "lender" && user.role !== "admin") {
+      router.push("/dashboard")
+    }
+    if (!authLoading && !user) {
+      router.push("/auth?next=/lender")
+    }
+  }, [user, authLoading, router])
 
   useEffect(() => {
     const fetchApplications = async () => {
@@ -143,10 +156,11 @@ export default function LenderDashboard() {
               <span className="text-sm text-muted-foreground">
                 {user?.firstName} {user?.lastName}
               </span>
+              <PortalToggle />
               <Button
                 variant="outline"
                 size="sm"
-                className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+                className="border-border text-muted-foreground hover:bg-muted bg-transparent"
                 onClick={() => {
                   signOut()
                   window.location.href = "/"

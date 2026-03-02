@@ -30,11 +30,5 @@ export default function DashboardPage() {
     return null
   }
 
-  // Redirect lender/admin to their dashboard
-  if (user.role === "lender" || user.role === "admin") {
-    router.push("/lender")
-    return null
-  }
-
   return <CustomerDashboard />
 }

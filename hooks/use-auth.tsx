@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", authUser.id)
+      .eq("user_id", authUser.id)
       .single()
 
     return mapAuthUser(authUser, profile)
