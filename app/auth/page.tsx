@@ -10,14 +10,16 @@ import { Label } from "@/components/ui/label"
 import { Mail, Lock, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { signIn, signUp, signInWithMagicLink } from "@/lib/auth"
+import { signUp, signInWithMagicLink } from "@/lib/auth"
 import { useAuth } from "@/hooks/use-auth"
+import { createClient } from "@/lib/supabase/client"
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("signin")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [status, setStatus] = useState("")
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
@@ -43,21 +45,76 @@ export default function AuthPage() {
     e.preventDefault()
     setLoading(true)
     setError("")
+    setStatus("Connecting...")
 
     try {
-      const { user, error: authError } = await signIn(signInData.email, signInData.password)
+      // Direct fetch to Supabase auth — bypasses client lock mechanism entirely
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-      if (authError) {
-        setError(authError)
-      } else if (user) {
-        setUser(user)
-        router.refresh()
-        router.push(nextUrl)
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 15000)
+
+      setStatus("Authenticating...")
+
+      const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseKey,
+        },
+        body: JSON.stringify({
+          email: signInData.email,
+          password: signInData.password,
+        }),
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeout)
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.msg || data.error_description || "Invalid credentials")
+        return
       }
-    } catch {
-      setError("An error occurred during sign in")
+
+      setStatus("Setting up session...")
+
+      // Set the session on the Supabase client so cookies are written
+      const supabase = createClient()
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      })
+
+      if (sessionError) {
+        setError(sessionError.message)
+        return
+      }
+
+      // Set user in context from the auth response
+      setUser({
+        id: data.user.id,
+        email: data.user.email,
+        role: data.user.user_metadata?.role || "applicant",
+        firstName: data.user.user_metadata?.first_name,
+        lastName: data.user.user_metadata?.last_name,
+      })
+
+      setStatus("Redirecting...")
+
+      // Hard navigation — guarantees middleware sees fresh auth cookies
+      window.location.href = nextUrl
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("Sign in timed out. Please try again.")
+      } else {
+        setError(err instanceof Error ? err.message : "An error occurred during sign in")
+      }
     } finally {
       setLoading(false)
+      setStatus("")
     }
   }
 
@@ -114,8 +171,7 @@ export default function AuthPage() {
         router.push("/auth/check-email")
       } else if (user) {
         setUser(user)
-        router.refresh()
-        router.push(nextUrl)
+        window.location.href = nextUrl
       }
     } catch {
       setError("An error occurred during account creation")
@@ -231,7 +287,7 @@ export default function AuthPage() {
                     disabled={loading}
                     className="w-full bg-[#997100] hover:bg-[#b8850a] text-white"
                   >
-                    {loading ? "Signing In..." : "Sign In"}
+                    {loading ? (status || "Signing In...") : "Sign In"}
                   </Button>
                 </form>
 

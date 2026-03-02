@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
+import { PortalToggle } from "@/components/portal-toggle"
 import { ApplicationsManagement } from "@/components/admin/applications-management"
 import { UsersManagement } from "@/components/admin/users-management"
 import { AdminMessaging } from "@/components/admin/admin-messaging"
@@ -159,7 +160,7 @@ export function AdminDashboard() {
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Link href="/" className="flex items-center">
+              <Link href="/dashboard" className="flex items-center">
                 <div className="relative">
                   <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-[#997100]"></div>
                   <span className="text-2xl font-bold tracking-wide text-foreground">PREME</span>
@@ -173,6 +174,7 @@ export function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <PortalToggle />
               <Button
                 variant="outline"
                 className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"

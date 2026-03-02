@@ -97,20 +97,15 @@ export async function signIn(
     return { user: null, error: "Sign in failed" }
   }
 
-  // Ensure profile exists
-  const profile = await ensureProfile(
+  // Non-blocking: ensure profile row exists for future queries
+  ensureProfile(
     data.user.id,
     data.user.email!,
     data.user.user_metadata?.first_name,
     data.user.user_metadata?.last_name,
     data.user.user_metadata?.role
-  )
+  ).catch(() => {})
 
-  if (profile) {
-    return { user: mapProfileToUser(profile), error: null }
-  }
-
-  // Fallback if profile creation failed (RLS)
   return {
     user: {
       id: data.user.id,

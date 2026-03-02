@@ -1,83 +1,89 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { User, Search, Filter, Plus, Edit, Trash2, Mail, Phone, Calendar, Shield, UserCheck } from "lucide-react"
+import { User, Search, Filter, Mail, Phone, Calendar, Shield, Loader2, Briefcase } from "lucide-react"
 
-const mockUsers = [
-  {
-    id: "1",
-    firstName: "John",
-    lastName: "Smith",
-    email: "john.smith@email.com",
-    phone: "555-0101",
-    role: "applicant",
-    status: "active",
-    createdAt: "2024-01-10T10:30:00Z",
-    lastLogin: "2024-01-16T14:20:00Z",
-    applicationCount: 2,
-  },
-  {
-    id: "2",
-    firstName: "Jane",
-    lastName: "Doe",
-    email: "jane.doe@email.com",
-    phone: "555-0102",
-    role: "applicant",
-    status: "active",
-    createdAt: "2024-01-08T09:15:00Z",
-    lastLogin: "2024-01-15T16:45:00Z",
-    applicationCount: 1,
-  },
-  {
-    id: "3",
-    firstName: "Sarah",
-    lastName: "Johnson",
-    email: "sarah.johnson@preme.com",
-    phone: "555-0201",
-    role: "admin",
-    status: "active",
-    createdAt: "2023-12-01T08:00:00Z",
-    lastLogin: "2024-01-16T09:30:00Z",
-    applicationCount: 0,
-  },
-  {
-    id: "4",
-    firstName: "Mike",
-    lastName: "Chen",
-    email: "mike.chen@preme.com",
-    phone: "555-0202",
-    role: "admin",
-    status: "active",
-    createdAt: "2023-12-01T08:00:00Z",
-    lastLogin: "2024-01-15T11:20:00Z",
-    applicationCount: 0,
-  },
-]
+interface ProfileUser {
+  id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  phone: string | null
+  role: "applicant" | "lender" | "admin"
+  created_at: string
+}
 
 export function UsersManagement() {
+  const [users, setUsers] = useState<ProfileUser[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("all")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
 
-  const filteredUsers = mockUsers.filter((user) => {
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await fetch("/api/admin/users")
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to fetch users")
+      }
+      setUsers(result.users)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch users")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
+
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    setUpdatingId(userId)
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to update role")
+      }
+      // Update local state
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, role: result.user.role } : u))
+      )
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update role")
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const filteredUsers = users.filter((user) => {
+    const name = `${user.first_name || ""} ${user.last_name || ""}`.toLowerCase()
     const matchesSearch =
-      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      name.includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesRole = roleFilter === "all" || user.role === roleFilter
-    const matchesStatus = statusFilter === "all" || user.status === statusFilter
-    return matchesSearch && matchesRole && matchesStatus
+    return matchesSearch && matchesRole
   })
 
   const getRoleColor = (role: string) => {
     switch (role) {
       case "admin":
         return "bg-[#997100] text-black"
+      case "lender":
+        return "bg-purple-600 text-white"
       case "applicant":
         return "bg-blue-600 text-white"
       default:
@@ -85,16 +91,14 @@ export function UsersManagement() {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-600 text-white"
-      case "inactive":
-        return "bg-gray-600 text-white"
-      case "suspended":
-        return "bg-red-600 text-white"
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case "admin":
+        return <Shield className="h-3 w-3 mr-1" />
+      case "lender":
+        return <Briefcase className="h-3 w-3 mr-1" />
       default:
-        return "bg-gray-600 text-white"
+        return <User className="h-3 w-3 mr-1" />
     }
   }
 
@@ -106,17 +110,36 @@ export function UsersManagement() {
     })
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card className="bg-card border-border">
+        <CardContent className="text-center py-8">
+          <p className="text-red-400 mb-2">Error: {error}</p>
+          <button onClick={fetchUsers} className="text-[#997100] underline text-sm">
+            Try again
+          </button>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Users Management</h2>
-          <p className="text-muted-foreground">Manage system users and permissions</p>
+          <p className="text-muted-foreground">
+            {users.length} user{users.length !== 1 ? "s" : ""} registered
+          </p>
         </div>
-        <Button className="bg-[#997100] hover:bg-[#b8850a] text-black">
-          <Plus className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
       </div>
 
       {/* Filters */}
@@ -142,19 +165,8 @@ export function UsersManagement() {
               <SelectContent className="bg-card border-border">
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="lender">Lender</SelectItem>
                 <SelectItem value="applicant">Applicant</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48 bg-card border-border text-foreground">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -173,53 +185,53 @@ export function UsersManagement() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground">
-                      {user.firstName} {user.lastName}
+                      {user.first_name || user.last_name
+                        ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+                        : "No name"}
                     </h3>
                     <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                       <div className="flex items-center space-x-1">
                         <Mail className="h-3 w-3" />
                         <span>{user.email}</span>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <Phone className="h-3 w-3" />
-                        <span>{user.phone}</span>
-                      </div>
+                      {user.phone && (
+                        <div className="flex items-center space-x-1">
+                          <Phone className="h-3 w-3" />
+                          <span>{user.phone}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-3 w-3" />
-                        <span>Joined {formatDate(user.createdAt)}</span>
+                        <span>Joined {formatDate(user.created_at)}</span>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <UserCheck className="h-3 w-3" />
-                        <span>Last login {formatDate(user.lastLogin)}</span>
-                      </div>
-                      {user.role === "applicant" && (
-                        <span>
-                          {user.applicationCount} application{user.applicationCount !== 1 ? "s" : ""}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <div className="flex flex-col items-end space-y-2">
-                    <Badge className={getRoleColor(user.role)}>
-                      {user.role === "admin" ? <Shield className="h-3 w-3 mr-1" /> : <User className="h-3 w-3 mr-1" />}
-                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                    </Badge>
-                    <Badge className={getStatusColor(user.status)}>
-                      {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                    </Badge>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-400">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Badge className={getRoleColor(user.role)}>
+                    {getRoleIcon(user.role)}
+                    {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                  </Badge>
+                  <Select
+                    value={user.role}
+                    onValueChange={(value) => handleRoleChange(user.id, value)}
+                    disabled={updatingId === user.id}
+                  >
+                    <SelectTrigger className="w-36 bg-card border-border text-foreground">
+                      {updatingId === user.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <SelectValue />
+                      )}
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="applicant">Applicant</SelectItem>
+                      <SelectItem value="lender">Lender</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>

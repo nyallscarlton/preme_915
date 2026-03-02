@@ -42,13 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = createClient()
 
   const fetchProfile = async (authUser: AuthUser): Promise<User> => {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", authUser.id)
-      .single()
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", authUser.id)
+        .single()
 
-    return mapAuthUser(authUser, profile)
+      return mapAuthUser(authUser, profile)
+    } catch {
+      return mapAuthUser(authUser, null)
+    }
   }
 
   const refreshUser = async () => {
@@ -69,8 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
     setUser(null)
+    setLoading(false)
+    // scope: 'local' clears browser storage only — no server call that could hang
+    await supabase.auth.signOut({ scope: "local" })
   }
 
   useEffect(() => {
@@ -98,16 +104,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event: string, session: Session | null) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        const mappedUser = await fetchProfile(session.user)
-        setUser(mappedUser)
-      } else if (event === "SIGNED_OUT") {
-        setUser(null)
-      } else if (event === "TOKEN_REFRESHED" && session?.user) {
-        const mappedUser = await fetchProfile(session.user)
-        setUser(mappedUser)
+      try {
+        if (event === "SIGNED_IN" && session?.user) {
+          const mappedUser = await fetchProfile(session.user)
+          setUser(mappedUser)
+        } else if (event === "SIGNED_OUT") {
+          setUser(null)
+        } else if (event === "TOKEN_REFRESHED" && session?.user) {
+          const mappedUser = await fetchProfile(session.user)
+          setUser(mappedUser)
+        }
+      } catch {
+        // Profile fetch failed — clear user on sign-out, keep stale user otherwise
+        if (event === "SIGNED_OUT") {
+          setUser(null)
+        }
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     return () => {
