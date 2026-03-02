@@ -1,8 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
-import { createClient } from "@/lib/supabase/client"
-import type { User as AuthUser, Session } from "@supabase/supabase-js"
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react"
 
 export type UserRole = "applicant" | "lender" | "admin"
 
@@ -25,110 +23,41 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-function mapAuthUser(authUser: AuthUser, profile?: Record<string, unknown> | null): User {
-  return {
-    id: authUser.id,
-    email: authUser.email!,
-    role: (profile?.role as UserRole) || (authUser.user_metadata?.role as UserRole) || "applicant",
-    firstName: (profile?.first_name as string) || authUser.user_metadata?.first_name,
-    lastName: (profile?.last_name as string) || authUser.user_metadata?.last_name,
-    phone: (profile?.phone as string) || undefined,
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
-  const fetchProfile = async (authUser: AuthUser): Promise<User> => {
+  const fetchUser = useCallback(async () => {
     try {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", authUser.id)
-        .single()
-
-      return mapAuthUser(authUser, profile)
-    } catch {
-      return mapAuthUser(authUser, null)
-    }
-  }
-
-  const refreshUser = async () => {
-    try {
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser()
-
-      if (authUser) {
-        const mappedUser = await fetchProfile(authUser)
-        setUser(mappedUser)
-      } else {
+      const res = await fetch("/api/auth/me")
+      if (!res.ok) {
         setUser(null)
+        return
       }
+      const data = await res.json()
+      setUser(data.user || null)
     } catch {
       setUser(null)
+    } finally {
+      setLoading(false)
     }
-  }
+  }, [])
 
-  const handleSignOut = async () => {
+  const refreshUser = useCallback(async () => {
+    await fetchUser()
+  }, [fetchUser])
+
+  const handleSignOut = useCallback(async () => {
+    // Clear cookies via server-side sign-out
+    await fetch("/api/auth/signout", { method: "POST" }).catch(() => {})
     setUser(null)
     setLoading(false)
-    // scope: 'local' clears browser storage only — no server call that could hang
-    await supabase.auth.signOut({ scope: "local" })
-  }
+    window.location.href = "/"
+  }, [])
 
   useEffect(() => {
-    // Get initial session
-    const initAuth = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-
-        if (session?.user) {
-          const mappedUser = await fetchProfile(session.user)
-          setUser(mappedUser)
-        }
-      } catch {
-        // No session
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    initAuth()
-
-    // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event: string, session: Session | null) => {
-      try {
-        if (event === "SIGNED_IN" && session?.user) {
-          const mappedUser = await fetchProfile(session.user)
-          setUser(mappedUser)
-        } else if (event === "SIGNED_OUT") {
-          setUser(null)
-        } else if (event === "TOKEN_REFRESHED" && session?.user) {
-          const mappedUser = await fetchProfile(session.user)
-          setUser(mappedUser)
-        }
-      } catch {
-        // Profile fetch failed — clear user on sign-out, keep stale user otherwise
-        if (event === "SIGNED_OUT") {
-          setUser(null)
-        }
-      } finally {
-        setLoading(false)
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    fetchUser()
+  }, [fetchUser])
 
   return (
     <AuthContext.Provider value={{ user, loading, signOut: handleSignOut, refreshUser, setUser }}>
