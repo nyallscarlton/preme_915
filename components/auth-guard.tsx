@@ -1,10 +1,9 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect, useState } from "react"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { supabaseBrowser } from "@/lib/supabase/browserClient"
+import { createClient } from "@/lib/supabase/client"
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -12,7 +11,11 @@ interface AuthGuardProps {
   redirectTo?: string
 }
 
-export function AuthGuard({ children, requireAuth = false, redirectTo = "/auth" }: AuthGuardProps) {
+export function AuthGuard({
+  children,
+  requireAuth = false,
+  redirectTo = "/auth",
+}: AuthGuardProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(false)
   const router = useRouter()
@@ -22,18 +25,15 @@ export function AuthGuard({ children, requireAuth = false, redirectTo = "/auth" 
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        const supabase = createClient()
         const {
-          data: { session },
-        } = await supabaseBrowser.auth.getSession()
+          data: { user },
+        } = await supabase.auth.getUser()
 
-        const isAuthenticated = session?.user?.email_confirmed_at
-
-        if (requireAuth && !isAuthenticated) {
-          // Check if this is guest mode
+        if (requireAuth && !user) {
           const isGuestMode = searchParams.get("guest") === "1"
 
           if (!isGuestMode) {
-            // Redirect to auth with next parameter
             const redirectUrl = new URL(redirectTo, window.location.origin)
             redirectUrl.searchParams.set("next", pathname)
             router.push(redirectUrl.toString())
@@ -42,8 +42,7 @@ export function AuthGuard({ children, requireAuth = false, redirectTo = "/auth" 
         }
 
         setIsAuthorized(true)
-      } catch (error) {
-        console.error("Auth guard error:", error)
+      } catch {
         setIsAuthorized(true) // Allow access on error
       } finally {
         setIsLoading(false)

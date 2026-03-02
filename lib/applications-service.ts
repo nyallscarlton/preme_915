@@ -1,7 +1,8 @@
-import { getSupabaseClient, hasSupabaseConfig } from "./supabase-client"
+import { createClient } from "@/lib/supabase/client"
 
 export interface LoanApplication {
   id: string
+  user_id?: string
   applicant_email: string
   applicant_name: string
   applicant_phone: string
@@ -38,60 +39,32 @@ export interface LoanApplication {
   updated_at?: string
 }
 
-// Generate unique application number
 function generateApplicationNumber(): string {
   const prefix = "PREME"
   const timestamp = Date.now().toString(36).toUpperCase()
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase()
+  const random = crypto.randomUUID().substring(0, 6).toUpperCase()
   return `${prefix}-${timestamp}-${random}`
 }
 
-// Generate guest token for magic link access
 function generateGuestToken(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36)
+  return crypto.randomUUID()
 }
 
-// Submit a new loan application
 export async function submitApplication(
   data: Partial<LoanApplication>,
+  userId?: string
 ): Promise<{ success: boolean; application?: LoanApplication; error?: string }> {
-  console.log("[v0] submitApplication called with data:", data)
-
-  const supabase = getSupabaseClient()
-  const hasConfig = hasSupabaseConfig()
-
-  console.log("[v0] Supabase client:", supabase ? "available" : "null")
-  console.log("[v0] hasSupabaseConfig:", hasConfig)
-
-  if (!supabase || !hasConfig) {
-    // Mock response for development
-    console.log("[v0] Using mock data - Supabase not configured")
-    const mockApp: LoanApplication = {
-      id: crypto.randomUUID(),
-      application_number: generateApplicationNumber(),
-      applicant_email: data.applicant_email || "",
-      applicant_name: data.applicant_name || "",
-      applicant_phone: data.applicant_phone || "",
-      status: "submitted",
-      guest_token: data.is_guest ? generateGuestToken() : undefined,
-      is_guest: data.is_guest || false,
-      submitted_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      ...data,
-    }
-    return { success: true, application: mockApp }
-  }
+  const supabase = createClient()
 
   try {
     const applicationData = {
       ...data,
+      user_id: userId || null,
       application_number: generateApplicationNumber(),
       guest_token: data.is_guest ? generateGuestToken() : null,
-      status: "submitted",
+      status: "submitted" as const,
       submitted_at: new Date().toISOString(),
     }
-
-    console.log("[v0] Inserting into Supabase:", applicationData)
 
     const { data: application, error } = await supabase
       .from("loan_applications")
@@ -100,84 +73,66 @@ export async function submitApplication(
       .single()
 
     if (error) {
-      console.error("[v0] Supabase insert error:", error)
       return { success: false, error: error.message }
     }
 
-    console.log("[v0] Application inserted successfully:", application)
     return { success: true, application }
   } catch (err) {
-    console.error("[v0] Error submitting application:", err)
     return { success: false, error: "Failed to submit application" }
   }
 }
 
-// Get all applications (for admin)
 export async function getAllApplications(): Promise<{
   success: boolean
   applications?: LoanApplication[]
   error?: string
 }> {
-  console.log("[v0] getAllApplications called")
-
-  const supabase = getSupabaseClient()
-  const hasConfig = hasSupabaseConfig()
-
-  if (!supabase || !hasConfig) {
-    console.log("[v0] Using mock data for getAllApplications")
-    // Mock data for development
-    return {
-      success: true,
-      applications: [
-        {
-          id: "1",
-          application_number: "PREME-ABC123-XYZ",
-          applicant_email: "john@example.com",
-          applicant_name: "John Smith",
-          applicant_phone: "(555) 123-4567",
-          status: "submitted",
-          loan_amount: 500000,
-          property_address: "123 Main St",
-          property_city: "Los Angeles",
-          property_state: "CA",
-          loan_type: "Bridge Loan",
-          submitted_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-        },
-      ],
-    }
-  }
+  const supabase = createClient()
 
   try {
-    console.log("[v0] Fetching from Supabase...")
     const { data: applications, error } = await supabase
       .from("loan_applications")
       .select("*")
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("[v0] Supabase fetch error:", error)
       return { success: false, error: error.message }
     }
 
-    console.log("[v0] Fetched applications:", applications?.length)
     return { success: true, applications: applications || [] }
   } catch (err) {
-    console.error("[v0] Error fetching applications:", err)
     return { success: false, error: "Failed to fetch applications" }
   }
 }
 
-// Get applications by email
-export async function getApplicationsByEmail(
-  email: string,
+export async function getApplicationsByUser(
+  userId: string,
+  email: string
 ): Promise<{ success: boolean; applications?: LoanApplication[]; error?: string }> {
-  const supabase = getSupabaseClient()
-  const hasConfig = hasSupabaseConfig()
+  const supabase = createClient()
 
-  if (!supabase || !hasConfig) {
-    return { success: true, applications: [] }
+  try {
+    // Get apps by user_id OR by email (for pre-auth guest submissions)
+    const { data: applications, error } = await supabase
+      .from("loan_applications")
+      .select("*")
+      .or(`user_id.eq.${userId},applicant_email.eq.${email}`)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, applications: applications || [] }
+  } catch (err) {
+    return { success: false, error: "Failed to fetch applications" }
   }
+}
+
+export async function getApplicationsByEmail(
+  email: string
+): Promise<{ success: boolean; applications?: LoanApplication[]; error?: string }> {
+  const supabase = createClient()
 
   try {
     const { data: applications, error } = await supabase
@@ -196,16 +151,10 @@ export async function getApplicationsByEmail(
   }
 }
 
-// Get application by guest token
 export async function getApplicationByToken(
-  token: string,
+  token: string
 ): Promise<{ success: boolean; application?: LoanApplication; error?: string }> {
-  const supabase = getSupabaseClient()
-  const hasConfig = hasSupabaseConfig()
-
-  if (!supabase || !hasConfig) {
-    return { success: false, error: "Database not configured" }
-  }
+  const supabase = createClient()
 
   try {
     const { data: application, error } = await supabase
@@ -224,20 +173,11 @@ export async function getApplicationByToken(
   }
 }
 
-// Update application status (for admin)
 export async function updateApplicationStatus(
   applicationId: string,
-  status: LoanApplication["status"],
+  status: LoanApplication["status"]
 ): Promise<{ success: boolean; error?: string }> {
-  console.log("[v0] updateApplicationStatus called:", { applicationId, status })
-
-  const supabase = getSupabaseClient()
-  const hasConfig = hasSupabaseConfig()
-
-  if (!supabase || !hasConfig) {
-    console.log("[v0] Mock: Updating application status", applicationId, status)
-    return { success: true }
-  }
+  const supabase = createClient()
 
   try {
     const { error } = await supabase
@@ -246,19 +186,17 @@ export async function updateApplicationStatus(
       .eq("id", applicationId)
 
     if (error) {
-      console.error("[v0] Supabase update error:", error)
       return { success: false, error: error.message }
     }
 
-    console.log("[v0] Application status updated successfully")
     return { success: true }
   } catch (err) {
-    console.error("[v0] Error updating application:", err)
     return { success: false, error: "Failed to update application" }
   }
 }
 
-// Archive application
-export async function archiveApplication(applicationId: string): Promise<{ success: boolean; error?: string }> {
+export async function archiveApplication(
+  applicationId: string
+): Promise<{ success: boolean; error?: string }> {
   return updateApplicationStatus(applicationId, "archived")
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "@/lib/auth"
@@ -15,20 +14,18 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { refreshUser, setUser } = useAuth()
+  const { setUser } = useAuth()
 
   const converted = searchParams.get("converted")
 
   useEffect(() => {
     if (converted) {
-      // Show success message for account conversion
       setError("")
     }
   }, [converted])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[v0] Login form submitted", { email, password })
 
     if (!email || !password) {
       setError("Please enter both email and password")
@@ -39,27 +36,22 @@ export default function LoginPage() {
     setError("")
 
     try {
-      console.log("[v0] Calling signIn function")
       const { user, error: authError } = await signIn(email, password)
-      console.log("[v0] signIn result", { user, authError })
 
       if (authError) {
-        console.log("[v0] Auth error:", authError)
         setError(authError)
       } else if (user) {
-        console.log("[v0] Login successful, updating user state")
         setUser(user)
-        await refreshUser()
+        router.refresh()
         if (user.role === "admin") {
-          console.log("[v0] Redirecting to admin")
           router.push("/admin")
+        } else if (user.role === "lender") {
+          router.push("/lender")
         } else {
-          console.log("[v0] Redirecting to portal")
           router.push("/portal")
         }
       }
-    } catch (err) {
-      console.log("[v0] Unexpected error:", err)
+    } catch {
       setError("An unexpected error occurred")
     } finally {
       setLoading(false)
@@ -86,7 +78,11 @@ export default function LoginPage() {
           </div>
         )}
 
-        {error && <div className="bg-destructive text-destructive-foreground p-3 rounded-lg mb-6 text-sm">{error}</div>}
+        {error && (
+          <div className="bg-destructive text-destructive-foreground p-3 rounded-lg mb-6 text-sm">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
@@ -124,18 +120,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-8 p-4 bg-muted rounded-lg border border-border">
-          <h3 className="text-sm font-medium text-foreground mb-3">Demo Accounts:</h3>
-          <div className="space-y-2 text-xs text-muted-foreground">
-            <div>
-              <strong className="text-foreground">Admin:</strong> admin@preme.com / demo123
-            </div>
-            <div>
-              <strong className="text-foreground">Applicant:</strong> demo@example.com / demo123
-            </div>
-          </div>
-        </div>
-
         <div className="text-center mt-8">
           <p className="text-muted-foreground text-sm">
             Don't have an account?{" "}
@@ -145,7 +129,7 @@ export default function LoginPage() {
           </p>
           <p className="text-muted-foreground text-sm mt-2">
             <Link href="/" className="text-[#997100] hover:text-[#b8850a] font-medium">
-              ← Back to Home
+              Back to Home
             </Link>
           </p>
         </div>

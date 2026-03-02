@@ -1,10 +1,10 @@
-import { supabase } from "./supabase"
+import { createClient } from "@/lib/supabase/client"
 
 export interface Message {
   id: string
   application_id: string
   sender_id: string
-  sender_type: "admin" | "applicant"
+  sender_type: "admin" | "applicant" | "lender"
   recipient_id: string
   subject: string
   message: string
@@ -33,6 +33,7 @@ export async function sendMessage(messageData: {
   message: string
 }): Promise<{ data: Message | null; error: string | null }> {
   try {
+    const supabase = createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -40,8 +41,11 @@ export async function sendMessage(messageData: {
       return { data: null, error: "User not authenticated" }
     }
 
-    // Get sender profile to determine type
-    const { data: senderProfile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+    const { data: senderProfile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single()
 
     const { data, error } = await supabase
       .from("messages")
@@ -61,13 +65,14 @@ export async function sendMessage(messageData: {
     }
 
     return { data, error: null }
-  } catch (error) {
+  } catch {
     return { data: null, error: "Failed to send message" }
   }
 }
 
 export async function getMessages(applicationId?: string): Promise<Message[]> {
   try {
+    const supabase = createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -75,11 +80,7 @@ export async function getMessages(applicationId?: string): Promise<Message[]> {
 
     let query = supabase
       .from("messages")
-      .select(`
-        *,
-        sender:profiles!messages_sender_id_fkey(first_name, last_name, role),
-        recipient:profiles!messages_recipient_id_fkey(first_name, last_name, role)
-      `)
+      .select("*")
       .order("created_at", { ascending: false })
 
     if (applicationId) {
@@ -89,33 +90,27 @@ export async function getMessages(applicationId?: string): Promise<Message[]> {
     const { data, error } = await query
 
     if (error) {
-      console.error("Error fetching messages:", error)
       return []
     }
 
-    return (
-      data?.map((msg) => ({
-        ...msg,
-        sender_name: `${msg.sender?.first_name} ${msg.sender?.last_name}`,
-        recipient_name: `${msg.recipient?.first_name} ${msg.recipient?.last_name}`,
-      })) || []
-    )
-  } catch (error) {
-    console.error("Error fetching messages:", error)
+    return data || []
+  } catch {
     return []
   }
 }
 
 export async function markMessageAsRead(messageId: string): Promise<void> {
   try {
+    const supabase = createClient()
     await supabase.from("messages").update({ is_read: true }).eq("id", messageId)
-  } catch (error) {
-    console.error("Error marking message as read:", error)
+  } catch {
+    // Silent fail
   }
 }
 
 export async function getNotifications(): Promise<Notification[]> {
   try {
+    const supabase = createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -128,47 +123,57 @@ export async function getNotifications(): Promise<Notification[]> {
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("Error fetching notifications:", error)
       return []
     }
 
     return data || []
-  } catch (error) {
-    console.error("Error fetching notifications:", error)
+  } catch {
     return []
   }
 }
 
 export async function markNotificationAsRead(notificationId: string): Promise<void> {
   try {
+    const supabase = createClient()
     await supabase.from("notifications").update({ is_read: true }).eq("id", notificationId)
-  } catch (error) {
-    console.error("Error marking notification as read:", error)
+  } catch {
+    // Silent fail
   }
 }
 
 export async function deleteNotification(notificationId: string): Promise<void> {
   try {
+    const supabase = createClient()
     await supabase.from("notifications").delete().eq("id", notificationId)
-  } catch (error) {
-    console.error("Error deleting notification:", error)
+  } catch {
+    // Silent fail
   }
 }
 
 export function subscribeToMessages(callback: (message: Message) => void) {
+  const supabase = createClient()
   return supabase
     .channel("messages")
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
-      callback(payload.new as Message)
-    })
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "messages" },
+      (payload) => {
+        callback(payload.new as Message)
+      }
+    )
     .subscribe()
 }
 
 export function subscribeToNotifications(callback: (notification: Notification) => void) {
+  const supabase = createClient()
   return supabase
     .channel("notifications")
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
-      callback(payload.new as Notification)
-    })
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "notifications" },
+      (payload) => {
+        callback(payload.new as Notification)
+      }
+    )
     .subscribe()
 }

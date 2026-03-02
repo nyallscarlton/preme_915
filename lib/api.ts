@@ -1,6 +1,6 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "/api"
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   data?: T
   error?: string
   success: boolean
@@ -18,24 +18,18 @@ class ApiClient {
         ...options,
       })
 
-      // For now, return mock data since this is UI-only
-      if (endpoint.includes("/applications")) {
-        return {
-          success: true,
-          data: { id: "mock-app-123", status: "submitted" } as T,
-        }
-      }
+      const data = await response.json()
 
-      if (endpoint.includes("/auth/resend")) {
+      if (!response.ok) {
         return {
-          success: true,
-          data: { message: "Verification email sent" } as T,
+          success: false,
+          error: data.error || `Request failed with status ${response.status}`,
         }
       }
 
       return {
         success: true,
-        data: {} as T,
+        data: data as T,
       }
     } catch (error) {
       return {
@@ -49,16 +43,23 @@ class ApiClient {
     return this.request<T>(endpoint, { method: "GET" })
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: "POST",
       body: data ? JSON.stringify(data) : undefined,
     })
   }
 
-  async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async put<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: "PUT",
+      body: data ? JSON.stringify(data) : undefined,
+    })
+  }
+
+  async patch<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
+      method: "PATCH",
       body: data ? JSON.stringify(data) : undefined,
     })
   }
@@ -67,12 +68,7 @@ class ApiClient {
     return this.request<T>(endpoint, { method: "DELETE" })
   }
 
-  // Specific helper methods
-  async resendVerification(email: string): Promise<ApiResponse> {
-    return this.post("/auth/resend", { email })
-  }
-
-  async submitApplication(formData: any): Promise<ApiResponse> {
+  async submitApplication(formData: unknown): Promise<ApiResponse> {
     return this.post("/applications", formData)
   }
 }

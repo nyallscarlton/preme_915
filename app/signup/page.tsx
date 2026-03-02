@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { signUp } from "@/lib/auth"
 import { useAuth } from "@/hooks/use-auth"
@@ -15,6 +14,7 @@ export default function SignupPage() {
   const [lastName, setLastName] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const router = useRouter()
   const { setUser } = useAuth()
 
@@ -35,15 +35,22 @@ export default function SignupPage() {
     setError("")
 
     try {
-      const { user, error: authError } = await signUp(email, password, firstName, lastName)
+      const { user, error: authError, needsVerification } = await signUp(
+        email,
+        password,
+        firstName,
+        lastName
+      )
 
       if (authError) {
         setError(authError)
+      } else if (needsVerification) {
+        setSuccess("Check your email to verify your account, then sign in.")
       } else if (user) {
         setUser(user)
         router.push("/portal")
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred")
     } finally {
       setLoading(false)
@@ -64,7 +71,17 @@ export default function SignupPage() {
           <p className="text-muted-foreground mt-2">Join PREME to get started</p>
         </div>
 
-        {error && <div className="bg-destructive text-destructive-foreground p-3 rounded-lg mb-6 text-sm">{error}</div>}
+        {error && (
+          <div className="bg-destructive text-destructive-foreground p-3 rounded-lg mb-6 text-sm">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-800 p-3 rounded-lg mb-6 text-sm">
+            {success}
+          </div>
+        )}
 
         <form onSubmit={handleSignup} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
@@ -136,7 +153,7 @@ export default function SignupPage() {
           </p>
           <p className="text-muted-foreground text-sm mt-2">
             <Link href="/" className="text-[#997100] hover:text-[#b8850a] font-medium">
-              ← Back to Home
+              Back to Home
             </Link>
           </p>
         </div>

@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail, ArrowLeft, RefreshCw, CheckCircle } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { supabaseBrowser } from "@/lib/supabase/browserClient"
+import { createClient } from "@/lib/supabase/client"
+
+const supabaseBrowser = createClient()
 
 export default function CheckEmailPage() {
   const [isResending, setIsResending] = useState(false)

@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,69 +14,72 @@ export async function POST(request: NextRequest) {
     }
 
     if (password.length < 6) {
-      return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 })
-    }
-
-    // In a real app, this would:
-    // 1. Verify the guest token and get application data
-    // 2. Check if application is approved
-    // 3. Create Supabase user account
-    // 4. Transfer guest application data to user account
-    // 5. Invalidate the guest token
-    // 6. Send welcome email
-
-    console.log("Converting guest application to full account")
-    console.log("Token:", token)
-
-    // Mock token validation
-    if (!token.startsWith("ml_")) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-    }
-
-    // Mock application data retrieval
-    const guestApplication = {
-      id: "app_123",
-      email: "user@example.com",
-      firstName: "John",
-      lastName: "Doe",
-      phone: "(555) 123-4567",
-      status: "approved",
-      loanAmount: 500000,
-      propertyAddress: "123 Main St, Beverly Hills, CA 90210",
-    }
-
-    // Check if application is approved
-    if (guestApplication.status !== "approved") {
       return NextResponse.json(
-        { error: "Only approved applications can be converted to full accounts" },
-        { status: 400 },
+        { error: "Password must be at least 6 characters" },
+        { status: 400 }
       )
     }
 
-    // Mock account creation process
-    console.log("Creating Supabase account for:", guestApplication.email)
-    console.log("Transferring application data...")
+    const supabase = createAdminClient()
 
-    // Simulate account creation delay
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    // Verify guest token and get application
+    const { data: application, error: fetchError } = await supabase
+      .from("loan_applications")
+      .select("*")
+      .eq("guest_token", token)
+      .single()
 
-    // Mock successful account creation
-    const newUser = {
-      id: `user_${Date.now()}`,
-      email: guestApplication.email,
-      firstName: guestApplication.firstName,
-      lastName: guestApplication.lastName,
-      role: "applicant",
-      createdAt: new Date().toISOString(),
+    if (fetchError || !application) {
+      return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 })
     }
 
-    console.log("Account created successfully:", newUser)
+    if (application.status !== "approved") {
+      return NextResponse.json(
+        { error: "Only approved applications can be converted to full accounts" },
+        { status: 400 }
+      )
+    }
+
+    // Create Supabase auth user
+    const nameParts = (application.applicant_name || "").split(" ")
+    const firstName = nameParts[0] || ""
+    const lastName = nameParts.slice(1).join(" ") || ""
+
+    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      email: application.applicant_email,
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          role: "applicant",
+        },
+      },
+    })
+
+    if (signUpError) {
+      return NextResponse.json({ error: signUpError.message }, { status: 400 })
+    }
+
+    if (!authData.user) {
+      return NextResponse.json({ error: "Failed to create account" }, { status: 500 })
+    }
+
+    // Link all guest applications by this email to the new user
+    await supabase
+      .from("loan_applications")
+      .update({
+        user_id: authData.user.id,
+        is_guest: false,
+        guest_token: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("applicant_email", application.applicant_email)
 
     return NextResponse.json({
       success: true,
       message: "Account created successfully",
-      user: newUser,
-      redirectUrl: "/portal",
+      redirectUrl: "/login?converted=true",
     })
   } catch (error) {
     console.error("Error converting guest application:", error)

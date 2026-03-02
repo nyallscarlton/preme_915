@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "PREME - Funding for Modern Real Estate Investors",
   description: "DSCR loans, business credit, and private capital—without the bank headaches.",
-  generator: "v0.app",
+  generator: "Preme Home Loans",
 }
 
 export default function RootLayout({

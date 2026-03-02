@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -70,8 +71,8 @@ export default function LoanApplicationPage() {
     }
   }
 
-  const handleStepData = (stepData: any) => {
-    setFormData((prev) => ({ ...prev, ...stepData }))
+  const handleStepData = (stepData: Record<string, unknown>) => {
+    setFormData((prev: Record<string, unknown>) => ({ ...prev, ...stepData }))
   }
 
   const handleSubmit = async () => {
@@ -144,7 +145,7 @@ export default function LoanApplicationPage() {
 
       // Store the application number for display
       setApplicationNumber(result.application?.application_number || null)
-      setFormData((prev: any) => ({
+      setFormData((prev: Record<string, unknown>) => ({
         ...prev,
         guestToken: result.application?.guest_token,
       }))
@@ -302,17 +303,15 @@ export default function LoanApplicationPage() {
       }
 
       try {
-        // Mock auth check - in production this would check actual auth
-        const mockSession = null // No session for demo purposes
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
 
-        if (mockSession?.user?.email_confirmed_at) {
-          // User is authenticated and verified, start with account flow
+        if (user) {
           setAuthChoice("account")
           setCurrentStep(1)
         }
       } catch (error) {
         console.error("Error checking auth:", error)
-        // Continue without authentication if there's an error
       }
     }
 
@@ -325,11 +324,10 @@ export default function LoanApplicationPage() {
       if (isGuestMode || authChoice) return
 
       try {
-        // Mock session check - in production this would check actual auth
-        const mockSession = null // No session for demo purposes
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
 
-        // If no session and not guest mode, redirect to auth
-        if (!mockSession?.user && !isGuestMode && currentStep === 0) {
+        if (!user && !isGuestMode && currentStep === 0) {
           router.push(`/auth?next=${encodeURIComponent("/apply")}`)
         }
       } catch (error) {

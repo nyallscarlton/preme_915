@@ -18,7 +18,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Plus, Copy, Trash2, GripVertical, FileText, CheckCircle, Clock, Save, Eye, Settings } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
+
+const supabase = createClient()
 
 interface ChecklistTemplate {
   id: string

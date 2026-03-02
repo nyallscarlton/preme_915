@@ -1,7 +1,11 @@
+import { createClient } from "@/lib/supabase/client"
+
+export type UserRole = "applicant" | "lender" | "admin"
+
 export interface User {
   id: string
   email: string
-  role: "admin" | "applicant"
+  role: UserRole
   firstName?: string
   lastName?: string
   phone?: string
@@ -12,95 +16,173 @@ export interface AuthState {
   loading: boolean
 }
 
-const mockUsers = [
-  {
-    id: "admin-1",
-    email: "admin@preme.com",
-    password: "demo123",
-    role: "admin" as const,
-    firstName: "Admin",
-    lastName: "User",
-  },
-  {
-    id: "demo-1",
-    email: "demo@example.com",
-    password: "demo123",
-    role: "applicant" as const,
-    firstName: "Demo",
-    lastName: "User",
-  },
-]
+export interface Profile {
+  id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  phone: string | null
+  role: UserRole
+  created_at: string
+}
 
-export async function signIn(email: string, password: string): Promise<{ user: User | null; error: string | null }> {
-  await new Promise((resolve) => setTimeout(resolve, 500)) // Simulate API delay
+function mapProfileToUser(profile: Profile): User {
+  return {
+    id: profile.id,
+    email: profile.email,
+    role: profile.role,
+    firstName: profile.first_name || undefined,
+    lastName: profile.last_name || undefined,
+    phone: profile.phone || undefined,
+  }
+}
 
-  const mockUser = mockUsers.find((u) => u.email === email && u.password === password)
+export async function signIn(
+  email: string,
+  password: string
+): Promise<{ user: User | null; error: string | null }> {
+  const supabase = createClient()
 
-  if (!mockUser) {
-    return { user: null, error: "Invalid email or password" }
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (error) {
+    return { user: null, error: error.message }
   }
 
-  const user: User = {
-    id: mockUser.id,
-    email: mockUser.email,
-    role: mockUser.role,
-    firstName: mockUser.firstName,
-    lastName: mockUser.lastName,
+  if (!data.user) {
+    return { user: null, error: "Sign in failed" }
   }
 
-  return { user, error: null }
+  // Fetch profile
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", data.user.id)
+    .single()
+
+  if (profile) {
+    return { user: mapProfileToUser(profile), error: null }
+  }
+
+  // Fallback if profile not yet created
+  return {
+    user: {
+      id: data.user.id,
+      email: data.user.email!,
+      role: (data.user.user_metadata?.role as UserRole) || "applicant",
+      firstName: data.user.user_metadata?.first_name,
+      lastName: data.user.user_metadata?.last_name,
+    },
+    error: null,
+  }
 }
 
-export async function signOut(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 100))
-}
+export async function signInWithMagicLink(
+  email: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
 
-export async function getCurrentUser(): Promise<User | null> {
-  return null
-}
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
+  })
 
-export async function checkEmailVerification(): Promise<{ needsVerification: boolean; email?: string }> {
-  return { needsVerification: false }
+  if (error) {
+    return { error: error.message }
+  }
+
+  return { error: null }
 }
 
 export async function signUp(
   email: string,
   password: string,
   firstName: string,
-  lastName: string,
-): Promise<{ user: User | null; error: string | null }> {
-  await new Promise((resolve) => setTimeout(resolve, 500)) // Simulate API delay
+  lastName: string
+): Promise<{ user: User | null; error: string | null; needsVerification?: boolean }> {
+  const supabase = createClient()
 
-  // Check if user already exists
-  const existingUser = mockUsers.find((u) => u.email === email)
-  if (existingUser) {
-    return { user: null, error: "An account with this email already exists" }
-  }
-
-  // Create new user
-  const newUser = {
-    id: `user-${Date.now()}`,
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    role: "applicant" as const,
-    firstName,
-    lastName,
+    options: {
+      data: {
+        first_name: firstName,
+        last_name: lastName,
+        role: "applicant",
+      },
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
+  })
+
+  if (error) {
+    return { user: null, error: error.message }
   }
 
-  mockUsers.push(newUser)
-
-  const user: User = {
-    id: newUser.id,
-    email: newUser.email,
-    role: newUser.role,
-    firstName: newUser.firstName,
-    lastName: newUser.lastName,
+  if (!data.user) {
+    return { user: null, error: "Sign up failed" }
   }
 
-  return { user, error: null }
+  // If email confirmation is required
+  if (!data.session) {
+    return {
+      user: null,
+      error: null,
+      needsVerification: true,
+    }
+  }
+
+  return {
+    user: {
+      id: data.user.id,
+      email: data.user.email!,
+      role: "applicant",
+      firstName,
+      lastName,
+    },
+    error: null,
+  }
 }
 
-export function requireAuth(allowedRoles?: ("admin" | "applicant")[]): (user: User | null) => boolean {
+export async function signOut(): Promise<void> {
+  const supabase = createClient()
+  await supabase.auth.signOut()
+}
+
+export async function getCurrentUser(): Promise<User | null> {
+  const supabase = createClient()
+
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser()
+
+  if (!authUser) return null
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", authUser.id)
+    .single()
+
+  if (profile) {
+    return mapProfileToUser(profile)
+  }
+
+  return {
+    id: authUser.id,
+    email: authUser.email!,
+    role: (authUser.user_metadata?.role as UserRole) || "applicant",
+    firstName: authUser.user_metadata?.first_name,
+    lastName: authUser.user_metadata?.last_name,
+  }
+}
+
+export function requireAuth(allowedRoles?: UserRole[]): (user: User | null) => boolean {
   return (user: User | null) => {
     if (!user) return false
     if (!allowedRoles) return true
@@ -110,6 +192,10 @@ export function requireAuth(allowedRoles?: ("admin" | "applicant")[]): (user: Us
 
 export function requireAdmin(user: User | null): boolean {
   return requireAuth(["admin"])(user)
+}
+
+export function requireLender(user: User | null): boolean {
+  return requireAuth(["lender", "admin"])(user)
 }
 
 export function requireApplicant(user: User | null): boolean {

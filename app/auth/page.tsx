@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Mail, Lock, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import { signIn, signUp, signInWithMagicLink } from "@/lib/auth"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("signin")
@@ -18,22 +19,24 @@ export default function AuthPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
   const router = useRouter()
   const searchParams = useSearchParams()
   const nextUrl = searchParams.get("next") || "/dashboard"
+  const { setUser } = useAuth()
 
-  // Sign In Form State
   const [signInData, setSignInData] = useState({
     email: "",
     password: "",
   })
 
-  // Create Account Form State
   const [createAccountData, setCreateAccountData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
+    firstName: "",
+    lastName: "",
   })
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -42,13 +45,39 @@ export default function AuthPage() {
     setError("")
 
     try {
-      // If unverified → navigate to `/auth/check-email?email=${email}&next=/apply`
-      // If verified → navigate to `searchParams.next || "/dashboard"`
+      const { user, error: authError } = await signIn(signInData.email, signInData.password)
 
-      // For now, simulate going to check-email for all sign-ins
-      router.push(`/auth/check-email?email=${encodeURIComponent(signInData.email)}&next=${encodeURIComponent(nextUrl)}`)
-    } catch (err) {
+      if (authError) {
+        setError(authError)
+      } else if (user) {
+        setUser(user)
+        router.refresh()
+        router.push(nextUrl)
+      }
+    } catch {
       setError("An error occurred during sign in")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleMagicLink = async () => {
+    if (!signInData.email) {
+      setError("Please enter your email address")
+      return
+    }
+    setLoading(true)
+    setError("")
+
+    try {
+      const { error: magicError } = await signInWithMagicLink(signInData.email)
+      if (magicError) {
+        setError(magicError)
+      } else {
+        setSuccess("Check your email for a sign-in link.")
+      }
+    } catch {
+      setError("Failed to send magic link")
     } finally {
       setLoading(false)
     }
@@ -72,10 +101,23 @@ export default function AuthPage() {
     }
 
     try {
-      router.push(
-        `/auth/check-email?email=${encodeURIComponent(createAccountData.email)}&next=${encodeURIComponent(nextUrl)}`,
+      const { user, error: authError, needsVerification } = await signUp(
+        createAccountData.email,
+        createAccountData.password,
+        createAccountData.firstName,
+        createAccountData.lastName
       )
-    } catch (err) {
+
+      if (authError) {
+        setError(authError)
+      } else if (needsVerification) {
+        router.push("/auth/check-email")
+      } else if (user) {
+        setUser(user)
+        router.refresh()
+        router.push(nextUrl)
+      }
+    } catch {
       setError("An error occurred during account creation")
     } finally {
       setLoading(false)
@@ -97,7 +139,9 @@ export default function AuthPage() {
         <Card className="bg-white border-gray-200">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-2xl text-gray-900">Welcome</CardTitle>
-            <CardDescription className="text-gray-600">Sign in to your account or create a new one</CardDescription>
+            <CardDescription className="text-gray-600">
+              Sign in to your account or create a new one
+            </CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -118,7 +162,15 @@ export default function AuthPage() {
               </TabsList>
 
               {error && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+                  {success}
+                </div>
               )}
 
               <TabsContent value="signin" className="space-y-4 mt-6">
@@ -133,7 +185,9 @@ export default function AuthPage() {
                         id="signin-email"
                         type="email"
                         value={signInData.email}
-                        onChange={(e) => setSignInData((prev) => ({ ...prev, email: e.target.value }))}
+                        onChange={(e) =>
+                          setSignInData((prev) => ({ ...prev, email: e.target.value }))
+                        }
                         className="pl-10 bg-white border-gray-300 text-gray-900 focus:border-[#997100] focus:ring-[#997100]"
                         placeholder="Enter your email"
                         required
@@ -151,7 +205,9 @@ export default function AuthPage() {
                         id="signin-password"
                         type={showPassword ? "text" : "password"}
                         value={signInData.password}
-                        onChange={(e) => setSignInData((prev) => ({ ...prev, password: e.target.value }))}
+                        onChange={(e) =>
+                          setSignInData((prev) => ({ ...prev, password: e.target.value }))
+                        }
                         className="pl-10 pr-10 bg-white border-gray-300 text-gray-900 focus:border-[#997100] focus:ring-[#997100]"
                         placeholder="Enter your password"
                         required
@@ -161,15 +217,13 @@ export default function AuthPage() {
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
-                  </div>
-
-                  <div className="text-right">
-                    <Link href="/auth/update-password" className="text-sm text-[#997100] hover:text-[#b8850a]">
-                      Forgot password?
-                    </Link>
                   </div>
 
                   <Button
@@ -180,10 +234,71 @@ export default function AuthPage() {
                     {loading ? "Signing In..." : "Sign In"}
                   </Button>
                 </form>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-gray-200" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-gray-500">Or</span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleMagicLink}
+                  disabled={loading}
+                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Sign in with Magic Link
+                </Button>
               </TabsContent>
 
               <TabsContent value="create" className="space-y-4 mt-6">
                 <form onSubmit={handleCreateAccount} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="create-first" className="text-gray-700">
+                        First Name
+                      </Label>
+                      <Input
+                        id="create-first"
+                        type="text"
+                        value={createAccountData.firstName}
+                        onChange={(e) =>
+                          setCreateAccountData((prev) => ({
+                            ...prev,
+                            firstName: e.target.value,
+                          }))
+                        }
+                        className="bg-white border-gray-300 text-gray-900"
+                        placeholder="First name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="create-last" className="text-gray-700">
+                        Last Name
+                      </Label>
+                      <Input
+                        id="create-last"
+                        type="text"
+                        value={createAccountData.lastName}
+                        onChange={(e) =>
+                          setCreateAccountData((prev) => ({
+                            ...prev,
+                            lastName: e.target.value,
+                          }))
+                        }
+                        className="bg-white border-gray-300 text-gray-900"
+                        placeholder="Last name"
+                        required
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="create-email" className="text-gray-700">
                       Email
@@ -194,8 +309,13 @@ export default function AuthPage() {
                         id="create-email"
                         type="email"
                         value={createAccountData.email}
-                        onChange={(e) => setCreateAccountData((prev) => ({ ...prev, email: e.target.value }))}
-                        className="pl-10 bg-white border-gray-300 text-gray-900 focus:border-[#997100] focus:ring-[#997100]"
+                        onChange={(e) =>
+                          setCreateAccountData((prev) => ({
+                            ...prev,
+                            email: e.target.value,
+                          }))
+                        }
+                        className="pl-10 bg-white border-gray-300 text-gray-900"
                         placeholder="Enter your email"
                         required
                       />
@@ -212,8 +332,13 @@ export default function AuthPage() {
                         id="create-password"
                         type={showPassword ? "text" : "password"}
                         value={createAccountData.password}
-                        onChange={(e) => setCreateAccountData((prev) => ({ ...prev, password: e.target.value }))}
-                        className="pl-10 pr-10 bg-white border-gray-300 text-gray-900 focus:border-[#997100] focus:ring-[#997100]"
+                        onChange={(e) =>
+                          setCreateAccountData((prev) => ({
+                            ...prev,
+                            password: e.target.value,
+                          }))
+                        }
+                        className="pl-10 pr-10 bg-white border-gray-300 text-gray-900"
                         placeholder="Minimum 6 characters"
                         required
                       />
@@ -222,7 +347,11 @@ export default function AuthPage() {
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -237,8 +366,13 @@ export default function AuthPage() {
                         id="confirm-password"
                         type={showConfirmPassword ? "text" : "password"}
                         value={createAccountData.confirmPassword}
-                        onChange={(e) => setCreateAccountData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-                        className="pl-10 pr-10 bg-white border-gray-300 text-gray-900 focus:border-[#997100] focus:ring-[#997100]"
+                        onChange={(e) =>
+                          setCreateAccountData((prev) => ({
+                            ...prev,
+                            confirmPassword: e.target.value,
+                          }))
+                        }
+                        className="pl-10 pr-10 bg-white border-gray-300 text-gray-900"
                         placeholder="Confirm your password"
                         required
                       />
@@ -247,13 +381,13 @@ export default function AuthPage() {
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
-                  </div>
-
-                  <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-                    We'll send a verification link to your email address.
                   </div>
 
                   <Button
@@ -269,7 +403,7 @@ export default function AuthPage() {
 
             <div className="text-center mt-6">
               <Link href="/" className="text-sm text-gray-600 hover:text-[#997100]">
-                ← Back to Home
+                Back to Home
               </Link>
             </div>
           </CardContent>
