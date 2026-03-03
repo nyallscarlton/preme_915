@@ -1,12 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { LogIn, Clock } from "lucide-react"
 import Link from "next/link"
 import { StartChoice } from "@/components/StartChoice"
 
 export default function LuxuryLandingPage() {
+  return (
+    <Suspense>
+      <LuxuryLandingPageInner />
+    </Suspense>
+  )
+}
+
+function LuxuryLandingPageInner() {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const handleStartApplication = () => {
@@ -124,6 +132,27 @@ export default function LuxuryLandingPage() {
                 <LogIn className="mr-2 h-5 w-5" />
                 Login to My Portal
               </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* PreQual CTA Section */}
+      <section className="py-24 border-t border-border">
+        <div className="container mx-auto px-6">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-foreground">
+              See What You Qualify For
+            </h2>
+            <p className="text-xl text-muted-foreground mb-10">
+              Free pre-qualification. No credit check. No obligation.
+            </p>
+            <Button
+              size="lg"
+              className="bg-[#997100] hover:bg-[#b8850a] text-white font-semibold text-lg px-12 py-4 rounded-lg"
+              onClick={handleStartApplication}
+            >
+              Get Pre-Qualified Now
             </Button>
           </div>
         </div>

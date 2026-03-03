@@ -19,6 +19,7 @@ import {
   Eye,
   Loader2,
   RefreshCw,
+  BarChart3,
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
@@ -27,6 +28,7 @@ import { ApplicationsManagement } from "@/components/admin/applications-manageme
 import { UsersManagement } from "@/components/admin/users-management"
 import { AdminMessaging } from "@/components/admin/admin-messaging"
 import { SystemSettings } from "@/components/admin/system-settings"
+import { MetricsDashboard } from "@/components/admin/metrics-dashboard"
 
 interface Application {
   id: string
@@ -215,7 +217,7 @@ export function AdminDashboard() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-muted border border-border">
+          <TabsList className="grid w-full grid-cols-6 bg-muted border border-border">
             <TabsTrigger
               value="dashboard"
               className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground"
@@ -243,6 +245,13 @@ export function AdminDashboard() {
             >
               <MessageSquare className="w-4 h-4 mr-2" />
               Messages
+            </TabsTrigger>
+            <TabsTrigger
+              value="metrics"
+              className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground"
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Metrics
             </TabsTrigger>
             <TabsTrigger
               value="settings"
@@ -458,6 +467,11 @@ export function AdminDashboard() {
           {/* Messages Tab */}
           <TabsContent value="messages" className="mt-6">
             <AdminMessaging applications={applications} />
+          </TabsContent>
+
+          {/* Metrics Tab */}
+          <TabsContent value="metrics" className="mt-6">
+            <MetricsDashboard />
           </TabsContent>
 
           {/* Settings Tab */}

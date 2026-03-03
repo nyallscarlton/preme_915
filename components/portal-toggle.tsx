@@ -3,7 +3,8 @@
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
-import { ArrowLeftRight } from "lucide-react"
+import { ArrowLeftRight, ClipboardList } from "lucide-react"
+import Link from "next/link"
 
 export function PortalToggle() {
   const { user } = useAuth()
@@ -16,9 +17,10 @@ export function PortalToggle() {
   }
 
   const isOnLenderPortal = pathname.startsWith("/lender") || pathname.startsWith("/admin")
+  const isOnConditions = pathname.startsWith("/conditions")
 
   const handleToggle = () => {
-    if (isOnLenderPortal) {
+    if (isOnLenderPortal || isOnConditions) {
       router.push("/dashboard")
     } else {
       router.push("/lender")
@@ -26,14 +28,29 @@ export function PortalToggle() {
   }
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleToggle}
-      className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-white bg-transparent gap-2"
-    >
-      <ArrowLeftRight className="h-3.5 w-3.5" />
-      {isOnLenderPortal ? "Borrower View" : "Lender Portal"}
-    </Button>
+    <div className="flex items-center gap-2">
+      {!isOnConditions && (
+        <Button
+          variant="outline"
+          size="sm"
+          asChild
+          className="border-border text-muted-foreground hover:bg-muted bg-transparent gap-2"
+        >
+          <Link href="/conditions">
+            <ClipboardList className="h-3.5 w-3.5" />
+            Conditions
+          </Link>
+        </Button>
+      )}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleToggle}
+        className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-white bg-transparent gap-2"
+      >
+        <ArrowLeftRight className="h-3.5 w-3.5" />
+        {isOnLenderPortal || isOnConditions ? "Borrower View" : "Lender Portal"}
+      </Button>
+    </div>
   )
 }

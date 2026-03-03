@@ -21,7 +21,19 @@ import {
   Search,
   Eye,
   Users,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
@@ -51,6 +63,7 @@ export default function LenderDashboard() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
+  const [analyticsOpen, setAnalyticsOpen] = useState(false)
 
   // Protect lender route — redirect non-lender/admin users
   useEffect(() => {
@@ -124,6 +137,14 @@ export default function LenderDashboard() {
     approved: applications.filter((a) => a.status === "approved").length,
     totalVolume: applications.reduce((sum, a) => sum + (a.loan_amount || 0), 0),
   }
+
+  const pipelineChartData = [
+    { name: "Submitted", count: stats.submitted, fill: "#3b82f6" },
+    { name: "In Review", count: stats.underReview, fill: "#eab308" },
+    { name: "Approved", count: stats.approved, fill: "#22c55e" },
+    { name: "Rejected", count: applications.filter((a) => a.status === "rejected").length, fill: "#ef4444" },
+    { name: "On Hold", count: applications.filter((a) => a.status === "on_hold").length, fill: "#f97316" },
+  ].filter((d) => d.count > 0)
 
   if (loading) {
     return (
@@ -229,6 +250,51 @@ export default function LenderDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Analytics Section */}
+        <Card className="bg-card border-border mb-8">
+          <CardHeader
+            className="cursor-pointer"
+            onClick={() => setAnalyticsOpen(!analyticsOpen)}
+          >
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-foreground">Pipeline Analytics</CardTitle>
+              {analyticsOpen ? (
+                <ChevronUp className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </CardHeader>
+          {analyticsOpen && (
+            <CardContent>
+              {pipelineChartData.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No application data yet</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={pipelineChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                        color: "hsl(var(--foreground))",
+                      }}
+                    />
+                    <Bar dataKey="count" name="Applications" radius={[4, 4, 0, 0]}>
+                      {pipelineChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          )}
+        </Card>
 
         {/* Filters */}
         <div className="flex gap-4 mb-6">
