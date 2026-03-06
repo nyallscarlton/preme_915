@@ -1,7 +1,14 @@
+import type { Metadata } from "next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowRight, FileText, Clock, Shield, CheckCircle, Phone } from "lucide-react"
 import Link from "next/link"
+
+export const metadata: Metadata = {
+  title: "How It Works",
+  description:
+    "Get funded in 4 simple steps: apply in 5 minutes, receive same-day pre-qualification, upload documents through our secure portal, and close in 7-14 days. No tax returns required.",
+}
 
 export default function HowItWorksPage() {
   const steps = [
@@ -228,7 +235,7 @@ export default function HowItWorksPage() {
                 className="border-white text-white hover:bg-white hover:text-black bg-transparent"
               >
                 <Phone className="mr-2 h-5 w-5" />
-                Call (555) 123-PREME
+                Call (470) 942-5787
               </Button>
             </div>
           </div>
@@ -258,7 +265,7 @@ export default function HowItWorksPage() {
             </div>
           </div>
           <div className="text-center text-gray-500 mt-8">
-            <p>&copy; 2024 PREME. All rights reserved. NMLS ID: 123456</p>
+            <p>&copy; 2024 PREME. All rights reserved. NMLS ID: 2560616</p>
           </div>
         </div>
       </footer>

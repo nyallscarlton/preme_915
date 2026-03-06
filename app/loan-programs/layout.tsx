@@ -7,10 +7,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Loan Programs | PREME Home Loans",
     description: "DSCR, Bridge, Fix & Flip, and more — explore our loan programs for real estate investors.",
-    url: "https://premerealestate.com/loan-programs",
+    url: "https://www.premerealestate.com/loan-programs",
   },
   alternates: {
-    canonical: "https://premerealestate.com/loan-programs",
+    canonical: "https://www.premerealestate.com/loan-programs",
   },
 }
 

@@ -138,7 +138,7 @@ function ContactPageInner() {
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold mb-2">Phone</h3>
-                      <p className="text-gray-300 mb-1">(555) 123-PREME</p>
+                      <p className="text-gray-300 mb-1">(470) 942-5787</p>
                       <p className="text-gray-400 text-sm">Mon-Fri 8AM-8PM EST</p>
                     </div>
                   </div>
@@ -149,7 +149,7 @@ function ContactPageInner() {
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold mb-2">Email</h3>
-                      <p className="text-gray-300 mb-1">funding@preme.com</p>
+                      <p className="text-gray-300 mb-1">lending@premehomeloans.com</p>
                       <p className="text-gray-400 text-sm">We respond within 2 hours</p>
                     </div>
                   </div>
@@ -160,9 +160,7 @@ function ContactPageInner() {
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold mb-2">Office</h3>
-                      <p className="text-gray-300 mb-1">123 Investment Blvd</p>
-                      <p className="text-gray-300 mb-1">Suite 500</p>
-                      <p className="text-gray-300">Miami, FL 33131</p>
+                      <p className="text-gray-300">Atlanta, GA</p>
                     </div>
                   </div>
 
@@ -394,7 +392,7 @@ function ContactPageInner() {
             </div>
           </div>
           <div className="text-center text-gray-500 mt-8">
-            <p>&copy; 2024 PREME. All rights reserved. NMLS ID: 123456</p>
+            <p>&copy; 2024 PREME. All rights reserved. NMLS ID: 2560616</p>
           </div>
         </div>
       </footer>

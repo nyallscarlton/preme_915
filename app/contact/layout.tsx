@@ -7,10 +7,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Contact Us | PREME Home Loans",
     description: "Speak with a lending specialist about investment property financing.",
-    url: "https://premerealestate.com/contact",
+    url: "https://www.premerealestate.com/contact",
   },
   alternates: {
-    canonical: "https://premerealestate.com/contact",
+    canonical: "https://www.premerealestate.com/contact",
   },
 }
 

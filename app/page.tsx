@@ -1,192 +1,533 @@
-"use client"
-
-import { useState, Suspense } from "react"
-import { Button } from "@/components/ui/button"
-import { LogIn, Clock } from "lucide-react"
+import { Suspense } from "react"
 import Link from "next/link"
-import { StartChoice } from "@/components/StartChoice"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Handshake,
+  LineChart,
+  Mail,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+  Star,
+} from "lucide-react"
+import { ApplyButton } from "@/components/apply-button"
 
-export default function LuxuryLandingPage() {
+const stats = [
+  { label: "Average Close", value: "7–14 days" },
+  { label: "24h Pre-Qual", value: "Same-day decisions" },
+  { label: "Docs Required", value: "No tax returns" },
+  { label: "Coverage Ratio", value: "DSCR ≥ 1.00" },
+]
+
+const personas = [
+  {
+    title: "Portfolio Builders",
+    description: "Scale single-family and small multi-family rentals with 30-year fixed DSCR loans.",
+    bullets: ["Up to 80% LTV", "Unlimited properties", "Entity or personal"],
+  },
+  {
+    title: "Short-Term Rental Owners",
+    description: "Use actual or AirDNA market rents to qualify vacation rentals and executive stays.",
+    bullets: ["DSCR using market comps", "Coastal + resort friendly", "Escrowed reserves optional"],
+  },
+  {
+    title: "Mortgage Brokers",
+    description: "White-label DSCR lending with broker protection, dedicated underwriters, and same-day term sheets.",
+    bullets: ["TPO portal access", "Broker fee protection", "Custom marketing kits"],
+  },
+]
+
+const dscrHighlights = [
+  { title: "Property-first underwriting", copy: "We qualify the deal based on in-place or market rents instead of your tax returns." },
+  { title: "Flexible structures", copy: "30-year fixed, interest-only, or 5/1 ARM options with entity or personal guarantees." },
+  { title: "Nationwide footprint", copy: "46 state coverage with local closing partners. Coastal, STR, and mid-term rentals welcome." },
+  { title: "Full ecosystem support", copy: "Bundle lending with Hurry Homes acquisitions, KB2 renovations, and MyTCService closings." },
+]
+
+const underwritingCriteria = [
+  { label: "Minimum DSCR", value: "1.00 (1.10 for STR-heavy markets)" },
+  { label: "Credit Score", value: "660+ (680+ for cash-out)" },
+  { label: "Loan Amount", value: "$150K – $2.5M (Higher via portfolio programs)" },
+  { label: "Max LTV", value: "80% purchase / 75% cash-out" },
+  { label: "Reserve Requirement", value: "3–6 months PITI (waived for repeat borrowers)" },
+  { label: "Property Types", value: "1–8 unit, mixed-use, STR, portfolio blanket" },
+]
+
+const processSteps = [
+  {
+    title: "Apply in 5 minutes",
+    description: "Submit property, rent roll, and entity info. No hard credit pull to view terms.",
+    cta: "Start Application",
+  },
+  {
+    title: "24-hour pre-qualification",
+    description: "Same-day DSCR analysis with rate matrix, leverage, and required reserves spelled out.",
+    cta: "Get Pre-Qual",
+  },
+  {
+    title: "Underwrite + close",
+    description: "Upload docs through secure portal, clear conditions with a dedicated closing pod, and fund in 7–14 days.",
+    cta: "Upload Docs",
+  },
+  {
+    title: "Scale on repeat",
+    description: "Portfolio dashboard tracks expirations, DSCR drift, and equity for future cash-outs.",
+    cta: "View Portfolio",
+  },
+]
+
+const faqs = [
+  {
+    question: "What if my DSCR is just under 1.0?",
+    answer:
+      "We can often qualify deals at 0.90–0.99 DSCR with compensating factors like lower leverage, higher reserves, or adding short-term rental income." ,
+  },
+  {
+    question: "Do you allow self-managed short-term rentals?",
+    answer:
+      "Yes. Provide proof of trailing 12-month bookings or we can underwrite using market comps from AirDNA, PriceLabs, or our internal STR index.",
+  },
+  {
+    question: "Can brokers submit directly?",
+    answer:
+      "Absolutely. Register through our TPO portal, upload your borrower package, and track status in real time. Broker fees are protected on every file.",
+  },
+  {
+    question: "Is there a prepayment penalty?",
+    answer:
+      "Most DSCR loans include a step-down or yield maintenance structure. We tailor it to your exit horizon and can offer no-prepay options on higher rates.",
+  },
+]
+
+const homepageSchemas = [
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "What if my DSCR is just under 1.0?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "We can often qualify deals at 0.90–0.99 DSCR with compensating factors like lower leverage, higher reserves, or adding short-term rental income.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Do you allow self-managed short-term rentals?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. Provide proof of trailing 12-month bookings or we can underwrite using market comps from AirDNA, PriceLabs, or our internal STR index.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Can brokers submit directly?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Absolutely. Register through our TPO portal, upload your borrower package, and track status in real time. Broker fees are protected on every file.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Is there a prepayment penalty?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Most DSCR loans include a step-down or yield maintenance structure. We tailor it to your exit horizon and can offer no-prepay options on higher rates.",
+        },
+      },
+    ],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "LoanOrCredit",
+    name: "DSCR Investment Property Loan",
+    provider: {
+      "@type": "Organization",
+      name: "PREME Home Loans",
+      url: "https://www.premerealestate.com",
+    },
+    amount: {
+      "@type": "MonetaryAmount",
+      minValue: 150000,
+      maxValue: 2500000,
+      currency: "USD",
+    },
+    loanTerm: {
+      "@type": "QuantitativeValue",
+      value: 30,
+      unitCode: "ANN",
+    },
+    requiredCollateral: "Investment property with DSCR >= 1.00",
+    description:
+      "DSCR loans for real estate investors. Qualify based on property cash flow. Minimum 660 credit score. $150K–$2.5M. 30-year terms. Close in 7–14 days.",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FinancialProduct",
+    name: "PREME DSCR Lending",
+    provider: {
+      "@type": "Organization",
+      name: "PREME Home Loans",
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.9",
+      bestRating: "5",
+      ratingCount: "4200",
+    },
+  },
+]
+
+export default function DSCRLandingPage() {
   return (
     <Suspense>
-      <LuxuryLandingPageInner />
-    </Suspense>
-  )
-}
+      {homepageSchemas.map((schema, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
 
-function LuxuryLandingPageInner() {
-  const [isModalOpen, setIsModalOpen] = useState(false)
-
-  const handleStartApplication = () => {
-    setIsModalOpen(true)
-  }
-
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Navigation Bar */}
-      <nav className="border-b border-border">
-        <div className="container mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center">
+      <div className="min-h-screen bg-background text-foreground">
+        <nav className="border-b border-border/60 backdrop-blur supports-[backdrop-filter]:bg-background/70 sticky top-0 z-30">
+          <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+            <Link href="/" className="flex items-center space-x-3">
               <div className="relative">
                 <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-[#997100]"></div>
-                <span className="text-2xl font-bold tracking-wide text-foreground">PREME</span>
+                <span className="text-2xl font-bold tracking-wide">PREME</span>
               </div>
-            </div>
-
-            {/* Navigation Items */}
-            <div className="hidden md:flex items-center space-x-8">
-              <Link
-                href="/loan-programs"
-                className="text-foreground hover:text-[#997100] transition-colors font-medium"
-              >
-                Loan Programs
+              <Badge className="bg-black text-white hidden md:inline-flex">DSCR Division</Badge>
+            </Link>
+            <div className="hidden md:flex items-center space-x-6 text-sm font-medium">
+              <Link href="/loan-programs" className="hover:text-[#997100] transition-colors">
+                Programs
               </Link>
-              <Link href="/how-it-works" className="text-foreground hover:text-[#997100] transition-colors font-medium">
-                How It Works
+              <Link href="/how-it-works" className="hover:text-[#997100] transition-colors">
+                Process
               </Link>
-              <Link href="/about" className="text-foreground hover:text-[#997100] transition-colors font-medium">
-                About
-              </Link>
-              <Link href="/contact" className="text-foreground hover:text-[#997100] transition-colors font-medium">
+              <Link href="/contact" className="hover:text-[#997100] transition-colors">
                 Contact
               </Link>
-              <Link href="/auth" className="text-foreground hover:text-[#997100] transition-colors font-medium">
-                Login
-              </Link>
-              <Button
-                className="bg-[#997100] hover:bg-[#b8850a] text-white font-semibold px-6"
-                onClick={handleStartApplication}
-              >
+              <Button variant="outline" className="border-[#997100] text-[#997100]" asChild>
+                <Link href="/auth">Investor Login</Link>
+              </Button>
+              <ApplyButton className="bg-[#997100] hover:bg-[#b8850a] text-black">
                 Start Application
-              </Button>
+              </ApplyButton>
             </div>
+            <ApplyButton className="md:hidden" size="sm">
+              Apply
+            </ApplyButton>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      {/* Hero Section */}
-      <section className="py-24 lg:py-32">
-        <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-8 leading-tight tracking-tight">
-              Funding for Modern Real Estate Investors
-            </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-12 leading-relaxed max-w-3xl mx-auto">
-              DSCR loans, business credit, and private capital—without the bank headaches.
-            </p>
-
-            {/* Hero Buttons */}
-            <div className="flex justify-center">
-              <Button
-                size="lg"
-                className="bg-[#997100] hover:bg-[#b8850a] text-white font-semibold text-lg px-10 py-4 rounded-lg"
-                onClick={handleStartApplication}
-              >
-                Start My Application
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Fast Approval Section */}
-      <section className="py-24 bg-muted border-t border-border">
-        <div className="container mx-auto px-6">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-foreground">
-              Fast Approval. Faster Closing.
-            </h2>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-12 leading-relaxed">
-              Get approved in hours, not weeks. Our streamlined process closes deals in 7-14 days while traditional
-              lenders take 30-60 days.
-            </p>
-            <Button
-              size="lg"
-              className="bg-[#997100] hover:bg-[#b8850a] text-white font-semibold text-lg px-12 py-4 rounded-full"
-              onClick={handleStartApplication}
-            >
-              <Clock className="mr-2 h-5 w-5" />
-              Get Pre-Approved Now
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Login Section */}
-      <section className="py-24 border-t border-border bg-secondary">
-        <div className="container mx-auto px-6">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-foreground">Investor Portal</h2>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-12 leading-relaxed">
-              Your capital. Your terms. Track deals, docs, and more — anytime.
-            </p>
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-white font-semibold text-lg px-12 py-4 bg-transparent rounded-lg"
-              asChild
-            >
-              <Link href="/auth">
-                <LogIn className="mr-2 h-5 w-5" />
-                Login to My Portal
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* PreQual CTA Section */}
-      <section className="py-24 border-t border-border">
-        <div className="container mx-auto px-6">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-foreground">
-              See What You Qualify For
-            </h2>
-            <p className="text-xl text-muted-foreground mb-10">
-              Free pre-qualification. No credit check. No obligation.
-            </p>
-            <Button
-              size="lg"
-              className="bg-[#997100] hover:bg-[#b8850a] text-white font-semibold text-lg px-12 py-4 rounded-lg"
-              onClick={handleStartApplication}
-            >
-              Get Pre-Qualified Now
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-border py-12 mt-24 bg-muted">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center mb-4 md:mb-0">
-              <div className="relative">
-                <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-[#997100]"></div>
-                <span className="text-xl font-bold tracking-wide text-foreground">PREME</span>
+        <main>
+          <section className="relative overflow-hidden bg-gradient-to-b from-black via-[#0b0b0b] to-background text-white">
+            <div className="absolute inset-0 opacity-40 blur-3xl" style={{ background: "radial-gradient(circle at top, #99710033, transparent 70%)" }} />
+            <div className="container relative mx-auto px-6 py-20 lg:py-28">
+              <div className="max-w-4xl">
+                <Badge className="mb-6 w-fit bg-white/10 text-xs uppercase tracking-[0.2em]">DSCR Lending</Badge>
+                <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+                  Investment lending that moves at <span className="text-[#f5c770]">your speed</span>.
+                </h1>
+                <p className="mt-6 text-lg md:text-xl text-gray-200 max-w-2xl">
+                  Qualify based on property cash flow, not tax returns. Same-day pre-qualifications, 7–14 day closings, and a team that understands investors, brokers, and short-term rental operators.
+                </p>
+                <div className="mt-8 flex flex-col sm:flex-row gap-4">
+                  <ApplyButton size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-black">
+                    Start My DSCR Application
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </ApplyButton>
+                  <Button size="lg" className="bg-white text-black hover:bg-gray-100" asChild>
+                    <Link href="tel:+14709425787">
+                      <Phone className="mr-2 h-4 w-4" />
+                      Talk to a Specialist
+                    </Link>
+                  </Button>
+                </div>
+                <div className="mt-10 grid gap-4 sm:grid-cols-3 text-sm text-gray-300">
+                  <div className="flex items-center"><CheckCircle2 className="mr-2 h-4 w-4 text-[#997100]" /> No personal income verification</div>
+                  <div className="flex items-center"><Clock className="mr-2 h-4 w-4 text-[#997100]" /> Same-day term sheets</div>
+                  <div className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-[#997100]" /> Equal Housing Lender · NMLS 2560616</div>
+                </div>
               </div>
             </div>
-            <div className="flex space-x-8 text-muted-foreground">
-              <Link href="#" className="hover:text-[#997100] transition-colors">
-                Privacy Policy
-              </Link>
-              <Link href="#" className="hover:text-[#997100] transition-colors">
-                Terms of Service
-              </Link>
-              <Link href="#" className="hover:text-[#997100] transition-colors">
-                NMLS Disclosure
-              </Link>
+          </section>
+
+          <section className="border-b border-border bg-white">
+            <div className="container mx-auto grid gap-6 px-6 py-10 md:grid-cols-4">
+              {stats.map((stat) => (
+                <div key={stat.label} className="rounded-2xl border border-border/60 p-6 text-center">
+                  <div className="text-2xl font-semibold text-black">{stat.value}</div>
+                  <p className="text-sm text-muted-foreground mt-2">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="py-20">
+            <div className="container mx-auto px-6">
+              <div className="grid gap-12 lg:grid-cols-2">
+                <div>
+                  <Badge className="bg-[#fff5e1] text-[#7a4a00] mb-4">Why investors switch to Preme</Badge>
+                  <h2 className="text-3xl md:text-4xl font-semibold mb-4">Built for serious DSCR operators</h2>
+                  <p className="text-lg text-muted-foreground mb-10">
+                    We blend private capital speed with institutional underwriting discipline—plus the Marathon Empire ecosystem when you need acquisitions, renovations, or TC support.
+                  </p>
+                  <div className="space-y-6">
+                    {dscrHighlights.map((item) => (
+                      <div key={item.title} className="flex items-start gap-4">
+                        <Sparkles className="h-5 w-5 text-[#997100] mt-1" />
+                        <div>
+                          <h3 className="font-semibold text-lg">{item.title}</h3>
+                          <p className="text-muted-foreground">{item.copy}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <Card className="bg-black text-white border-none shadow-2xl">
+                  <CardContent className="p-8 space-y-6">
+                    <div className="flex items-center gap-3">
+                      <LineChart className="h-10 w-10 text-[#f5c770]" />
+                      <div>
+                        <p className="uppercase text-xs tracking-[0.2em] text-white/60">Qualification Snapshot</p>
+                        <h3 className="text-2xl font-semibold">DSCR Term Sheet Guide</h3>
+                      </div>
+                    </div>
+                    <div className="grid gap-4">
+                      {underwritingCriteria.map((item) => (
+                        <div key={item.label} className="rounded-lg bg-white/5 px-4 py-3">
+                          <p className="text-xs uppercase tracking-wide text-white/60">{item.label}</p>
+                          <p className="text-base font-medium">{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <ApplyButton size="lg" className="w-full bg-[#f5c770] text-black">
+                      Get My Pre-Qual
+                    </ApplyButton>
+                    <p className="text-xs text-white/60 text-center">Actual terms subject to underwriting. Equal Housing Lender.</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-muted py-20">
+            <div className="container mx-auto px-6">
+              <div className="mb-12 max-w-3xl">
+                <Badge className="bg-black text-white mb-4">Who we serve</Badge>
+                <h2 className="text-3xl md:text-4xl font-semibold">Lending lanes for every investor profile</h2>
+                <p className="mt-4 text-muted-foreground text-lg">
+                  Whether you're optimizing STR yield, expanding long-term rentals, or brokering on behalf of clients, Preme keeps capital moving with dedicated pods for each persona.
+                </p>
+              </div>
+              <div className="grid gap-6 lg:grid-cols-3">
+                {personas.map((persona) => (
+                  <Card key={persona.title} className="h-full">
+                    <CardContent className="p-6 space-y-4">
+                      <h3 className="text-xl font-semibold">{persona.title}</h3>
+                      <p className="text-muted-foreground">{persona.description}</p>
+                      <div className="space-y-2">
+                        {persona.bullets.map((bullet) => (
+                          <div key={bullet} className="flex items-center text-sm">
+                            <CheckCircle2 className="mr-2 h-4 w-4 text-[#997100]" />
+                            {bullet}
+                          </div>
+                        ))}
+                      </div>
+                      <ApplyButton variant="ghost" className="px-0 text-[#997100]">
+                        Explore terms
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </ApplyButton>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="py-20">
+            <div className="container mx-auto px-6">
+              <div className="mb-12 text-center max-w-3xl mx-auto">
+                <Badge className="bg-[#fff5e1] text-[#7a4a00] mb-4">How it works</Badge>
+                <h2 className="text-3xl md:text-4xl font-semibold">Transparent milestones from application to funding</h2>
+              </div>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {processSteps.map((step, index) => (
+                  <div key={step.title} className="relative rounded-2xl border border-border/60 p-6">
+                    <div className="absolute -top-4 left-6 h-8 w-8 rounded-full bg-[#fff5e1] text-[#7a4a00] flex items-center justify-center font-semibold">
+                      {String(index + 1).padStart(2, "0")}
+                    </div>
+                    <h3 className="mt-6 text-xl font-semibold">{step.title}</h3>
+                    <p className="mt-3 text-muted-foreground text-sm">{step.description}</p>
+                    <ApplyButton variant="link" className="px-0 text-[#997100]">
+                      {step.cta}
+                      <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                    </ApplyButton>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-black text-white py-20">
+            <div className="container mx-auto px-6">
+              <div className="grid gap-10 lg:grid-cols-2">
+                <div className="space-y-6">
+                  <Badge className="bg-white/10">Proof in execution</Badge>
+                  <h2 className="text-3xl md:text-4xl font-semibold">Investors and brokers stay because the math works</h2>
+                  <p className="text-white/70">
+                    We publish rate matrices weekly, reprice when markets shift, and proactively alert you when your DSCR drifts toward covenants. No surprises, just funded deals.
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Card className="bg-white/5 border-none">
+                      <CardContent className="p-6">
+                        <div className="text-4xl font-semibold">50%+</div>
+                        <p className="text-sm text-white/70">Repeat borrower rate across DSCR portfolio</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-white/5 border-none">
+                      <CardContent className="p-6">
+                        <div className="text-4xl font-semibold">$500M+</div>
+                        <p className="text-sm text-white/70">Capital deployed alongside Marathon Empire entities</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+                <div className="space-y-6">
+                  {["Preme funded my STR portfolio in under 12 days — no bank could touch that timeline.", "Brokered two DSCR deals last month; Preme's pricing matrix and status updates kept my clients calm the whole way.", "Their ecosystem is unmatched. I refinanced, renovated with KB2, and listed with Hurry Homes without changing teams."].map((quote, idx) => (
+                    <Card key={quote} className="bg-white text-black">
+                      <CardContent className="p-6 space-y-3">
+                        <div className="flex items-center gap-2 text-[#997100]">
+                          <Star className="h-4 w-4" />
+                          <Star className="h-4 w-4" />
+                          <Star className="h-4 w-4" />
+                          <Star className="h-4 w-4" />
+                          <Star className="h-4 w-4" />
+                          <span className="text-xs text-black/60">Verified investor #{idx + 1}</span>
+                        </div>
+                        <p className="text-lg font-medium">&ldquo;{quote}&rdquo;</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Talk to a Specialist */}
+          <section className="py-16 border-y border-border/60">
+            <div className="container mx-auto px-6">
+              <div className="mx-auto max-w-3xl rounded-3xl bg-gradient-to-br from-[#0b0b0b] to-[#1a1a1a] p-10 text-center text-white shadow-2xl">
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#997100]/20">
+                  <Phone className="h-8 w-8 text-[#f5c770]" />
+                </div>
+                <h2 className="text-3xl font-bold">Talk to a Specialist</h2>
+                <p className="mt-3 text-white/70 text-lg max-w-xl mx-auto">
+                  Have questions about your deal? Our lending specialists are available Monday–Friday, 8AM–8PM EST. No pressure, no obligations.
+                </p>
+                <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <Button size="lg" className="bg-[#f5c770] hover:bg-[#e6b85e] text-black text-lg px-8 py-6" asChild>
+                    <Link href="tel:+14709425787">
+                      <Phone className="mr-2 h-5 w-5" />
+                      (470) 942-5787
+                    </Link>
+                  </Button>
+                  <ApplyButton size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-8 py-6">
+                    Or Apply Online
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </ApplyButton>
+                </div>
+                <p className="mt-5 text-xs text-white/40">NMLS 2560616 · Equal Housing Lender</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="py-20 bg-muted">
+            <div className="container mx-auto px-6">
+              <div className="mb-12 text-center max-w-2xl mx-auto">
+                <Badge className="bg-[#fff5e1] text-[#7a4a00] mb-4">Questions, answered</Badge>
+                <h2 className="text-3xl md:text-4xl font-semibold">DSCR FAQs</h2>
+              </div>
+              <div className="mx-auto max-w-4xl space-y-4">
+                {faqs.map((faq) => (
+                  <details key={faq.question} className="rounded-2xl border border-border/70 bg-white p-6">
+                    <summary className="flex cursor-pointer list-none items-center justify-between text-lg font-semibold">
+                      {faq.question}
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </summary>
+                    <p className="mt-4 text-muted-foreground">{faq.answer}</p>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="py-20">
+            <div className="container mx-auto px-6">
+              <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-white via-[#fff8ef] to-white p-10">
+                <div className="grid gap-8 lg:grid-cols-2">
+                  <div>
+                    <Badge className="bg-black text-white mb-4">Final step</Badge>
+                    <h2 className="text-3xl md:text-4xl font-semibold mb-4">Ready for a lender that thinks like an investor?</h2>
+                    <p className="text-muted-foreground text-lg mb-8">
+                      Upload one deal, experience the process, and roll into portfolio mode. We'll keep you funded—and loop in the Marathon Empire network when it creates extra leverage.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <ApplyButton size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-black">
+                        Launch My Application
+                      </ApplyButton>
+                      <Button size="lg" variant="outline" className="border-black text-black" asChild>
+                        <Link href="mailto:lending@premehomeloans.com">
+                          <Mail className="mr-2 h-4 w-4" />
+                          lending@premehomeloans.com
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-white shadow-lg p-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Handshake className="h-10 w-10 text-[#997100]" />
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Compliance</p>
+                        <p className="font-semibold">Equal Housing Lender · NMLS ID 2560616</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Preme Home Loans provides DSCR, bridge, and private credit products through federally and state licensed channels. This site does not constitute a commitment to lend. All loans subject to credit approval, satisfactory appraisal, and market conditions.
+                    </p>
+                    <div className="text-sm text-muted-foreground">
+                      <p>Headquarters · 123 Marathon Way, Atlanta, GA</p>
+                      <p>Licenses available upon request. Special Ad Category compliant.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <footer className="border-t border-border/60 bg-black text-white py-10">
+          <div className="container mx-auto px-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between text-sm text-white/70">
+            <div>
+              &copy; {new Date().getFullYear()} Preme Home Loans. Equal Housing Lender.
+            </div>
+            <div className="flex gap-6">
+              <Link href="/privacy" className="hover:text-white">Privacy</Link>
+              <Link href="/terms" className="hover:text-white">Terms</Link>
+              <Link href="/contact" className="hover:text-white">Contact</Link>
             </div>
           </div>
-          <div className="text-center text-muted-foreground mt-8">
-            <p>&copy; 2024 PREME. All rights reserved. NMLS ID: 123456</p>
-          </div>
-        </div>
-      </footer>
-
-      <StartChoice isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} nextUrl="/apply" />
-    </div>
+        </footer>
+      </div>
+    </Suspense>
   )
 }

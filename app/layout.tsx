@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     title: "PREME Home Loans - Funding for Modern Real Estate Investors",
     description:
       "DSCR loans, fix & flip financing, and private capital—without the bank headaches. Close in 7-14 days.",
-    url: "https://premerealestate.com",
+    url: "https://www.premerealestate.com",
     siteName: "PREME Home Loans",
     type: "website",
     locale: "en_US",
@@ -39,9 +39,9 @@ export const metadata: Metadata = {
     description:
       "DSCR loans, fix & flip financing, and private capital—without the bank headaches. Close in 7-14 days.",
   },
-  metadataBase: new URL("https://premerealestate.com"),
+  metadataBase: new URL("https://www.premerealestate.com"),
   alternates: {
-    canonical: "https://premerealestate.com",
+    canonical: "https://www.premerealestate.com",
   },
   robots: {
     index: true,
@@ -54,9 +54,62 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "PREME Home Loans",
+    url: "https://www.premerealestate.com",
+    telephone: "(470) 942-5787",
+    email: "lending@premehomeloans.com",
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Atlanta",
+      addressRegion: "GA",
+      addressCountry: "US",
+    },
+    sameAs: [],
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Real Estate Investment Loan Products",
+      itemListElement: [
+        {
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "FinancialProduct",
+            name: "DSCR Loans",
+            description:
+              "Debt Service Coverage Ratio loans for investment properties. Qualify based on property cash flow, not personal income.",
+          },
+        },
+        {
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "FinancialProduct",
+            name: "Fix & Flip Financing",
+            description:
+              "Short-term bridge loans for purchasing and renovating investment properties.",
+          },
+        },
+        {
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "FinancialProduct",
+            name: "Investment Property Loans",
+            description:
+              "Flexible financing solutions for single-family, multi-family, and short-term rental investment properties.",
+          },
+        },
+      ],
+    },
+  }
+
   return (
     <html lang="en">
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
         <script
           async
           defer
