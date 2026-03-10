@@ -25,6 +25,7 @@ import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
 import { PortalToggle } from "@/components/portal-toggle"
 import { ApplicationsManagement } from "@/components/admin/applications-management"
+import { ConditionsManagement } from "@/components/admin/conditions-management"
 import { UsersManagement } from "@/components/admin/users-management"
 import { AdminMessaging } from "@/components/admin/admin-messaging"
 import { SystemSettings } from "@/components/admin/system-settings"
@@ -32,13 +33,17 @@ import { MetricsDashboard } from "@/components/admin/metrics-dashboard"
 
 interface Application {
   id: string
+  dbId: string
   applicantName: string
   applicantEmail: string
+  applicantPhone: string
   propertyAddress: string
   loanAmount: number
   status: string
   submittedAt: string
   loanType: string
+  creditScoreRange: string
+  propertyValue: number
   progress: number
   assignedTo: string | null
 }
@@ -68,14 +73,18 @@ export function AdminDashboard() {
       // Transform API data to match component interface
       const transformedApps = (result.applications || []).map((app: any) => ({
         id: app.application_number || app.id,
+        dbId: app.id,
         applicantName: app.applicant_name || "Unknown",
         applicantEmail: app.applicant_email || "",
+        applicantPhone: app.applicant_phone || "",
         propertyAddress:
           [app.property_address, app.property_city, app.property_state].filter(Boolean).join(", ") || "N/A",
         loanAmount: app.loan_amount || 0,
         status: app.status || "submitted",
         submittedAt: app.submitted_at || app.created_at || new Date().toISOString(),
         loanType: app.loan_type || app.property_type || "N/A",
+        creditScoreRange: app.credit_score_range || "N/A",
+        propertyValue: app.property_value || 0,
         progress: app.status === "approved" ? 100 : app.status === "under_review" ? 65 : 25,
         assignedTo: null,
       }))
@@ -217,7 +226,7 @@ export function AdminDashboard() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 bg-muted border border-border">
+          <TabsList className="grid w-full grid-cols-7 bg-muted border border-border">
             <TabsTrigger
               value="dashboard"
               className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground"
@@ -231,6 +240,13 @@ export function AdminDashboard() {
             >
               <FileText className="w-4 h-4 mr-2" />
               Applications
+            </TabsTrigger>
+            <TabsTrigger
+              value="conditions"
+              className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground"
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Conditions
             </TabsTrigger>
             <TabsTrigger
               value="users"
@@ -457,6 +473,11 @@ export function AdminDashboard() {
           {/* Applications Tab - Pass real applications and refresh callback */}
           <TabsContent value="applications" className="mt-6">
             <ApplicationsManagement applications={applications} onRefresh={fetchApplications} />
+          </TabsContent>
+
+          {/* Conditions Tab */}
+          <TabsContent value="conditions" className="mt-6">
+            <ConditionsManagement applications={applications} />
           </TabsContent>
 
           {/* Users Tab */}

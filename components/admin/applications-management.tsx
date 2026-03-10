@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,19 +23,73 @@ import {
   DollarSign,
   Archive,
   Loader2,
+  Phone,
+  Mail,
+  Send,
+  Plus,
+  Trash2,
+  Shield,
+  Building2,
+  Copy,
+  ChevronDown,
+  ChevronUp,
+  Link2,
 } from "lucide-react"
 
 interface Application {
   id: string
+  dbId: string
   applicantName: string
   applicantEmail: string
+  applicantPhone: string
   propertyAddress: string
   loanAmount: number
   status: string
   submittedAt: string
   loanType: string
+  creditScoreRange: string
+  propertyValue: number
   progress: number
   assignedTo: string | null
+}
+
+interface Condition {
+  id: string
+  application_id: string
+  title: string
+  description: string | null
+  status: string
+  due_date: string | null
+  created_by: string | null
+  created_at: string
+}
+
+interface DscrLender {
+  id: string
+  name: string
+  short_name: string
+  min_fico: number
+  min_loan: number
+  max_loan: number | null
+  min_dscr: number
+  max_term: string | null
+}
+
+interface MatchResult {
+  lender: DscrLender
+  qualified: boolean
+  reasons: string[]
+}
+
+interface ConditionsData {
+  conditions: Condition[]
+  lenderMatch: {
+    matches: MatchResult[]
+    application: Record<string, unknown> | null
+    stats: { qualified: number; total: number }
+  }
+  progress: { total: number; received: number; approved: number; pending: number }
+  templates: Record<string, string[]>
 }
 
 interface ApplicationsManagementProps {
@@ -51,6 +105,20 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
   const [isUpdating, setIsUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
 
+  // New state for conditions/lender/sms
+  const [condData, setCondData] = useState<ConditionsData | null>(null)
+  const [condLoading, setCondLoading] = useState(false)
+  const [newCondLabel, setNewCondLabel] = useState("")
+  const [addingCond, setAddingCond] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [portalUrl, setPortalUrl] = useState("")
+  const [showLenderDetail, setShowLenderDetail] = useState(false)
+  const [showTemplates, setShowTemplates] = useState(false)
+  const [smsText, setSmsText] = useState("")
+  const [sendingSms, setSendingSms] = useState(false)
+  const [smsStatus, setSmsStatus] = useState<"idle" | "sent" | "error">("idle")
+  const [copiedPortal, setCopiedPortal] = useState(false)
+
   const filteredApplications = applications.filter((app) => {
     const matchesStatus = statusFilter === "all" || app.status === statusFilter
     const matchesSearch =
@@ -60,97 +128,162 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
     return matchesStatus && matchesSearch
   })
 
+  // Fetch conditions + lender data when an app is selected
+  const fetchConditions = useCallback(async (dbId: string) => {
+    setCondLoading(true)
+    try {
+      const res = await fetch(`/api/applications/${dbId}/conditions`)
+      if (res.ok) setCondData(await res.json())
+    } catch { /* ignore */ }
+    setCondLoading(false)
+  }, [])
+
+  useEffect(() => {
+    if (selectedApp) {
+      fetchConditions(selectedApp.dbId)
+    } else {
+      setCondData(null)
+      setPortalUrl("")
+      setSmsText("")
+      setSmsStatus("idle")
+    }
+  }, [selectedApp, fetchConditions])
+
+  // ─── Conditions actions ───
+
+  async function addConditionItem(label: string) {
+    if (!label.trim() || !selectedApp) return
+    setAddingCond(true)
+    await fetch(`/api/applications/${selectedApp.dbId}/conditions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "add", label }),
+    })
+    setNewCondLabel("")
+    setAddingCond(false)
+    fetchConditions(selectedApp.dbId)
+  }
+
+  async function addConditionBatch(labels: string[]) {
+    if (!selectedApp) return
+    await fetch(`/api/applications/${selectedApp.dbId}/conditions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "add_batch", labels }),
+    })
+    setShowTemplates(false)
+    fetchConditions(selectedApp.dbId)
+  }
+
+  async function updateCondStatus(conditionId: string, status: string) {
+    if (!selectedApp) return
+    await fetch(`/api/applications/${selectedApp.dbId}/conditions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update_status", condition_id: conditionId, status }),
+    })
+    fetchConditions(selectedApp.dbId)
+  }
+
+  async function deleteCond(conditionId: string) {
+    if (!selectedApp) return
+    await fetch(`/api/applications/${selectedApp.dbId}/conditions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", condition_id: conditionId }),
+    })
+    fetchConditions(selectedApp.dbId)
+  }
+
+  async function sendConditionsEmail() {
+    if (!selectedApp) return
+    setSendingEmail(true)
+    try {
+      const res = await fetch(`/api/applications/${selectedApp.dbId}/conditions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "send_request_email" }),
+      })
+      const json = await res.json()
+      if (json.portal_url) setPortalUrl(json.portal_url)
+    } catch { /* ignore */ }
+    setSendingEmail(false)
+  }
+
+  // ─── SMS ───
+
+  async function sendSms() {
+    if (!smsText.trim() || !selectedApp) return
+    setSendingSms(true)
+    setSmsStatus("idle")
+    try {
+      const res = await fetch(`/api/applications/${selectedApp.dbId}/sms`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: smsText }),
+      })
+      if (res.ok) {
+        setSmsText("")
+        setSmsStatus("sent")
+        setTimeout(() => setSmsStatus("idle"), 3000)
+      } else {
+        setSmsStatus("error")
+      }
+    } catch {
+      setSmsStatus("error")
+    }
+    setSendingSms(false)
+  }
+
+  // ─── Helpers ───
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "approved":
-        return "bg-green-600 text-white"
-      case "under_review":
-        return "bg-yellow-600 text-black"
-      case "submitted":
-        return "bg-blue-600 text-white"
-      case "rejected":
-        return "bg-red-600 text-white"
-      case "on_hold":
-        return "bg-orange-600 text-white"
-      case "archived":
-        return "bg-gray-500 text-white"
-      default:
-        return "bg-gray-600 text-white"
+      case "approved": return "bg-green-600 text-white"
+      case "under_review": return "bg-yellow-600 text-black"
+      case "submitted": return "bg-blue-600 text-white"
+      case "rejected": return "bg-red-600 text-white"
+      case "on_hold": return "bg-orange-600 text-white"
+      case "archived": return "bg-gray-500 text-white"
+      default: return "bg-gray-600 text-white"
     }
   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "approved":
-        return <CheckCircle className="h-4 w-4" />
-      case "under_review":
-        return <Clock className="h-4 w-4" />
-      case "submitted":
-        return <FileText className="h-4 w-4" />
-      case "rejected":
-        return <AlertCircle className="h-4 w-4" />
-      case "on_hold":
-        return <AlertCircle className="h-4 w-4" />
-      case "archived":
-        return <Archive className="h-4 w-4" />
-      default:
-        return <FileText className="h-4 w-4" />
+      case "approved": return <CheckCircle className="h-4 w-4" />
+      case "under_review": return <Clock className="h-4 w-4" />
+      case "submitted": return <FileText className="h-4 w-4" />
+      case "rejected": return <AlertCircle className="h-4 w-4" />
+      case "on_hold": return <AlertCircle className="h-4 w-4" />
+      case "archived": return <Archive className="h-4 w-4" />
+      default: return <FileText className="h-4 w-4" />
     }
   }
 
-  const formatStatus = (status: string) => {
-    return status
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ")
-  }
+  const formatStatus = (status: string) =>
+    status.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
     })
-  }
 
   const handleStatusUpdate = async (appId: string, newStatus: string) => {
     setIsUpdating(true)
     setUpdateError(null)
-
     try {
-      console.log("[v0] Updating application status:", { appId, newStatus })
-
       const response = await fetch(`/api/applications/${appId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       })
-
       const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to update status")
-      }
-
-      console.log("[v0] Status updated successfully")
-
-      // Refresh the applications list
-      if (onRefresh) {
-        onRefresh()
-      }
-
-      // Update local state
-      if (selectedApp && selectedApp.id === appId) {
-        setSelectedApp({ ...selectedApp, status: newStatus })
-      }
-
+      if (!response.ok || !result.success) throw new Error(result.error || "Failed to update status")
+      if (onRefresh) onRefresh()
+      if (selectedApp && selectedApp.id === appId) setSelectedApp({ ...selectedApp, status: newStatus })
       setReviewNotes("")
     } catch (error) {
-      console.error("[v0] Error updating status:", error)
       setUpdateError(error instanceof Error ? error.message : "Failed to update status")
     } finally {
       setIsUpdating(false)
@@ -161,30 +294,33 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
     await handleStatusUpdate(appId, "archived")
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // SELECTED APPLICATION DETAIL VIEW
+  // ═══════════════════════════════════════════════════════════
+
   if (selectedApp) {
     return (
       <div className="space-y-6">
+        {/* Top bar */}
         <div className="flex items-center justify-between">
           <Button
             variant="outline"
             className="border-border text-foreground hover:bg-muted bg-transparent"
             onClick={() => setSelectedApp(null)}
           >
-            ← Back to Applications
+            &larr; Back to Applications
           </Button>
-          <div className="flex space-x-2">
-            <Button variant="outline" className="border-border text-foreground hover:bg-muted bg-transparent">
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-            <Button variant="outline" className="border-border text-foreground hover:bg-muted bg-transparent">
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Message Applicant
-            </Button>
+          <div className="flex items-center gap-2">
+            <a
+              href={`tel:${selectedApp.applicantPhone}`}
+              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition"
+            >
+              <Phone className="h-4 w-4" /> Call
+            </a>
             <Button
               variant="outline"
               className="border-gray-500 text-gray-500 hover:bg-gray-500 hover:text-white bg-transparent"
-              onClick={() => handleArchive(selectedApp.id)}
+              onClick={() => handleArchive(selectedApp.dbId)}
               disabled={isUpdating || selectedApp.status === "archived"}
             >
               {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2 h-4 w-4" />}
@@ -200,15 +336,17 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Application Details */}
+          {/* ═══ LEFT: Application Details + SMS + Conditions ═══ */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Application Info */}
             <Card className="bg-card border-border">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-foreground text-2xl">{selectedApp.id}</CardTitle>
                     <CardDescription className="text-muted-foreground text-lg">
-                      {selectedApp.applicantName} • {selectedApp.applicantEmail}
+                      {selectedApp.applicantName} &bull; {selectedApp.applicantEmail}
+                      {selectedApp.applicantPhone && <span> &bull; {selectedApp.applicantPhone}</span>}
                     </CardDescription>
                   </div>
                   <Badge className={getStatusColor(selectedApp.status)}>
@@ -217,83 +355,224 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Application Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-muted-foreground">
-                      <DollarSign className="h-4 w-4" />
-                      <span className="text-sm">Loan Amount</span>
-                    </div>
-                    <p className="text-xl font-semibold text-foreground">${selectedApp.loanAmount.toLocaleString()}</p>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Loan Amount</p>
+                    <p className="text-lg font-semibold text-foreground">${selectedApp.loanAmount.toLocaleString()}</p>
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-muted-foreground">
-                      <FileText className="h-4 w-4" />
-                      <span className="text-sm">Property Type</span>
-                    </div>
-                    <p className="text-xl font-semibold text-foreground">{selectedApp.loanType}</p>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Property Type</p>
+                    <p className="text-lg font-semibold text-foreground">{selectedApp.loanType}</p>
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span className="text-sm">Submitted</span>
-                    </div>
-                    <p className="text-xl font-semibold text-foreground">{formatDate(selectedApp.submittedAt)}</p>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Credit Score</p>
+                    <p className="text-lg font-semibold text-foreground">{selectedApp.creditScoreRange}</p>
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-muted-foreground">
-                      <User className="h-4 w-4" />
-                      <span className="text-sm">Assigned To</span>
-                    </div>
-                    <p className="text-xl font-semibold text-foreground">{selectedApp.assignedTo || "Unassigned"}</p>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Property Value</p>
+                    <p className="text-lg font-semibold text-foreground">
+                      {selectedApp.propertyValue ? `$${selectedApp.propertyValue.toLocaleString()}` : "N/A"}
+                    </p>
                   </div>
                 </div>
+                <div className="mt-4">
+                  <p className="text-xs text-muted-foreground">Property Address</p>
+                  <p className="text-foreground">{selectedApp.propertyAddress}</p>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">Submitted {formatDate(selectedApp.submittedAt)}</p>
+              </CardContent>
+            </Card>
 
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-muted-foreground">
-                    <FileText className="h-4 w-4" />
-                    <span className="text-sm">Property Address</span>
-                  </div>
-                  <p className="text-lg text-foreground">{selectedApp.propertyAddress}</p>
+            {/* SMS Compose */}
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-foreground text-base flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-[#997100]" />
+                  Message Applicant
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {smsStatus === "sent" && <p className="mb-2 text-xs text-green-600 font-medium">Message sent!</p>}
+                {smsStatus === "error" && <p className="mb-2 text-xs text-red-600">Failed to send — check Twilio config</p>}
+                <div className="flex items-end gap-2">
+                  <Textarea
+                    value={smsText}
+                    onChange={(e) => setSmsText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendSms() } }}
+                    placeholder="Type a message... (Enter to send)"
+                    rows={2}
+                    className="flex-1 bg-muted border-border text-foreground resize-none"
+                  />
+                  <a
+                    href={`tel:${selectedApp.applicantPhone}`}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-green-600 text-white hover:bg-green-700 transition"
+                    title="Call"
+                  >
+                    <Phone className="h-4 w-4" />
+                  </a>
+                  <Button
+                    onClick={sendSms}
+                    disabled={sendingSms || !smsText.trim()}
+                    className="bg-[#997100] hover:bg-[#b8850a] text-black h-10"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Documents Section */}
+            {/* Conditions & Documents Tracker */}
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-foreground">Documents</CardTitle>
-                <CardDescription className="text-muted-foreground">Uploaded application documents</CardDescription>
+                <CardTitle className="text-foreground flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-[#997100]" />
+                  Conditions & Documents
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Track required documents and their status
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {["Income Verification", "Bank Statements", "Credit Report", "Property Appraisal"].map((doc) => (
-                    <div key={doc} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="h-5 w-5 text-[#997100]" />
-                        <span className="text-foreground">{doc}</span>
+              <CardContent className="space-y-4">
+                {condLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <>
+                    {/* Progress bar */}
+                    {condData && condData.progress.total > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                          <span>{condData.progress.received} of {condData.progress.total} received</span>
+                          <span>{condData.progress.approved} approved</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div
+                            className="bg-[#997100] h-2 rounded-full transition-all"
+                            style={{ width: `${condData.progress.total > 0 ? (condData.progress.received / condData.progress.total) * 100 : 0}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    )}
+
+                    {/* Conditions list */}
+                    <div className="space-y-2">
+                      {condData?.conditions.length === 0 && (
+                        <p className="text-sm text-muted-foreground">No conditions added yet. Use templates below or add manually.</p>
+                      )}
+                      {condData?.conditions.map((c) => (
+                        <div key={c.id} className="flex items-center gap-2 p-2.5 bg-muted rounded-lg">
+                          <button
+                            onClick={() => {
+                              const next = c.status === "outstanding" ? "submitted" : c.status === "submitted" ? "approved" : c.status
+                              if (next !== c.status) updateCondStatus(c.id, next)
+                            }}
+                            className={`shrink-0 ${
+                              c.status === "approved" ? "text-green-500" :
+                              c.status === "submitted" ? "text-blue-500" :
+                              c.status === "waived" ? "text-gray-400" :
+                              "text-gray-400 hover:text-[#997100]"
+                            } transition`}
+                            title={`Status: ${c.status}. Click to advance.`}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </button>
+                          <span className={`flex-1 text-sm ${c.status === "approved" || c.status === "waived" ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                            {c.title}
+                          </span>
+                          <Badge variant="outline" className={`text-xs ${
+                            c.status === "outstanding" ? "border-orange-400 text-orange-500" :
+                            c.status === "submitted" ? "border-blue-400 text-blue-500" :
+                            c.status === "approved" ? "border-green-400 text-green-500" :
+                            "border-border text-muted-foreground"
+                          }`}>
+                            {c.status}
+                          </Badge>
+                          <button onClick={() => deleteCond(c.id)} className="shrink-0 text-muted-foreground hover:text-red-500 transition">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+
+                    {/* Add condition */}
+                    <div className="flex gap-2">
+                      <Input
+                        value={newCondLabel}
+                        onChange={(e) => setNewCondLabel(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && addConditionItem(newCondLabel)}
+                        placeholder="Add condition..."
+                        className="bg-muted border-border text-foreground"
+                      />
+                      <Button
+                        onClick={() => addConditionItem(newCondLabel)}
+                        disabled={addingCond || !newCondLabel.trim()}
+                        className="bg-[#997100] hover:bg-[#b8850a] text-black"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Templates */}
+                    <div>
+                      <button
+                        onClick={() => setShowTemplates(!showTemplates)}
+                        className="text-xs text-[#997100] hover:text-[#b8850a] font-medium"
+                      >
+                        {showTemplates ? "Hide templates" : "+ Add from template"}
+                      </button>
+                      {showTemplates && condData?.templates && (
+                        <div className="mt-2 space-y-1">
+                          {Object.entries(condData.templates).map(([key, labels]) => (
+                            <button
+                              key={key}
+                              onClick={() => addConditionBatch(labels)}
+                              className="block w-full text-left rounded-lg bg-muted px-3 py-2 text-xs text-foreground hover:bg-accent transition"
+                            >
+                              <span className="font-medium text-[#997100]">{key.toUpperCase()}</span>
+                              <span className="text-muted-foreground ml-2">({labels.length} items)</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Email / Portal */}
+                    <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+                      <Button
+                        onClick={sendConditionsEmail}
+                        disabled={sendingEmail || !condData?.conditions.some((c) => c.status === "outstanding")}
+                        className="bg-[#997100] hover:bg-[#b8850a] text-black"
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        {sendingEmail ? "Sending..." : "Email Document Request"}
+                      </Button>
+                      {portalUrl && (
+                        <Button
+                          variant="outline"
+                          className="border-border text-foreground hover:bg-muted bg-transparent"
+                          onClick={() => {
+                            navigator.clipboard.writeText(portalUrl)
+                            setCopiedPortal(true)
+                            setTimeout(() => setCopiedPortal(false), 2000)
+                          }}
+                          title={portalUrl}
+                        >
+                          {copiedPortal ? <CheckCircle className="mr-2 h-4 w-4 text-green-500" /> : <Copy className="mr-2 h-4 w-4" />}
+                          {copiedPortal ? "Copied!" : "Copy Portal Link"}
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Review Panel */}
+          {/* ═══ RIGHT SIDEBAR ═══ */}
           <div className="space-y-6">
+            {/* Review Panel */}
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="text-foreground">Review Application</CardTitle>
@@ -304,7 +583,7 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
                   <label className="block text-sm font-medium text-foreground mb-2">Update Status</label>
                   <Select
                     defaultValue={selectedApp.status}
-                    onValueChange={(value) => handleStatusUpdate(selectedApp.id, value)}
+                    onValueChange={(value) => handleStatusUpdate(selectedApp.dbId, value)}
                     disabled={isUpdating}
                   >
                     <SelectTrigger className="bg-card border-border text-foreground">
@@ -326,62 +605,107 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
                   <Textarea
                     value={reviewNotes}
                     onChange={(e) => setReviewNotes(e.target.value)}
-                    className="bg-card border-border text-foreground min-h-[120px]"
-                    placeholder="Add your review notes here..."
+                    className="bg-card border-border text-foreground min-h-[80px]"
+                    placeholder="Add your review notes..."
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Button
                     className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => handleStatusUpdate(selectedApp.id, "approved")}
+                    onClick={() => handleStatusUpdate(selectedApp.dbId, "approved")}
                     disabled={isUpdating}
                   >
-                    {isUpdating ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                    )}
-                    Approve Application
+                    {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                    Approve
                   </Button>
                   <Button
                     variant="outline"
                     className="w-full border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-black bg-transparent"
-                    onClick={() => handleStatusUpdate(selectedApp.id, "under_review")}
+                    onClick={() => handleStatusUpdate(selectedApp.dbId, "under_review")}
                     disabled={isUpdating}
                   >
-                    {isUpdating ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Clock className="mr-2 h-4 w-4" />
-                    )}
+                    <Clock className="mr-2 h-4 w-4" />
                     Request More Info
                   </Button>
                   <Button
                     variant="outline"
                     className="w-full border-red-600 text-red-600 hover:bg-red-600 hover:text-white bg-transparent"
-                    onClick={() => handleStatusUpdate(selectedApp.id, "rejected")}
+                    onClick={() => handleStatusUpdate(selectedApp.dbId, "rejected")}
                     disabled={isUpdating}
                   >
-                    {isUpdating ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <XCircle className="mr-2 h-4 w-4" />
-                    )}
-                    Reject Application
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Reject
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
+            {/* DSCR Lender Match */}
+            {condData?.lenderMatch && condData.lenderMatch.matches.length > 0 && (
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-3 cursor-pointer" onClick={() => setShowLenderDetail(!showLenderDetail)}>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-foreground text-base flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-[#997100]" />
+                      DSCR Lender Match
+                      <Badge className="bg-green-600 text-white ml-1">
+                        {condData.lenderMatch.stats.qualified} qualified
+                      </Badge>
+                    </CardTitle>
+                    {showLenderDetail ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                  </div>
+                </CardHeader>
+                {showLenderDetail && (
+                  <CardContent className="pt-0 space-y-2">
+                    {condData.lenderMatch.matches.map((m) => (
+                      <div
+                        key={m.lender.id}
+                        className={`rounded-lg border p-3 text-xs ${
+                          m.qualified ? "border-green-600/30 bg-green-600/5" : "border-border bg-muted opacity-70"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-foreground">{m.lender.name}</p>
+                            <p className="text-muted-foreground">{m.lender.short_name}</p>
+                          </div>
+                          {m.qualified ? (
+                            <Shield className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground">
+                          <span>DSCR &ge; {m.lender.min_dscr}</span>
+                          <span>FICO &ge; {m.lender.min_fico}</span>
+                          <span>Loan ${m.lender.min_loan.toLocaleString()}+</span>
+                          {m.lender.max_loan && <span>Max ${m.lender.max_loan.toLocaleString()}</span>}
+                          {m.lender.max_term && <span>{m.lender.max_term}</span>}
+                        </div>
+                        {m.reasons.length > 0 && (
+                          <div className="mt-1.5 space-y-0.5">
+                            {m.reasons.map((r, i) => (
+                              <p key={i} className="text-red-500">{r}</p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                )}
+              </Card>
+            )}
+
+            {/* Timeline */}
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-foreground">Application Timeline</CardTitle>
+                <CardTitle className="text-foreground text-base">Timeline</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center shrink-0">
                       <CheckCircle className="h-3 w-3 text-white" />
                     </div>
                     <div>
@@ -389,10 +713,9 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
                       <p className="text-xs text-muted-foreground">{formatDate(selectedApp.submittedAt)}</p>
                     </div>
                   </div>
-
                   {selectedApp.status !== "submitted" && (
                     <div className="flex items-start space-x-3">
-                      <div className="w-6 h-6 bg-yellow-600 rounded-full flex items-center justify-center">
+                      <div className="w-6 h-6 bg-yellow-600 rounded-full flex items-center justify-center shrink-0">
                         <Clock className="h-3 w-3 text-black" />
                       </div>
                       <div>
@@ -401,10 +724,9 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
                       </div>
                     </div>
                   )}
-
                   {selectedApp.status === "approved" && (
                     <div className="flex items-start space-x-3">
-                      <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
+                      <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center shrink-0">
                         <CheckCircle className="h-3 w-3 text-white" />
                       </div>
                       <div>
@@ -421,6 +743,10 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
       </div>
     )
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // APPLICATIONS LIST VIEW
+  // ═══════════════════════════════════════════════════════════
 
   return (
     <div className="space-y-6">
@@ -485,7 +811,7 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
                   <div>
                     <h3 className="font-semibold text-foreground">{app.id}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {app.applicantName} • {app.applicantEmail}
+                      {app.applicantName} &bull; {app.applicantEmail}
                     </p>
                     <p className="text-sm text-muted-foreground">{app.propertyAddress}</p>
                   </div>
@@ -510,7 +836,7 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
                       variant="outline"
                       size="sm"
                       className="border-gray-400 text-gray-500 hover:bg-gray-500 hover:text-white bg-transparent"
-                      onClick={() => handleArchive(app.id)}
+                      onClick={() => handleArchive(app.dbId)}
                       disabled={isUpdating || app.status === "archived"}
                     >
                       <Archive className="h-4 w-4" />
