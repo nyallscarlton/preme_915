@@ -81,27 +81,25 @@ export async function extractConditionsFromFile(
 
   // Build content for OpenAI
   const content: any[] = []
+  let model = "gpt-4o-mini"
 
-  if (mimeType.startsWith("image/")) {
+  if (mimeType === "application/pdf") {
+    // PDFs: use GPT-4o which supports PDF files natively
+    model = "gpt-4o"
+    const base64Data = fileBuffer.toString("base64")
+    content.push({
+      type: "file",
+      file: {
+        filename: fileName,
+        file_data: `data:application/pdf;base64,${base64Data}`,
+      },
+    })
+  } else if (mimeType.startsWith("image/")) {
     // Images: use GPT-4o-mini vision
     const base64Data = fileBuffer.toString("base64")
     content.push({
       type: "image_url",
       image_url: { url: `data:${mimeType};base64,${base64Data}` },
-    })
-  } else if (mimeType === "application/pdf") {
-    // PDFs: extract text and send as text (GPT-4o-mini doesn't support PDF vision)
-    const pdfText = extractTextFromPdf(fileBuffer)
-    if (pdfText.trim().length < 20) {
-      // If text extraction fails (scanned PDF), this is likely an image-based PDF
-      // Fall back to sending first instruction to user
-      throw new Error(
-        "This PDF appears to be image-based (scanned). Please take a screenshot of the conditions page and upload the image instead."
-      )
-    }
-    content.push({
-      type: "text",
-      text: `Here is the text content extracted from a PDF named "${fileName}":\n\n${pdfText}`,
     })
   } else {
     // Text/CSV/other files
@@ -124,7 +122,7 @@ export async function extractConditionsFromFile(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model,
       max_tokens: 4096,
       temperature: 0.1,
       messages: [
