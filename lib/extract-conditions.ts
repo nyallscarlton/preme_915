@@ -31,59 +31,65 @@ export async function extractConditionsFromFile(
   mimeType: string,
   fileName: string
 ): Promise<ExtractedCondition[]> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY
-  if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured")
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) throw new Error("OPENAI_API_KEY not configured")
 
   const base64Data = fileBuffer.toString("base64")
 
-  // Build parts for Gemini
-  const parts: any[] = []
+  // Build content for OpenAI vision
+  const content: any[] = []
 
-  if (mimeType === "application/pdf" || mimeType.startsWith("image/")) {
-    parts.push({
-      inlineData: {
-        mimeType,
-        data: base64Data,
-      },
+  if (mimeType.startsWith("image/")) {
+    content.push({
+      type: "image_url",
+      image_url: { url: `data:${mimeType};base64,${base64Data}` },
+    })
+  } else if (mimeType === "application/pdf") {
+    // GPT-4o-mini doesn't accept PDFs directly — convert to base64 image approach
+    // For PDFs, send as file content with a note
+    content.push({
+      type: "image_url",
+      image_url: { url: `data:application/pdf;base64,${base64Data}` },
     })
   } else {
     // Text file
     const text = fileBuffer.toString("utf-8")
-    parts.push({ text: `Here is the content of a file named "${fileName}":\n\n${text}` })
+    content.push({
+      type: "text",
+      text: `Here is the content of a file named "${fileName}":\n\n${text}`,
+    })
   }
 
-  parts.push({
+  content.push({
+    type: "text",
     text: "Extract all conditions from this document. Return ONLY a JSON array.",
   })
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [{ parts }],
-        generationConfig: {
-          maxOutputTokens: 4096,
-          temperature: 0.1,
-        },
-      }),
-    }
-  )
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      max_tokens: 4096,
+      temperature: 0.1,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content },
+      ],
+    }),
+  })
 
   if (!res.ok) {
     const err = await res.text()
-    throw new Error(`Gemini API error: ${err}`)
+    throw new Error(`OpenAI API error: ${err}`)
   }
 
   const json = await res.json()
 
-  // Extract text from response
-  const text =
-    json.candidates?.[0]?.content?.parts
-      ?.map((p: any) => p.text || "")
-      .join("") || ""
+  const text = json.choices?.[0]?.message?.content || ""
 
   // Extract JSON from response (may be wrapped in ```json ... ```)
   const jsonMatch = text.match(/\[[\s\S]*\]/)
