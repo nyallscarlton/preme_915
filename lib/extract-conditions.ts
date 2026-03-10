@@ -26,6 +26,51 @@ Rules:
 - Do NOT invent conditions that aren't in the document
 - Return ONLY valid JSON array, no other text`
 
+/**
+ * Extract readable text from a PDF buffer without external dependencies.
+ * Handles most text-based PDFs by finding text stream objects.
+ */
+function extractTextFromPdf(buffer: Buffer): string {
+  const raw = buffer.toString("latin1")
+  const textChunks: string[] = []
+
+  // Find all stream content between "stream" and "endstream"
+  const streamRegex = /stream\r?\n([\s\S]*?)endstream/g
+  let match
+  while ((match = streamRegex.exec(raw)) !== null) {
+    const content = match[1]
+    // Extract text operators: Tj, TJ, ' and "
+    const tjRegex = /\(([^)]*)\)\s*Tj/g
+    let tj
+    while ((tj = tjRegex.exec(content)) !== null) {
+      textChunks.push(tj[1])
+    }
+    // TJ array: [(text) kerning (text) ...]
+    const tjArrayRegex = /\[([^\]]*)\]\s*TJ/g
+    let tjArr
+    while ((tjArr = tjArrayRegex.exec(content)) !== null) {
+      const inner = tjArr[1]
+      const parts = /\(([^)]*)\)/g
+      let p
+      while ((p = parts.exec(inner)) !== null) {
+        textChunks.push(p[1])
+      }
+    }
+  }
+
+  // Decode common PDF escape sequences
+  const decoded = textChunks
+    .join(" ")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\\(/g, "(")
+    .replace(/\\\)/g, ")")
+    .replace(/\\\\/g, "\\")
+
+  return decoded
+}
+
 export async function extractConditionsFromFile(
   fileBuffer: Buffer,
   mimeType: string,
@@ -34,29 +79,36 @@ export async function extractConditionsFromFile(
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured")
 
-  const base64Data = fileBuffer.toString("base64")
-
-  // Build content for OpenAI vision
+  // Build content for OpenAI
   const content: any[] = []
 
   if (mimeType.startsWith("image/")) {
+    // Images: use GPT-4o-mini vision
+    const base64Data = fileBuffer.toString("base64")
     content.push({
       type: "image_url",
       image_url: { url: `data:${mimeType};base64,${base64Data}` },
     })
   } else if (mimeType === "application/pdf") {
-    // GPT-4o-mini doesn't accept PDFs directly — convert to base64 image approach
-    // For PDFs, send as file content with a note
-    content.push({
-      type: "image_url",
-      image_url: { url: `data:application/pdf;base64,${base64Data}` },
-    })
-  } else {
-    // Text file
-    const text = fileBuffer.toString("utf-8")
+    // PDFs: extract text and send as text (GPT-4o-mini doesn't support PDF vision)
+    const pdfText = extractTextFromPdf(fileBuffer)
+    if (pdfText.trim().length < 20) {
+      // If text extraction fails (scanned PDF), this is likely an image-based PDF
+      // Fall back to sending first instruction to user
+      throw new Error(
+        "This PDF appears to be image-based (scanned). Please take a screenshot of the conditions page and upload the image instead."
+      )
+    }
     content.push({
       type: "text",
-      text: `Here is the content of a file named "${fileName}":\n\n${text}`,
+      text: `Here is the text content extracted from a PDF named "${fileName}":\n\n${pdfText}`,
+    })
+  } else {
+    // Text/CSV/other files
+    const textContent = fileBuffer.toString("utf-8")
+    content.push({
+      type: "text",
+      text: `Here is the content of a file named "${fileName}":\n\n${textContent}`,
     })
   }
 
