@@ -1,5 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk"
-
 export interface ExtractedCondition {
   title: string
   description: string | null
@@ -33,55 +31,59 @@ export async function extractConditionsFromFile(
   mimeType: string,
   fileName: string
 ): Promise<ExtractedCondition[]> {
-  const client = new Anthropic()
+  const apiKey = process.env.GOOGLE_AI_API_KEY
+  if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured")
 
-  // Build the content blocks
-  const content: Anthropic.MessageCreateParams["messages"][0]["content"] = []
+  const base64Data = fileBuffer.toString("base64")
 
-  if (mimeType === "application/pdf") {
-    content.push({
-      type: "document",
-      source: {
-        type: "base64",
-        media_type: "application/pdf",
-        data: fileBuffer.toString("base64"),
-      },
-    } as any)
-  } else if (mimeType.startsWith("image/")) {
-    content.push({
-      type: "image",
-      source: {
-        type: "base64",
-        media_type: mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-        data: fileBuffer.toString("base64"),
+  // Build parts for Gemini
+  const parts: any[] = []
+
+  if (mimeType === "application/pdf" || mimeType.startsWith("image/")) {
+    parts.push({
+      inlineData: {
+        mimeType,
+        data: base64Data,
       },
     })
   } else {
-    // Try as text
+    // Text file
     const text = fileBuffer.toString("utf-8")
-    content.push({
-      type: "text",
-      text: `Here is the content of a file named "${fileName}":\n\n${text}`,
-    })
+    parts.push({ text: `Here is the content of a file named "${fileName}":\n\n${text}` })
   }
 
-  content.push({
-    type: "text",
+  parts.push({
     text: "Extract all conditions from this document. Return ONLY a JSON array.",
   })
 
-  const response = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 4096,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content }],
-  })
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [{ parts }],
+        generationConfig: {
+          maxOutputTokens: 4096,
+          temperature: 0.1,
+        },
+      }),
+    }
+  )
 
-  // Parse the response
-  const text = response.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("")
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Gemini API error: ${err}`)
+  }
+
+  const json = await res.json()
+
+  // Extract text from response
+  const text =
+    json.candidates?.[0]?.content?.parts
+      ?.map((p: any) => p.text || "")
+      .join("") || ""
 
   // Extract JSON from response (may be wrapped in ```json ... ```)
   const jsonMatch = text.match(/\[[\s\S]*\]/)
