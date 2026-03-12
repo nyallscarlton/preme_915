@@ -21,14 +21,14 @@ const stats = [
   { label: "Average Close", value: "7–14 days" },
   { label: "24h Pre-Qual", value: "Same-day decisions" },
   { label: "Docs Required", value: "No tax returns" },
-  { label: "Coverage Ratio", value: "DSCR ≥ 1.00" },
+  { label: "Coverage Ratio", value: "DSCR as low as 0.75" },
 ]
 
 const personas = [
   {
     title: "Portfolio Builders",
     description: "Scale single-family and small multi-family rentals with 30-year fixed DSCR loans.",
-    bullets: ["Up to 80% LTV", "Unlimited properties", "Entity or personal"],
+    bullets: ["Up to 85% LTV", "Unlimited properties", "Entity or personal"],
   },
   {
     title: "Short-Term Rental Owners",
@@ -50,12 +50,12 @@ const dscrHighlights = [
 ]
 
 const underwritingCriteria = [
-  { label: "Minimum DSCR", value: "1.00 (1.10 for STR-heavy markets)" },
-  { label: "Credit Score", value: "660+ (680+ for cash-out)" },
-  { label: "Loan Amount", value: "$150K – $2.5M (Higher via portfolio programs)" },
-  { label: "Max LTV", value: "80% purchase / 75% cash-out" },
+  { label: "Minimum DSCR", value: "No minimum — programs start at 0.75 (lender-dependent)" },
+  { label: "Credit Score", value: "600+ (varies by lender, LTV, and property type)" },
+  { label: "Loan Amount", value: "$50K – $6.25M" },
+  { label: "Max LTV", value: "Up to 85% purchase / 80% cash-out" },
   { label: "Reserve Requirement", value: "3–6 months PITI (waived for repeat borrowers)" },
-  { label: "Property Types", value: "1–8 unit, mixed-use, STR, portfolio blanket" },
+  { label: "Property Types", value: "1–10 unit, mixed-use, STR, condotel, non-warrantable condo" },
 ]
 
 const processSteps = [
@@ -154,8 +154,8 @@ const homepageSchemas = [
     },
     amount: {
       "@type": "MonetaryAmount",
-      minValue: 150000,
-      maxValue: 2500000,
+      minValue: 50000,
+      maxValue: 6250000,
       currency: "USD",
     },
     loanTerm: {
@@ -163,9 +163,9 @@ const homepageSchemas = [
       value: 30,
       unitCode: "ANN",
     },
-    requiredCollateral: "Investment property with DSCR >= 1.00",
+    requiredCollateral: "Investment property with DSCR as low as 0.75",
     description:
-      "DSCR loans for real estate investors. Qualify based on property cash flow. Minimum 660 credit score. $150K–$2.5M. 30-year terms. Close in 7–14 days.",
+      "DSCR loans for real estate investors. Qualify based on property cash flow. 600+ credit score. $50K–$6.25M. 30-year terms. Close in 7–14 days.",
   },
   {
     "@context": "https://schema.org",
