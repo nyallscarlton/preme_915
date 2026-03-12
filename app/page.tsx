@@ -206,19 +206,19 @@ export default function DSCRLandingPage() {
               <Badge className="bg-black text-white hidden md:inline-flex">DSCR Division</Badge>
             </Link>
             <div className="hidden md:flex items-center space-x-6 text-sm font-medium">
-              <Link href="/loan-programs" className="hover:text-[#997100] transition-colors">
+              <Link href="/loan-programs" className="hover:text-[#8B6914] transition-colors">
                 Programs
               </Link>
-              <Link href="/how-it-works" className="hover:text-[#997100] transition-colors">
+              <Link href="/how-it-works" className="hover:text-[#8B6914] transition-colors">
                 Process
               </Link>
-              <Link href="/contact" className="hover:text-[#997100] transition-colors">
+              <Link href="/contact" className="hover:text-[#8B6914] transition-colors">
                 Contact
               </Link>
-              <Button variant="outline" className="border-[#997100] text-[#997100]" asChild>
+              <Button variant="outline" className="border-[#8B6914] text-[#8B6914]" asChild>
                 <Link href="/auth">Investor Login</Link>
               </Button>
-              <ApplyButton className="bg-[#997100] hover:bg-[#b8850a] text-black">
+              <ApplyButton className="bg-[#997100] hover:bg-[#b8850a] text-white">
                 Start Application
               </ApplyButton>
             </div>
@@ -241,7 +241,7 @@ export default function DSCRLandingPage() {
                   Qualify based on property cash flow, not tax returns. Same-day pre-qualifications, 7–14 day closings, and a team that understands investors, brokers, and short-term rental operators.
                 </p>
                 <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                  <ApplyButton size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-black">
+                  <ApplyButton size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-white">
                     Start My DSCR Application
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </ApplyButton>
@@ -255,14 +255,14 @@ export default function DSCRLandingPage() {
                 <div className="mt-10 grid gap-4 sm:grid-cols-3 text-sm text-gray-300">
                   <div className="flex items-center"><CheckCircle2 className="mr-2 h-4 w-4 text-[#997100]" /> No personal income verification</div>
                   <div className="flex items-center"><Clock className="mr-2 h-4 w-4 text-[#997100]" /> Same-day term sheets</div>
-                  <div className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-[#997100]" /> Equal Housing Lender · NMLS 2560616</div>
+                  <div className="flex items-center"><ShieldCheck className="mr-2 h-4 w-4 text-[#997100]" /> NMLS 2560616</div>
                 </div>
               </div>
             </div>
           </section>
 
           <section className="border-b border-border bg-white">
-            <div className="container mx-auto grid gap-6 px-6 py-10 md:grid-cols-4">
+            <div className="container mx-auto grid grid-cols-2 gap-6 px-6 py-10 sm:grid-cols-2 md:grid-cols-4">
               {stats.map((stat) => (
                 <div key={stat.label} className="rounded-2xl border border-border/60 p-6 text-center">
                   <div className="text-2xl font-semibold text-black">{stat.value}</div>
@@ -310,10 +310,10 @@ export default function DSCRLandingPage() {
                         </div>
                       ))}
                     </div>
-                    <ApplyButton size="lg" className="w-full bg-[#f5c770] text-black">
-                      Get My Pre-Qual
-                    </ApplyButton>
-                    <p className="text-xs text-white/60 text-center">Actual terms subject to underwriting. Equal Housing Lender.</p>
+                    <Button size="lg" className="w-full bg-[#997100] hover:bg-[#b8850a] text-white" asChild>
+                      <Link href="/apply">Get My Pre-Qual</Link>
+                    </Button>
+                    <p className="text-xs text-white/60 text-center">Actual terms subject to underwriting.</p>
                   </CardContent>
                 </Card>
               </div>
@@ -343,10 +343,10 @@ export default function DSCRLandingPage() {
                           </div>
                         ))}
                       </div>
-                      <ApplyButton variant="ghost" className="px-0 text-[#997100]">
+                      <Link href="/loan-programs" className="inline-flex items-center px-0 text-sm font-medium text-[#8B6914] hover:underline">
                         Explore terms
                         <ArrowRight className="ml-2 h-4 w-4" />
-                      </ApplyButton>
+                      </Link>
                     </CardContent>
                   </Card>
                 ))}
@@ -368,10 +368,10 @@ export default function DSCRLandingPage() {
                     </div>
                     <h3 className="mt-6 text-xl font-semibold">{step.title}</h3>
                     <p className="mt-3 text-muted-foreground text-sm">{step.description}</p>
-                    <ApplyButton variant="link" className="px-0 text-[#997100]">
+                    <Link href="/apply" className="inline-flex items-center px-0 text-sm font-medium text-[#8B6914] hover:underline mt-2">
                       {step.cta}
                       <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                    </ApplyButton>
+                    </Link>
                   </div>
                 ))}
               </div>
@@ -403,8 +403,12 @@ export default function DSCRLandingPage() {
                   </div>
                 </div>
                 <div className="space-y-6">
-                  {["Preme funded my STR portfolio in under 12 days — no bank could touch that timeline.", "Brokered two DSCR deals last month; Preme's pricing matrix and status updates kept my clients calm the whole way.", "Their ecosystem is unmatched. I refinanced, renovated with KB2, and listed with Hurry Homes without changing teams."].map((quote, idx) => (
-                    <Card key={quote} className="bg-white text-black">
+                  {[
+                    { quote: "Preme funded my STR portfolio in under 12 days — no bank could touch that timeline.", attribution: "DSCR Investor, Atlanta GA" },
+                    { quote: "Brokered two DSCR deals last month; Preme's pricing matrix and status updates kept my clients calm the whole way.", attribution: "Fix & Flip Operator, Dallas TX" },
+                    { quote: "Their ecosystem is unmatched. I refinanced, renovated with KB2, and listed with Hurry Homes without changing teams.", attribution: "STR Portfolio Owner, Nashville TN" },
+                  ].map((testimonial) => (
+                    <Card key={testimonial.quote} className="bg-white text-black">
                       <CardContent className="p-6 space-y-3">
                         <div className="flex items-center gap-2 text-[#997100]">
                           <Star className="h-4 w-4" />
@@ -412,9 +416,9 @@ export default function DSCRLandingPage() {
                           <Star className="h-4 w-4" />
                           <Star className="h-4 w-4" />
                           <Star className="h-4 w-4" />
-                          <span className="text-xs text-black/60">Verified investor #{idx + 1}</span>
+                          <span className="text-xs text-black/60">{testimonial.attribution}</span>
                         </div>
-                        <p className="text-lg font-medium">&ldquo;{quote}&rdquo;</p>
+                        <p className="text-lg font-medium">&ldquo;{testimonial.quote}&rdquo;</p>
                       </CardContent>
                     </Card>
                   ))}
@@ -435,18 +439,13 @@ export default function DSCRLandingPage() {
                   Have questions about your deal? Our lending specialists are available Monday–Friday, 8AM–8PM EST. No pressure, no obligations.
                 </p>
                 <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <Button size="lg" className="bg-[#f5c770] hover:bg-[#e6b85e] text-black text-lg px-8 py-6" asChild>
+                  <Button size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-white text-lg px-8 py-6" asChild>
                     <Link href="tel:+14709425787">
                       <Phone className="mr-2 h-5 w-5" />
                       (470) 942-5787
                     </Link>
                   </Button>
-                  <ApplyButton size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-8 py-6">
-                    Or Apply Online
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </ApplyButton>
                 </div>
-                <p className="mt-5 text-xs text-white/40">NMLS 2560616 · Equal Housing Lender</p>
               </div>
             </div>
           </section>
@@ -482,7 +481,7 @@ export default function DSCRLandingPage() {
                       Upload one deal, experience the process, and roll into portfolio mode. We'll keep you funded—and loop in the Marathon Empire network when it creates extra leverage.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4">
-                      <ApplyButton size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-black">
+                      <ApplyButton size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-white">
                         Launch My Application
                       </ApplyButton>
                       <Button size="lg" variant="outline" className="border-black text-black" asChild>
@@ -498,7 +497,7 @@ export default function DSCRLandingPage() {
                       <Handshake className="h-10 w-10 text-[#997100]" />
                       <div>
                         <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Compliance</p>
-                        <p className="font-semibold">Equal Housing Lender · NMLS ID 2560616</p>
+                        <p className="font-semibold">NMLS ID 2560616</p>
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -506,7 +505,7 @@ export default function DSCRLandingPage() {
                     </p>
                     <div className="text-sm text-muted-foreground">
                       <p>Headquarters · 123 Marathon Way, Atlanta, GA</p>
-                      <p>Licenses available upon request. Special Ad Category compliant.</p>
+                      <p>Licenses available upon request.</p>
                     </div>
                   </div>
                 </div>
@@ -518,7 +517,7 @@ export default function DSCRLandingPage() {
         <footer className="border-t border-border/60 bg-black text-white py-10">
           <div className="container mx-auto px-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between text-sm text-white/70">
             <div>
-              &copy; {new Date().getFullYear()} Preme Home Loans. Equal Housing Lender.
+              &copy; {new Date().getFullYear()} Preme Home Loans. NMLS 2560616. Equal Housing Lender.
             </div>
             <div className="flex gap-6">
               <Link href="/privacy" className="hover:text-white">Privacy</Link>
