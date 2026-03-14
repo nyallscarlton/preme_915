@@ -27,6 +27,7 @@ function ContactPageInner() {
     loan_type: "",
     loan_amount: "",
     message: "",
+    tcpa_consent: false,
   })
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -201,7 +202,7 @@ function ContactPageInner() {
                           className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
                           onClick={() => {
                             setSubmitted(false)
-                            setFormData({ first_name: "", last_name: "", email: "", phone: "", loan_type: "", loan_amount: "", message: "" })
+                            setFormData({ first_name: "", last_name: "", email: "", phone: "", loan_type: "", loan_amount: "", message: "", tcpa_consent: false })
                           }}
                         >
                           Send Another Message
@@ -299,6 +300,20 @@ function ContactPageInner() {
                           />
                         </div>
 
+                        <div className="flex items-start space-x-3">
+                          <input
+                            type="checkbox"
+                            id="tcpa_consent"
+                            checked={formData.tcpa_consent}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, tcpa_consent: e.target.checked }))}
+                            className="mt-1 h-4 w-4 rounded border-gray-700 text-[#997100] focus:ring-[#997100] accent-[#997100]"
+                            required
+                          />
+                          <label htmlFor="tcpa_consent" className="text-xs text-gray-400 leading-relaxed cursor-pointer">
+                            By checking this box, I provide my express written consent to receive calls (including via automated dialing systems, prerecorded messages, and artificial intelligence), texts, and emails about my inquiry from Preme Home Loans and its partners at the phone number provided. Consent is not a condition of purchase. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787.
+                          </label>
+                        </div>
+
                         {error && (
                           <p className="text-red-400 text-sm">{error}</p>
                         )}
@@ -380,13 +395,13 @@ function ContactPageInner() {
               </div>
             </div>
             <div className="flex space-x-8 text-gray-400">
-              <Link href="#" className="hover:text-[#997100] transition-colors">
+              <Link href="/privacy" className="hover:text-[#997100] transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="#" className="hover:text-[#997100] transition-colors">
+              <Link href="/terms" className="hover:text-[#997100] transition-colors">
                 Terms of Service
               </Link>
-              <Link href="#" className="hover:text-[#997100] transition-colors">
+              <Link href="/contact" className="hover:text-[#997100] transition-colors">
                 NMLS Disclosure
               </Link>
             </div>

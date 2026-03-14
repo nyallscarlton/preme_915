@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -20,6 +21,8 @@ export function ReviewSubmitForm({
   isSubmitting,
   submissionError,
 }: ReviewSubmitFormProps) {
+  const [tcpaConsent, setTcpaConsent] = useState(false)
+
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === "string" ? Number.parseFloat(amount) : amount
     return isNaN(num) ? "$0" : `$${num.toLocaleString()}`
@@ -174,6 +177,20 @@ export function ReviewSubmitForm({
             </p>
           </div>
 
+          <div className="flex items-start space-x-3">
+            <input
+              type="checkbox"
+              id="tcpaConsent"
+              checked={tcpaConsent}
+              onChange={(e) => setTcpaConsent(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-[hsl(var(--primary))]"
+              required
+            />
+            <label htmlFor="tcpaConsent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+              By checking this box, I provide my express written consent to receive calls (including via automated dialing systems, prerecorded messages, and artificial intelligence), texts, and emails about my inquiry from Preme Home Loans and its partners at the phone number provided. Consent is not a condition of purchase. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787.
+            </label>
+          </div>
+
           <div className="flex justify-between pt-6">
             <Button
               onClick={onPrevious}
@@ -187,7 +204,7 @@ export function ReviewSubmitForm({
             <Button
               onClick={onSubmit}
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !tcpaConsent}
             >
               {isSubmitting ? (
                 <>

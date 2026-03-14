@@ -83,6 +83,7 @@ export function LoanApplicationPortal() {
     signature: "",
     printedName: "",
     signatureDate: "",
+    tcpaConsent: false,
   })
 
   const handleInputChange = (field: string, value: string) => {
@@ -892,6 +893,20 @@ export function LoanApplicationPortal() {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      id="tcpaConsent"
+                      checked={formData.tcpaConsent}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, tcpaConsent: e.target.checked }))}
+                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-[hsl(var(--primary))]"
+                      required
+                    />
+                    <label htmlFor="tcpaConsent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                      By checking this box, I provide my express written consent to receive calls (including via automated dialing systems, prerecorded messages, and artificial intelligence), texts, and emails about my inquiry from Preme Home Loans and its partners at the phone number provided. Consent is not a condition of purchase. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787.
+                    </label>
                   </div>
 
                   <Button

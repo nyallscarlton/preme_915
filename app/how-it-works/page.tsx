@@ -253,13 +253,13 @@ export default function HowItWorksPage() {
               </div>
             </div>
             <div className="flex space-x-8 text-gray-400">
-              <Link href="#" className="hover:text-[#997100] transition-colors">
+              <Link href="/privacy" className="hover:text-[#997100] transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="#" className="hover:text-[#997100] transition-colors">
+              <Link href="/terms" className="hover:text-[#997100] transition-colors">
                 Terms of Service
               </Link>
-              <Link href="#" className="hover:text-[#997100] transition-colors">
+              <Link href="/contact" className="hover:text-[#997100] transition-colors">
                 NMLS Disclosure
               </Link>
             </div>

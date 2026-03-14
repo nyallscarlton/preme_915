@@ -22,16 +22,17 @@ export function GuestContactForm({ onNext, onPrevious, onDataChange, initialData
     email: initialData.email || "",
     phone: initialData.phone || "",
     address: initialData.address || "",
+    tcpaConsent: initialData.tcpaConsent || false,
     ...initialData,
   })
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | boolean) => {
     const updatedData = { ...formData, [field]: value }
     setFormData(updatedData)
     onDataChange(updatedData)
   }
 
-  const isFormValid = formData.firstName && formData.lastName && formData.email && formData.phone
+  const isFormValid = formData.firstName && formData.lastName && formData.email && formData.phone && formData.tcpaConsent
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -121,6 +122,20 @@ export function GuestContactForm({ onNext, onPrevious, onDataChange, initialData
             value={formData.address}
             onChange={(value) => handleInputChange("address", value)}
           />
+
+          <div className="flex items-start space-x-3">
+            <input
+              type="checkbox"
+              id="tcpaConsent"
+              checked={formData.tcpaConsent}
+              onChange={(e) => handleInputChange("tcpaConsent", e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-[hsl(var(--primary))]"
+              required
+            />
+            <label htmlFor="tcpaConsent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+              By checking this box, I provide my express written consent to receive calls (including via automated dialing systems, prerecorded messages, and artificial intelligence), texts, and emails about my inquiry from Preme Home Loans and its partners at the phone number provided. Consent is not a condition of purchase. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787.
+            </label>
+          </div>
 
           <div className="bg-muted/50 p-4 rounded-lg border border-border">
             <h4 className="font-medium text-foreground mb-2">Guest Application Benefits</h4>

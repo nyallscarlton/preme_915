@@ -190,13 +190,13 @@ export default function AboutClient() {
               </div>
             </div>
             <div className="flex space-x-8 text-muted-foreground">
-              <Link href="#" className="hover:text-primary transition-colors">
+              <Link href="/privacy" className="hover:text-primary transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="#" className="hover:text-primary transition-colors">
+              <Link href="/terms" className="hover:text-primary transition-colors">
                 Terms of Service
               </Link>
-              <Link href="#" className="hover:text-primary transition-colors">
+              <Link href="/contact" className="hover:text-primary transition-colors">
                 NMLS Disclosure
               </Link>
             </div>
