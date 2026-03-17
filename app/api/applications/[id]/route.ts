@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { notifyMCStatusChange } from "@/lib/mc-webhook"
+import { notifyMCNewApplication } from "@/lib/mc-webhook"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -84,6 +86,65 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("API error:", error)
+    return NextResponse.json({ error: "Failed to update application" }, { status: 500 })
+  }
+}
+
+// PUT - Guest submits/updates their application (authenticated via guest_token)
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const data = await request.json()
+    const { id } = params
+    const adminClient = createAdminClient()
+
+    // Authenticate via guest_token
+    const guestToken = data.guest_token
+    if (!guestToken) {
+      return NextResponse.json({ error: "Missing guest token" }, { status: 401 })
+    }
+
+    // Verify the token matches the application
+    const { data: existing, error: lookupError } = await adminClient
+      .from("loan_applications")
+      .select("id, guest_token, application_number")
+      .eq("id", id)
+      .eq("guest_token", guestToken)
+      .single()
+
+    if (lookupError || !existing) {
+      return NextResponse.json({ error: "Invalid token or application" }, { status: 403 })
+    }
+
+    // Build update payload (strip internal fields)
+    const { guest_token: _gt, is_guest: _ig, ...updateFields } = data
+
+    const { data: application, error } = await adminClient
+      .from("loan_applications")
+      .update({
+        ...updateFields,
+        status: "submitted",
+        submitted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error("[applications] PUT error:", error)
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    // Fire-and-forget MC notification
+    notifyMCNewApplication(application).catch(() => {})
+
+    return NextResponse.json({
+      success: true,
+      application,
+      message: "Application submitted successfully",
+    })
   } catch (error) {
     console.error("API error:", error)
     return NextResponse.json({ error: "Failed to update application" }, { status: 500 })

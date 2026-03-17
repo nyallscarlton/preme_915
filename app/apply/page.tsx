@@ -44,12 +44,16 @@ export default function LoanApplicationPage() {
   const [formData, setFormData] = useState<any>({})
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoadingToken, setIsLoadingToken] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [applicationNumber, setApplicationNumber] = useState<string | null>(null)
+  const [existingApplicationId, setExistingApplicationId] = useState<string | null>(null)
+  const [existingGuestToken, setExistingGuestToken] = useState<string | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
 
   const isGuestMode = searchParams.get("guest") === "1"
+  const token = searchParams.get("token")
 
   const currentSteps = authChoice === "guest" ? steps : accountSteps
   const progress = authChoice ? (currentStep / currentSteps.length) * 100 : 0
@@ -127,12 +131,21 @@ export default function LoanApplicationPage() {
 
       console.log("[v0] Submitting application to API:", applicationData)
 
-      const response = await fetch("/api/applications", {
-        method: "POST",
+      // If updating an existing application (from email link), use PUT
+      const isUpdate = !!existingApplicationId
+      const url = isUpdate
+        ? `/api/applications/${existingApplicationId}`
+        : "/api/applications"
+
+      const response = await fetch(url, {
+        method: isUpdate ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(applicationData),
+        body: JSON.stringify({
+          ...applicationData,
+          ...(existingGuestToken ? { guest_token: existingGuestToken } : {}),
+        }),
       })
 
       const result = await response.json()
@@ -294,8 +307,71 @@ export default function LoanApplicationPage() {
     }
   }
 
+  // Load existing application data when token is present
+  useEffect(() => {
+    if (!token) return
+
+    const loadApplication = async () => {
+      setIsLoadingToken(true)
+      try {
+        const res = await fetch(`/api/guest/verify-token?token=${encodeURIComponent(token)}`)
+        const data = await res.json()
+
+        if (data.ok && data.application) {
+          const app = data.application
+          const prefilled: Record<string, unknown> = {
+            firstName: app.firstName || "",
+            lastName: app.lastName || "",
+            email: app.email && !app.email.endsWith("@placeholder.preme") ? app.email : "",
+            phone: app.phone || "",
+            propertyAddress: app.propertyAddress || "",
+            propertyCity: app.propertyCity || "",
+            propertyState: app.propertyState || "",
+            propertyZip: app.propertyZip || "",
+            propertyType: app.propertyType || "",
+            propertyValue: app.propertyValue || "",
+            loanAmount: app.loanAmount || "",
+            loanPurpose: app.loanPurpose || "",
+            annualIncome: app.annualIncome || "",
+            employmentStatus: app.employmentStatus || "",
+            employerName: app.employerName || "",
+            creditScore: app.creditScore || "",
+            hasSponsor: app.hasSponsor || false,
+            sponsorName: app.sponsorName || "",
+            sponsorEmail: app.sponsorEmail || "",
+            sponsorPhone: app.sponsorPhone || "",
+            cashReserves: app.cashReserves || "",
+            investmentAccounts: app.investmentAccounts || "",
+            retirementAccounts: app.retirementAccounts || "",
+            tcpaConsent: true, // They already consented via phone call
+          }
+          setFormData(prefilled)
+          setExistingApplicationId(app.applicationId)
+          setExistingGuestToken(app.guestToken)
+          setApplicationNumber(app.applicationNumber)
+          setAuthChoice("guest")
+          setCurrentStep(1)
+        } else {
+          console.error("[apply] Token verification failed:", data.error)
+          // Fall through to normal guest mode
+          setAuthChoice("guest")
+          setCurrentStep(1)
+        }
+      } catch (err) {
+        console.error("[apply] Error loading application:", err)
+        setAuthChoice("guest")
+        setCurrentStep(1)
+      } finally {
+        setIsLoadingToken(false)
+      }
+    }
+
+    loadApplication()
+  }, [token])
+
   useEffect(() => {
     const checkAuth = async () => {
+      if (token) return // Token flow handles its own setup
       if (isGuestMode) {
         setAuthChoice("guest")
         setCurrentStep(1)
@@ -316,12 +392,12 @@ export default function LoanApplicationPage() {
     }
 
     checkAuth()
-  }, [isGuestMode])
+  }, [isGuestMode, token])
 
   useEffect(() => {
     const checkAuthGuard = async () => {
-      // Skip guard if guest mode or already have auth choice
-      if (isGuestMode || authChoice) return
+      // Skip guard if guest mode, token mode, or already have auth choice
+      if (isGuestMode || token || authChoice) return
 
       try {
         const supabase = createClient()
@@ -337,6 +413,17 @@ export default function LoanApplicationPage() {
 
     checkAuthGuard()
   }, [isGuestMode, authChoice, currentStep, router])
+
+  if (isLoadingToken) {
+    return (
+      <div className="min-h-screen bg-white text-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-[#997100] mx-auto mb-4" />
+          <p className="text-lg text-gray-600">Loading your application...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (isSubmitted) {
     return (

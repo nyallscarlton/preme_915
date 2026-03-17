@@ -31,6 +31,9 @@ export async function GET(request: Request) {
     // Map to the shape the guest dashboard expects
     const mapped = {
       id: application.application_number || application.id,
+      applicationId: application.id,
+      applicationNumber: application.application_number,
+      guestToken: application.guest_token,
       email: application.applicant_email,
       firstName: application.applicant_name?.split(" ")[0] || "",
       lastName: application.applicant_name?.split(" ").slice(1).join(" ") || "",
@@ -39,20 +42,25 @@ export async function GET(request: Request) {
       submittedAt: application.submitted_at || application.created_at,
       loanAmount: application.loan_amount || 0,
       loanPurpose: application.loan_purpose || "",
-      propertyAddress: [
-        application.property_address,
-        application.property_city,
-        application.property_state,
-        application.property_zip,
-      ]
-        .filter(Boolean)
-        .join(", "),
+      loanType: application.loan_type || "",
+      propertyAddress: application.property_address || "",
+      propertyCity: application.property_city || "",
+      propertyState: application.property_state || "",
+      propertyZip: application.property_zip || "",
+      propertyType: application.property_type || "",
       propertyValue: application.property_value || 0,
       downPayment: 0,
       annualIncome: application.annual_income || 0,
       employmentStatus: application.employment_status || "",
       employerName: application.employer_name || "",
       creditScore: application.credit_score_range || "",
+      hasSponsor: application.has_sponsor || false,
+      sponsorName: application.sponsor_name || "",
+      sponsorEmail: application.sponsor_email || "",
+      sponsorPhone: application.sponsor_phone || "",
+      cashReserves: application.cash_reserves || 0,
+      investmentAccounts: application.investment_accounts || 0,
+      retirementAccounts: application.retirement_accounts || 0,
       statusHistory: [
         {
           status: "submitted",

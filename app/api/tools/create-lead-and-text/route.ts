@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     if (existing) {
       const token = existing.guest_token
       const applyUrl = token
-        ? `https://preme915.vercel.app/guest-dashboard?token=${token}`
+        ? `https://preme915.vercel.app/apply?guest=1&token=${token}`
         : `https://preme915.vercel.app/apply?guest=1`
       const sent = await sendApplicationLink(email, applyUrl, existing.application_number, first_name)
       return NextResponse.json({
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const applyUrl = `https://preme915.vercel.app/guest-dashboard?token=${guestToken}`
+    const applyUrl = `https://preme915.vercel.app/apply?guest=1&token=${guestToken}`
     const sent = await sendApplicationLink(email, applyUrl, appNumber, first_name)
 
     return NextResponse.json({
