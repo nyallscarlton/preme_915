@@ -287,7 +287,8 @@ export async function storeReview(params: {
 }
 
 /**
- * Apply a prompt patch to Riley's LLM if the review found CRITICAL issues.
+ * Apply a prompt patch to Riley's LLM if the review found CRITICAL or HIGH issues.
+ * Uses raw fetch (not retell-sdk) for reliability on Vercel.
  */
 export async function applyPromptPatch(
   review: ReviewResult,
@@ -297,47 +298,79 @@ export async function applyPromptPatch(
   if (review.severity !== "CRITICAL" && review.severity !== "HIGH") return null
 
   const retellKey = process.env.RETELL_API_KEY
-  const agentId = process.env.RETELL_PREME_AGENT_ID
-  if (!retellKey || !agentId) return null
+  const llmId = process.env.RETELL_PREME_LLM_ID
+  if (!retellKey || !llmId) {
+    console.error("[call-reviewer] Missing RETELL_API_KEY or RETELL_PREME_LLM_ID")
+    return null
+  }
 
   try {
-    const Retell = (await import("retell-sdk")).default
-    const retell = new Retell({ apiKey: retellKey })
-
-    const agent = await retell.agent.retrieve(agentId)
-    const llmId = (agent.response_engine as any).llm_id
-    const llm = await retell.llm.retrieve(llmId)
-
-    const currentPrompt = llm.general_prompt || ""
+    // Get current prompt
+    const getRes = await fetch(`https://api.retellai.com/get-retell-llm/${llmId}`, {
+      headers: { Authorization: `Bearer ${retellKey}` },
+    })
+    if (!getRes.ok) {
+      console.error("[call-reviewer] Failed to get LLM:", getRes.status)
+      return null
+    }
+    const llmData = await getRes.json()
+    const currentPrompt: string = llmData.general_prompt || ""
 
     // Check if this patch is already applied (avoid duplicates)
     if (currentPrompt.includes(review.prompt_patch.substring(0, 50))) {
+      console.log("[call-reviewer] Patch already applied for", callId)
       return "Patch already applied"
     }
 
-    // Append patch to the end of the prompt under a LEARNED section
+    // Append patch under a LEARNED section
     const patchSection = `\n\n==============================\nLEARNED FROM CALL REVIEW (${callId})\n==============================\n${review.prompt_patch}`
 
-    await retell.llm.update(llmId, {
-      general_prompt: currentPrompt + patchSection,
+    const patchRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${retellKey}`,
+      },
+      body: JSON.stringify({ general_prompt: currentPrompt + patchSection }),
     })
 
-    // Update the review record to mark patch as applied
+    if (!patchRes.ok) {
+      console.error("[call-reviewer] Failed to patch LLM:", patchRes.status, await patchRes.text().catch(() => ""))
+      return null
+    }
+
+    console.log(`[call-reviewer] Prompt patched for call ${callId}: ${review.prompt_patch.substring(0, 80)}...`)
+
+    // Mark patch as applied in zx_contact_interactions
     try {
       const { createClient } = await import("@supabase/supabase-js")
       const url = process.env.NEXT_PUBLIC_SUPABASE_URL
       const key = process.env.SUPABASE_SERVICE_ROLE_KEY
       if (url && key) {
         const supabase = createClient(url, key)
-        await supabase
-          .from("call_reviews")
-          .update({
-            prompt_patch_applied: true,
-            prompt_patch_description: review.prompt_patch,
-          })
-          .eq("call_id", callId)
+        // Update the review row's metadata to mark patch as applied
+        const { data: rows } = await supabase
+          .from("zx_contact_interactions")
+          .select("id, metadata")
+          .eq("channel", "voice")
+          .filter("metadata->>type", "eq", "call_review")
+          .filter("metadata->>call_id", "eq", callId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+
+        if (rows && rows.length > 0) {
+          const meta = (rows[0].metadata as Record<string, unknown>) || {}
+          await supabase
+            .from("zx_contact_interactions")
+            .update({
+              metadata: { ...meta, prompt_patch_applied: true },
+            })
+            .eq("id", rows[0].id)
+        }
       }
-    } catch {}
+    } catch (err) {
+      console.error("[call-reviewer] Failed to mark patch applied:", err)
+    }
 
     return review.prompt_patch
   } catch (err) {
