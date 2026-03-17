@@ -124,11 +124,12 @@ async function sendApplicationLink(
   const applyUrl = `https://premerealestate.com/apply?guest=1&ref=${appNumber}`
   const greeting = firstName ? `Hey ${firstName}!` : "Hey!"
 
-  // Try SMS first
-  const smsSent = await trySMS(toPhone, `${greeting} Here's your pre-filled application from Preme Home Loans. Just review, edit if needed, and submit: ${applyUrl}`)
-  if (smsSent) return "sms"
+  // SMS is disabled until toll-free/10DLC verification clears.
+  // TODO: Re-enable SMS once Twilio verification is approved:
+  // const smsSent = await trySMS(toPhone, `${greeting} Here's your pre-filled application from Preme Home Loans. Just review, edit if needed, and submit: ${applyUrl}`)
+  // if (smsSent) return "sms"
 
-  // Fall back to email
+  // Send via email
   const realEmail = toEmail && !toEmail.endsWith("@placeholder.preme") ? toEmail : null
   if (realEmail) {
     const emailSent = await sendEmail(realEmail, appNumber, applyUrl, firstName)
