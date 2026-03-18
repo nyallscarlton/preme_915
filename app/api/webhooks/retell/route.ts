@@ -9,8 +9,8 @@
 
 import { NextRequest, NextResponse } from "next/server"
 
-// Allow up to 60s for the LLM review call
-export const maxDuration = 60
+// Allow up to 120s — recording downloads from Retell can be slow
+export const maxDuration = 120
 
 const MC_URL = process.env.MC_WEBHOOK_URL || "http://localhost:3000"
 const MC_AUTH = "Basic YWRtaW46Mll1bmdueWFsbHMh"
@@ -60,6 +60,13 @@ export async function POST(request: NextRequest) {
           has_transcript: !!transcript,
           has_recording: !!recordingUrl,
         })
+
+        // Persist recording to Supabase Storage (fire-and-forget)
+        if (recordingUrl) {
+          persistRecording(call.call_id, recordingUrl).catch((err) =>
+            console.error("[retell-preme] Recording persistence failed (call_ended):", err)
+          )
+        }
         break
       }
 
@@ -218,6 +225,13 @@ export async function POST(request: NextRequest) {
           caller_intent: callerIntent,
         })
 
+        // Persist recording to Supabase Storage (fire-and-forget)
+        if (call.recording_url) {
+          persistRecording(call.call_id, call.recording_url).catch((err) =>
+            console.error("[retell-preme] Recording persistence failed (call_analyzed):", err)
+          )
+        }
+
         // --- Auto Sales Coach: review every call ---
         await triggerCallReview({
           callId: call.call_id,
@@ -325,6 +339,84 @@ function sendTelegramAlert(data: {
       disable_web_page_preview: true,
     }),
   }).catch((err) => console.error("[retell-preme] Telegram error:", err))
+}
+
+/**
+ * Download a Retell recording and persist it to Supabase Storage.
+ * Stores at path: call-recordings/{YYYY-MM}/{callId}.wav
+ * Updates the zx_contact_interactions metadata with the permanent storage URL.
+ */
+async function persistRecording(callId: string, recordingUrl: string) {
+  const { createClient } = await import("@supabase/supabase-js")
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    console.warn("[retell-preme] Missing Supabase credentials, skipping recording persistence")
+    return
+  }
+
+  const supabase = createClient(url, key)
+
+  // 1. Fetch the recording audio from Retell
+  const res = await fetch(recordingUrl)
+  if (!res.ok) {
+    console.error(`[retell-preme] Failed to fetch recording: ${res.status} ${res.statusText}`)
+    return
+  }
+  const audioBuffer = Buffer.from(await res.arrayBuffer())
+
+  // 2. Upload to Supabase Storage bucket "call-recordings"
+  const now = new Date()
+  const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+  const storagePath = `${yearMonth}/${callId}.wav`
+
+  const { error: uploadError } = await supabase.storage
+    .from("call-recordings")
+    .upload(storagePath, audioBuffer, {
+      contentType: "audio/wav",
+      upsert: true,
+    })
+
+  if (uploadError) {
+    console.error("[retell-preme] Storage upload failed:", uploadError.message)
+    return
+  }
+
+  // 3. Get the permanent URL
+  const { data: urlData } = supabase.storage
+    .from("call-recordings")
+    .getPublicUrl(storagePath)
+  const permanentUrl = urlData?.publicUrl || null
+
+  // 4. Update zx_contact_interactions metadata with the storage URL
+  try {
+    const { data: rows } = await supabase
+      .from("zx_contact_interactions")
+      .select("id, metadata")
+      .filter("metadata->>call_id", "eq", callId)
+      .eq("channel", "voice")
+      .order("created_at", { ascending: false })
+      .limit(1)
+
+    if (rows && rows.length > 0) {
+      const meta = (rows[0].metadata as Record<string, unknown>) || {}
+      await supabase
+        .from("zx_contact_interactions")
+        .update({
+          metadata: {
+            ...meta,
+            recording_storage_url: permanentUrl,
+            recording_storage_path: storagePath,
+          },
+        })
+        .eq("id", rows[0].id)
+    }
+  } catch (err) {
+    // Non-fatal — recording is already saved in storage
+    console.error("[retell-preme] Failed to update interaction metadata:", err)
+  }
+
+  console.log(`[retell-preme] Recording persisted: ${storagePath}`)
 }
 
 /** Auto sales coach review — awaited so Vercel doesn't kill it */

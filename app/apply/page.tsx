@@ -235,6 +235,8 @@ export default function LoanApplicationPage() {
               onPrevious={handlePrevious}
               onDataChange={handleStepData}
               initialData={formData}
+              applicationId={existingApplicationId || undefined}
+              guestToken={existingGuestToken || undefined}
             />
           )
         case 8:
@@ -297,6 +299,8 @@ export default function LoanApplicationPage() {
               onPrevious={handlePrevious}
               onDataChange={handleStepData}
               initialData={formData}
+              applicationId={existingApplicationId || undefined}
+              guestToken={existingGuestToken || undefined}
             />
           )
         case 7:

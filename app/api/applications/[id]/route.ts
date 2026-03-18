@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { notifyMCStatusChange } from "@/lib/mc-webhook"
 import { notifyMCNewApplication } from "@/lib/mc-webhook"
+import { sendStatusNotification } from "@/lib/notifications"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -64,12 +65,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    // Get application number for MC webhook
+    // Get application details before update (for notifications)
     const { data: app } = await supabase
       .from("loan_applications")
-      .select("application_number")
+      .select("application_number, applicant_email, applicant_name, guest_token, status")
       .eq("id", id)
       .single()
+
+    const oldStatus = app?.status || "unknown"
 
     const { error } = await supabase
       .from("loan_applications")
@@ -83,6 +86,18 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     // Fire-and-forget MC notification
     if (app?.application_number) {
       notifyMCStatusChange(id, status, app.application_number).catch(() => {})
+    }
+
+    // Fire-and-forget borrower email + Telegram notification
+    if (app?.applicant_email && app?.application_number) {
+      sendStatusNotification({
+        email: app.applicant_email,
+        name: app.applicant_name || "",
+        applicationNumber: app.application_number,
+        oldStatus,
+        newStatus: status,
+        guestToken: app.guest_token || undefined,
+      }).catch(() => {})
     }
 
     return NextResponse.json({ success: true })

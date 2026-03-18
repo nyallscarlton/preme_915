@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getBaseUrl } from "@/lib/config"
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,8 +58,8 @@ export async function POST(request: NextRequest) {
     if (existing) {
       const token = existing.guest_token
       const applyUrl = token
-        ? `https://preme915.vercel.app/apply?guest=1&token=${token}`
-        : `https://preme915.vercel.app/apply?guest=1`
+        ? `${getBaseUrl()}/apply?guest=1&token=${token}`
+        : `${getBaseUrl()}/apply?guest=1`
       const sent = await sendApplicationLink(email, applyUrl, existing.application_number, first_name)
       return NextResponse.json({
         result: sent === "email"
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const applyUrl = `https://preme915.vercel.app/apply?guest=1&token=${guestToken}`
+    const applyUrl = `${getBaseUrl()}/apply?guest=1&token=${guestToken}`
     const sent = await sendApplicationLink(email, applyUrl, appNumber, first_name)
 
     return NextResponse.json({
