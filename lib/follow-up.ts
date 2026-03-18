@@ -55,24 +55,24 @@ function getFollowUpContent(step: 1 | 2 | 3, firstName: string): FollowUpContent
   switch (step) {
     case 1:
       return {
-        subject: "You're Almost There!",
-        heading: "You're just a few steps away",
-        body: `Hey ${firstName}, we noticed you started a pre-qualification application but didn't finish. No worries — your progress has been saved and you can pick up right where you left off. It only takes a few more minutes to see what you qualify for.`,
-        ctaLabel: "Finish My Application",
+        subject: "5 min to your DSCR term sheet",
+        heading: "Your DSCR scenario is 5 minutes away",
+        body: `${firstName}, you started a pre-qual with Preme but didn't finish. We get it — you're busy closing deals.<br><br>Here's what's waiting on the other side: a same-day pre-qualification based on property cash flow, not your tax returns. No W-2s. No pay stubs. DSCR as low as 0.75. Loans from $50K to $6.25M, closing in as few as 7 days.<br><br>The application takes under 5 minutes. Your progress is saved.`,
+        ctaLabel: "Get My DSCR Term Sheet",
       }
     case 2:
       return {
-        subject: "Your Pre-Qualification Is Waiting",
-        heading: "Your pre-qualification is ready when you are",
-        body: `${firstName}, your saved application is still here. Rates move fast, and getting pre-qualified now means you'll be ready to move when you find the right property. Our process is quick, secure, and there's no commitment — just clarity on what you can afford.`,
-        ctaLabel: "Complete My Pre-Qualification",
+        subject: "Your rate lock window is open",
+        heading: "DSCR rates are moving — your numbers are ready",
+        body: `${firstName}, since you started your pre-qual, we've funded over $40M in DSCR loans for investors who skipped the tax-return gauntlet. Portfolio builds, short-term rentals, fix-and-flips — all qualified on property cash flow alone.<br><br>Rate environments shift. The spread you'd lock today won't be the spread available next week. Your draft application is still here — finish it now and we'll run a custom DSCR scenario analysis with live rates for your deal.`,
+        ctaLabel: "Lock In My Rate Scenario",
       }
     case 3:
       return {
-        subject: "Last Chance — Plus a Free Rate Consultation",
-        heading: "Before we close your file",
-        body: `${firstName}, we're reaching out one last time. Your draft application will remain on file, but we'd hate for you to miss out. As a thank-you for coming back, we're offering a <strong>free personalized rate consultation</strong> with one of our loan officers — no strings attached. Let's find the best path forward for your next investment.`,
-        ctaLabel: "Finish & Claim My Free Consultation",
+        subject: "Custom DSCR analysis, on us",
+        heading: "One asset. One call. Full DSCR breakdown.",
+        body: `${firstName}, last note from us. We're offering you a <strong>complimentary DSCR scenario analysis</strong> on any property in your pipeline — purchase, refi, or cash-out. You'll get projected cash flow, rate options, and max leverage in a single call.<br><br>No application needed for the analysis. But if the numbers work, we close in 7–14 days while other lenders are still asking for your 2024 returns. 300+ investors have used this exact process to move faster than the competition.`,
+        ctaLabel: "Claim My Free DSCR Analysis",
       }
   }
 }
@@ -107,7 +107,7 @@ function buildFollowUpEmailHtml(
           <!-- Body -->
           <tr>
             <td style="padding: 40px;">
-              <h1 style="color: #1a1a1a; font-size: 22px; margin: 0 0 16px;">Hey ${firstName}!</h1>
+              <h1 style="color: #1a1a1a; font-size: 22px; margin: 0 0 16px;">${firstName},</h1>
 
               <h2 style="color: #997100; font-size: 18px; margin: 0 0 16px;">${content.heading}</h2>
 
@@ -238,7 +238,7 @@ export async function checkAndSendFollowUps(): Promise<{ sent: number; errors: n
         : `${base}/apply`
 
       const html = buildFollowUpEmailHtml(content, firstName, app.application_number, ctaUrl)
-      const subject = `${content.subject} — ${app.application_number}`
+      const subject = content.subject
 
       const ok = await sendFollowUpEmail(app.applicant_email, subject, html)
 
