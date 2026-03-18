@@ -1,9 +1,12 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import Script from "next/script"
 import "./globals.css"
 import { AuthProvider } from "@/hooks/use-auth"
 import { getBaseUrl } from "@/lib/config"
+
+const GA_CONVERSION_ID = "AW-17997920712"
 
 const siteUrl = getBaseUrl()
 
@@ -120,6 +123,19 @@ export default function RootLayout({
         ></script>
       </head>
       <body className={inter.className}>
+        {/* Google Ads gtag.js */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_CONVERSION_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_CONVERSION_ID}');
+          `}
+        </Script>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

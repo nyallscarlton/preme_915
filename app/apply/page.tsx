@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { CheckCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import { gtagLeadConversion } from "@/lib/gtag"
 import { GuestContactForm } from "@/components/application/guest-contact-form"
 import { LoanDetailsForm } from "@/components/application/loan-details-form"
 import { PropertyInfoForm } from "@/components/application/property-info-form"
@@ -155,6 +156,9 @@ export default function LoanApplicationPage() {
       }
 
       console.log("[v0] Application submitted successfully:", result)
+
+      // Fire Google Ads conversion
+      gtagLeadConversion()
 
       // Store the application number for display
       setApplicationNumber(result.application?.application_number || null)
