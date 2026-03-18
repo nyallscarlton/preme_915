@@ -4,10 +4,12 @@
  * Checks for draft applications that were never submitted and sends
  * a sequence of branded follow-up emails to nudge applicants back.
  *
- * Sequence:
- *   1 hour  → gentle nudge ("You're almost there!")
- *   24 hours → urgency + value ("Your pre-qualification is waiting")
- *   72 hours → final reminder with incentive ("Last chance — free consultation")
+ * Uses time-window detection (no extra DB columns needed):
+ *   - Step 1: application is 1–2 hours old
+ *   - Step 2: application is 24–25 hours old
+ *   - Step 3: application is 72–73 hours old
+ *
+ * The cron runs every 30 minutes, so each window is hit at least once.
  */
 
 import { getBaseUrl } from "@/lib/config"
@@ -24,8 +26,6 @@ interface AbandonedApplication {
   application_number: string
   guest_token: string | null
   created_at: string
-  last_followup_at: string | null
-  followup_count: number
 }
 
 interface FollowUpContent {
@@ -34,6 +34,18 @@ interface FollowUpContent {
   body: string
   ctaLabel: string
 }
+
+// ---------------------------------------------------------------------------
+// Time windows (ms) — each follow-up is eligible within a 1-hour window
+// ---------------------------------------------------------------------------
+
+const ONE_HOUR = 60 * 60 * 1000
+
+const WINDOWS = [
+  { step: 1 as const, minAge: 1 * ONE_HOUR, maxAge: 2 * ONE_HOUR },
+  { step: 2 as const, minAge: 24 * ONE_HOUR, maxAge: 25 * ONE_HOUR },
+  { step: 3 as const, minAge: 72 * ONE_HOUR, maxAge: 73 * ONE_HOUR },
+]
 
 // ---------------------------------------------------------------------------
 // Follow-up email content by sequence step
@@ -52,42 +64,17 @@ function getFollowUpContent(step: 1 | 2 | 3, firstName: string): FollowUpContent
       return {
         subject: "Your Pre-Qualification Is Waiting",
         heading: "Your pre-qualification is ready when you are",
-        body: `${firstName}, your saved application is still here. Rates move fast, and getting pre-qualified now means you'll be ready to move when you find the right home. Our process is quick, secure, and there's no commitment — just clarity on what you can afford.`,
+        body: `${firstName}, your saved application is still here. Rates move fast, and getting pre-qualified now means you'll be ready to move when you find the right property. Our process is quick, secure, and there's no commitment — just clarity on what you can afford.`,
         ctaLabel: "Complete My Pre-Qualification",
       }
     case 3:
       return {
         subject: "Last Chance — Plus a Free Rate Consultation",
         heading: "Before we close your file",
-        body: `${firstName}, we're reaching out one last time. Your draft application will remain on file, but we'd hate for you to miss out. As a thank-you for coming back, we're offering a <strong>free personalized rate consultation</strong> with one of our loan officers — no strings attached. Let's find the best path forward for you.`,
+        body: `${firstName}, we're reaching out one last time. Your draft application will remain on file, but we'd hate for you to miss out. As a thank-you for coming back, we're offering a <strong>free personalized rate consultation</strong> with one of our loan officers — no strings attached. Let's find the best path forward for your next investment.`,
         ctaLabel: "Finish & Claim My Free Consultation",
       }
   }
-}
-
-// ---------------------------------------------------------------------------
-// Determine which follow-up step (if any) an application qualifies for
-// ---------------------------------------------------------------------------
-
-function getEligibleStep(app: AbandonedApplication): 1 | 2 | 3 | null {
-  const now = Date.now()
-  const createdAt = new Date(app.created_at).getTime()
-  const ageMs = now - createdAt
-
-  const ONE_HOUR = 60 * 60 * 1000
-  const TWENTY_FOUR_HOURS = 24 * ONE_HOUR
-  const SEVENTY_TWO_HOURS = 72 * ONE_HOUR
-
-  const count = app.followup_count
-
-  // Step 3: 72h+ since creation, only if steps 1 & 2 already sent
-  if (ageMs >= SEVENTY_TWO_HOURS && count === 2) return 3
-  // Step 2: 24h+ since creation, only if step 1 already sent
-  if (ageMs >= TWENTY_FOUR_HOURS && count === 1) return 2
-  // Step 1: 1h+ since creation, no follow-ups sent yet
-  if (ageMs >= ONE_HOUR && count === 0) return 1
-
-  return null
 }
 
 // ---------------------------------------------------------------------------
@@ -214,70 +201,55 @@ export async function checkAndSendFollowUps(): Promise<{ sent: number; errors: n
   let sent = 0
   let errors = 0
 
-  // Fetch all draft applications that haven't been submitted and haven't
-  // exhausted the 3-step sequence yet.
-  const { data: apps, error } = await supabase
-    .from("loan_applications")
-    .select(
-      "id, applicant_email, applicant_name, application_number, guest_token, created_at, last_followup_at, followup_count",
-    )
-    .eq("status", "draft")
-    .is("submitted_at", null)
-    .lt("followup_count", 3)
+  const now = Date.now()
 
-  if (error) {
-    console.error("[follow-up] Query error:", error.message)
-    return { sent: 0, errors: 1 }
-  }
+  for (const window of WINDOWS) {
+    // Calculate the created_at range for this window
+    const createdBefore = new Date(now - window.minAge).toISOString()
+    const createdAfter = new Date(now - window.maxAge).toISOString()
 
-  if (!apps || apps.length === 0) {
-    console.log("[follow-up] No eligible abandoned applications found")
-    return { sent: 0, errors: 0 }
-  }
+    const { data: apps, error } = await supabase
+      .from("loan_applications")
+      .select("id, applicant_email, applicant_name, application_number, guest_token, created_at")
+      .eq("status", "draft")
+      .is("submitted_at", null)
+      .gte("created_at", createdAfter)
+      .lte("created_at", createdBefore)
 
-  for (const app of apps as AbandonedApplication[]) {
-    // Skip invalid emails
-    if (!app.applicant_email || app.applicant_email.endsWith("@placeholder.preme")) {
+    if (error) {
+      console.error(`[follow-up] Step ${window.step} query error:`, error.message)
+      errors++
       continue
     }
 
-    const step = getEligibleStep(app)
-    if (!step) continue
+    if (!apps || apps.length === 0) continue
 
-    const firstName = app.applicant_name?.split(" ")[0] || "there"
-    const content = getFollowUpContent(step, firstName)
+    for (const app of apps as AbandonedApplication[]) {
+      if (!app.applicant_email || app.applicant_email.endsWith("@placeholder.preme")) {
+        continue
+      }
 
-    const base = getBaseUrl()
-    const ctaUrl = app.guest_token
-      ? `${base}/apply?guest=1&token=${app.guest_token}`
-      : `${base}/apply`
+      const firstName = app.applicant_name?.split(" ")[0] || "there"
+      const content = getFollowUpContent(window.step, firstName)
 
-    const html = buildFollowUpEmailHtml(content, firstName, app.application_number, ctaUrl)
-    const subject = `${content.subject} — ${app.application_number}`
+      const base = getBaseUrl()
+      const ctaUrl = app.guest_token
+        ? `${base}/apply?guest=1&token=${app.guest_token}`
+        : `${base}/apply`
 
-    const ok = await sendFollowUpEmail(app.applicant_email, subject, html)
+      const html = buildFollowUpEmailHtml(content, firstName, app.application_number, ctaUrl)
+      const subject = `${content.subject} — ${app.application_number}`
 
-    if (ok) {
-      // Update tracking fields
-      const { error: updateError } = await supabase
-        .from("loan_applications")
-        .update({
-          last_followup_at: new Date().toISOString(),
-          followup_count: app.followup_count + 1,
-        })
-        .eq("id", app.id)
+      const ok = await sendFollowUpEmail(app.applicant_email, subject, html)
 
-      if (updateError) {
-        console.error("[follow-up] Failed to update tracking for", app.id, updateError.message)
-        errors++
-      } else {
+      if (ok) {
         console.log(
-          `[follow-up] Step ${step} email sent to ${app.applicant_email} (${app.application_number})`,
+          `[follow-up] Step ${window.step} email sent to ${app.applicant_email} (${app.application_number})`,
         )
         sent++
+      } else {
+        errors++
       }
-    } else {
-      errors++
     }
   }
 
