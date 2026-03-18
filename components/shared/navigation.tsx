@@ -11,6 +11,8 @@ export function Navigation({ currentPage }: NavigationProps) {
     { href: "/loan-programs", label: "Loan Programs" },
     { href: "/how-it-works", label: "How It Works" },
     { href: "/about", label: "About" },
+    { href: "/blog", label: "Resources" },
+    { href: "/calculator", label: "Calculator" },
     { href: "/contact", label: "Contact" },
   ]
 

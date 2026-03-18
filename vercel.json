@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/follow-ups",
+      "schedule": "*/30 * * * *"
+    }
+  ],
   "redirects": [
     {
       "source": "/:path(.*)",

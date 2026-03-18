@@ -15,6 +15,11 @@ import {
   ShieldCheck,
   Sparkles,
   Star,
+  Quote,
+  Shield,
+  Globe,
+  Zap,
+  Timer,
 } from "lucide-react"
 import { ApplyButton } from "@/components/apply-button"
 
@@ -103,6 +108,36 @@ const faqs = [
     answer:
       "Most DSCR loans include a step-down or yield maintenance structure. We tailor it to your exit horizon and can offer no-prepay options on higher rates.",
   },
+]
+
+const testimonials = [
+  {
+    quote: "Closed on a 4-unit property in 12 days. No tax returns, no W-2s — just the property's cash flow. Preme made it effortless.",
+    name: "Marcus T.",
+    type: "Portfolio Investor, Atlanta",
+  },
+  {
+    quote: "We've financed 3 Airbnb properties through Preme. Their DSCR program let us scale without the income documentation headache.",
+    name: "Jennifer & David K.",
+    type: "Short-Term Rental Operators, Savannah",
+  },
+  {
+    quote: "I refer all my investor clients to Preme. Fast pre-quals, competitive rates, and they actually close on time. My clients love them.",
+    name: "Robert Chen",
+    type: "Mortgage Broker, Charlotte",
+  },
+  {
+    quote: "Other lenders wanted 6 months of bank statements and tax returns. Preme qualified me based on the property's rental potential. Closed in under 2 weeks.",
+    name: "Alicia M.",
+    type: "Fix & Flip Investor, Marietta",
+  },
+]
+
+const trustBadges = [
+  { icon: Shield, label: "NMLS 2560616" },
+  { icon: Globe, label: "50+ States" },
+  { icon: Zap, label: "Same-Day Pre-Quals" },
+  { icon: Timer, label: "7-14 Day Closings" },
 ]
 
 const homepageSchemas = [
@@ -212,6 +247,9 @@ export default function DSCRLandingPage() {
               <Link href="/how-it-works" className="hover:text-[#8B6914] transition-colors">
                 Process
               </Link>
+              <Link href="/blog" className="hover:text-[#8B6914] transition-colors">
+                Resources
+              </Link>
               <Link href="/contact" className="hover:text-[#8B6914] transition-colors">
                 Contact
               </Link>
@@ -269,6 +307,20 @@ export default function DSCRLandingPage() {
                   <p className="text-sm text-muted-foreground mt-2">{stat.label}</p>
                 </div>
               ))}
+            </div>
+          </section>
+
+          {/* Trust Badges */}
+          <section className="bg-gradient-to-r from-black via-[#0b0b0b] to-black text-white py-5">
+            <div className="container mx-auto px-6">
+              <div className="flex flex-wrap items-center justify-center gap-6 md:gap-0 md:divide-x md:divide-white/20">
+                {trustBadges.map((badge) => (
+                  <div key={badge.label} className="flex items-center gap-2 px-6 py-1 text-sm font-medium tracking-wide text-white/90">
+                    <badge.icon className="h-4 w-4 text-[#f5c770]" />
+                    {badge.label}
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 
@@ -347,6 +399,35 @@ export default function DSCRLandingPage() {
                         Explore terms
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Testimonials */}
+          <section className="py-20 bg-white">
+            <div className="container mx-auto px-6">
+              <div className="mb-12 text-center max-w-3xl mx-auto">
+                <Badge className="bg-[#fff5e1] text-[#7a4a00] mb-4">What investors say</Badge>
+                <h2 className="text-3xl md:text-4xl font-semibold">Trusted by investors and brokers across the Southeast</h2>
+              </div>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {testimonials.map((t) => (
+                  <Card key={t.name} className="relative border border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-6 space-y-4">
+                      <Quote className="h-8 w-8 text-[#997100]/30" />
+                      <div className="flex gap-0.5">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} className="h-4 w-4 fill-[#997100] text-[#997100]" />
+                        ))}
+                      </div>
+                      <p className="text-[15px] leading-relaxed text-foreground/90">&ldquo;{t.quote}&rdquo;</p>
+                      <div className="pt-2 border-t border-border/40">
+                        <p className="font-semibold text-sm">{t.name}</p>
+                        <p className="text-xs text-muted-foreground">{t.type}</p>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
