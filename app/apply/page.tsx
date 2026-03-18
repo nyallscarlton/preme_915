@@ -438,8 +438,7 @@ export default function LoanApplicationPage() {
             <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center">
                 <div className="relative">
-                  <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-[#997100]"></div>
-                  <span className="text-3xl font-bold tracking-wide text-gray-900">PREME</span>
+                  <span className="text-3xl font-bold tracking-wide text-gray-900">PR<span className="relative">E<span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-[#997100]"></span></span>ME</span>
                 </div>
               </Link>
             </div>
@@ -561,8 +560,7 @@ export default function LoanApplicationPage() {
             <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center">
                 <div className="relative">
-                  <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-[#997100]"></div>
-                  <span className="text-3xl font-bold tracking-wide text-gray-900">PREME</span>
+                  <span className="text-3xl font-bold tracking-wide text-gray-900">PR<span className="relative">E<span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-[#997100]"></span></span>ME</span>
                 </div>
               </Link>
             </div>
@@ -593,8 +591,7 @@ export default function LoanApplicationPage() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center">
               <div className="relative">
-                <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-[#997100]"></div>
-                <span className="text-3xl font-bold tracking-wide text-gray-900">PREME</span>
+                <span className="text-3xl font-bold tracking-wide text-gray-900">PR<span className="relative">E<span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-[#997100]"></span></span>ME</span>
               </div>
             </Link>
             <div className="flex items-center space-x-4">

@@ -57,8 +57,7 @@ export function AuthGuard({
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="relative mb-8">
-            <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-[#997100]"></div>
-            <span className="text-4xl font-bold tracking-wide text-gray-900">PREME</span>
+            <span className="text-4xl font-bold tracking-wide text-gray-900">PR<span className="relative">E<span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-[#997100]"></span></span>ME</span>
           </div>
           <p className="text-lg text-gray-600">Loading...</p>
         </div>

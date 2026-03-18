@@ -24,8 +24,7 @@ export default function AboutClient() {
             {/* Logo */}
             <Link href="/" className="flex items-center">
               <div className="relative">
-                <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-primary"></div>
-                <span className="text-2xl font-bold tracking-wide text-foreground">PREME</span>
+                <span className="text-2xl font-bold tracking-wide text-foreground">PR<span className="relative">E<span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-primary"></span></span>ME</span>
               </div>
             </Link>
 
@@ -185,8 +184,7 @@ export default function AboutClient() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
               <div className="relative">
-                <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-primary"></div>
-                <span className="text-xl font-bold tracking-wide text-foreground">PREME</span>
+                <span className="text-xl font-bold tracking-wide text-foreground">PR<span className="relative">E<span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-primary"></span></span>ME</span>
               </div>
             </div>
             <div className="flex space-x-8 text-muted-foreground">

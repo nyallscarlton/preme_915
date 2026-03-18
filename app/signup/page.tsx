@@ -63,8 +63,7 @@ export default function SignupPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
             <div className="relative">
-              <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-[#997100]"></div>
-              <span className="text-3xl font-bold tracking-wide text-foreground">PREME</span>
+              <span className="text-3xl font-bold tracking-wide text-foreground">PR<span className="relative">E<span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-[#997100]"></span></span>ME</span>
             </div>
           </Link>
           <h1 className="text-2xl font-bold text-foreground mt-6">Create Your Account</h1>

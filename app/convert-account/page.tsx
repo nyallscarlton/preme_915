@@ -140,8 +140,7 @@ export default function ConvertAccountPage() {
           <div className="container mx-auto px-6 py-6">
             <Link href="/" className="flex items-center">
               <div className="relative">
-                <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-primary"></div>
-                <span className="text-3xl font-bold tracking-wide text-foreground">PREME</span>
+                <span className="text-3xl font-bold tracking-wide text-foreground">PR<span className="relative">E<span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-primary"></span></span>ME</span>
               </div>
             </Link>
           </div>
@@ -177,8 +176,7 @@ export default function ConvertAccountPage() {
         <div className="container mx-auto px-6 py-6">
           <Link href="/" className="flex items-center">
             <div className="relative">
-              <div className="absolute -top-2 left-[1.1rem] w-4 h-1 bg-primary"></div>
-              <span className="text-3xl font-bold tracking-wide text-foreground">PREME</span>
+              <span className="text-3xl font-bold tracking-wide text-foreground">PR<span className="relative">E<span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-primary"></span></span>ME</span>
             </div>
           </Link>
         </div>

@@ -74,7 +74,7 @@ function buildEmailHtml(params: StatusNotificationParams): string {
           <!-- Header -->
           <tr>
             <td style="background-color: #0a0a0a; padding: 28px 40px; text-align: center;">
-              <span style="color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 3px;">PREME</span>
+              <span style="color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 3px; position: relative; display: inline-block;">PR<span style="position: relative;">E<span style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 16px; height: 4px; background-color: #997100; display: block;"></span></span>ME</span>
               <span style="color: #997100; font-size: 14px; display: block; margin-top: 4px; letter-spacing: 1px;">HOME LOANS</span>
             </td>
           </tr>
