@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +10,6 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
-  AlertTriangle,
   CheckCircle2,
   Clock,
   FileWarning,
@@ -17,202 +17,93 @@ import {
   Loader2,
   ArrowLeft,
   Landmark,
+  ChevronRight,
+  Upload,
 } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth"
+import { createClient } from "@/lib/supabase/client"
 
 // ---------------------------------------------------------------------------
-// Types (mirrors lib/browser/types.ts for client use)
+// Types
 // ---------------------------------------------------------------------------
 
-type PortalStatus = "connected" | "disconnected" | "error"
-type LoanStatusValue =
-  | "processing"
-  | "submitted"
-  | "conditional_approval"
-  | "clear_to_close"
-  | "funded"
-  | "suspended"
-  | "denied"
+interface LoanRow {
+  id: string
+  loan_number: string
+  borrower_name: string | null
+  property_address: string | null
+  lender: string
+  loan_amount: number | null
+  loan_type: string | null
+  loan_program: string | null
+  closing_date: string | null
+  status: string
+  conditions_total: number
+  conditions_open: number
+  conditions_closed: number
+  created_at: string
+  updated_at: string
+}
 
 interface PortalInfo {
   portalId: string
   portalName: string
-  status: PortalStatus
-  lastSyncedAt?: string
-  error?: string
+  status: "connected" | "disconnected"
   activeLoanCount: number
 }
 
-interface LoanRow {
-  loanNumber: string
-  borrowerName: string
-  propertyAddress: string
-  loanAmount: number
-  status: LoanStatusValue
-  lockExpiration?: string
-  conditionsCount: number
-  portalId: string
-  portalName: string
-}
-
 // ---------------------------------------------------------------------------
-// Mock Data (renders the page without live portal connections)
+// Portal registry — matches portal-config.ts
 // ---------------------------------------------------------------------------
 
-const MOCK_PORTALS: PortalInfo[] = [
-  { portalId: "uwm", portalName: "UWM (United Wholesale Mortgage)", status: "connected", lastSyncedAt: new Date(Date.now() - 45 * 60_000).toISOString(), activeLoanCount: 6 },
-  { portalId: "rocket_pro", portalName: "Rocket Pro TPO", status: "connected", lastSyncedAt: new Date(Date.now() - 120 * 60_000).toISOString(), activeLoanCount: 3 },
-  { portalId: "kiavi", portalName: "Kiavi", status: "disconnected", activeLoanCount: 0 },
-  { portalId: "lima_one", portalName: "Lima One Capital", status: "connected", lastSyncedAt: new Date(Date.now() - 30 * 60_000).toISOString(), activeLoanCount: 2 },
-  { portalId: "angel_oak", portalName: "Angel Oak Mortgage Solutions", status: "error", lastSyncedAt: new Date(Date.now() - 360 * 60_000).toISOString(), error: "Session timeout — re-login required", activeLoanCount: 1 },
-  { portalId: "carrington", portalName: "Carrington Wholesale", status: "disconnected", activeLoanCount: 0 },
-  { portalId: "newfi", portalName: "NewFi Wholesale", status: "disconnected", activeLoanCount: 0 },
-  { portalId: "corevest", portalName: "CoreVest Finance", status: "disconnected", activeLoanCount: 0 },
-]
-
-const MOCK_LOANS: LoanRow[] = [
-  { loanNumber: "UWM-2026-001234", borrowerName: "James & Maria Rodriguez", propertyAddress: "1452 Peachtree St NE, Atlanta, GA 30309", loanAmount: 385000, status: "clear_to_close", conditionsCount: 0, portalId: "uwm", portalName: "UWM", lockExpiration: new Date(Date.now() + 12 * 24 * 60 * 60_000).toISOString() },
-  { loanNumber: "UWM-2026-001198", borrowerName: "David Thompson", propertyAddress: "834 Spring St NW, Atlanta, GA 30308", loanAmount: 275000, status: "conditional_approval", conditionsCount: 3, portalId: "uwm", portalName: "UWM", lockExpiration: new Date(Date.now() + 8 * 24 * 60 * 60_000).toISOString() },
-  { loanNumber: "UWM-2026-001201", borrowerName: "Sarah Chen", propertyAddress: "2100 Howell Mill Rd, Atlanta, GA 30318", loanAmount: 520000, status: "processing", conditionsCount: 0, portalId: "uwm", portalName: "UWM" },
-  { loanNumber: "UWM-2026-001156", borrowerName: "Marcus Williams", propertyAddress: "445 Boulevard SE, Atlanta, GA 30312", loanAmount: 195000, status: "conditional_approval", conditionsCount: 5, portalId: "uwm", portalName: "UWM", lockExpiration: new Date(Date.now() + 3 * 24 * 60 * 60_000).toISOString() },
-  { loanNumber: "UWM-2026-001210", borrowerName: "Emily & Robert Park", propertyAddress: "901 Memorial Dr SE, Atlanta, GA 30316", loanAmount: 310000, status: "submitted", conditionsCount: 0, portalId: "uwm", portalName: "UWM" },
-  { loanNumber: "UWM-2026-001089", borrowerName: "Antonio Reyes", propertyAddress: "1677 N Decatur Rd, Atlanta, GA 30307", loanAmount: 440000, status: "suspended", conditionsCount: 2, portalId: "uwm", portalName: "UWM" },
-  { loanNumber: "RPT-2026-007821", borrowerName: "Lisa & Kevin O'Brien", propertyAddress: "3200 Cobb Pkwy, Kennesaw, GA 30144", loanAmount: 350000, status: "conditional_approval", conditionsCount: 2, portalId: "rocket_pro", portalName: "Rocket Pro TPO", lockExpiration: new Date(Date.now() + 15 * 24 * 60 * 60_000).toISOString() },
-  { loanNumber: "RPT-2026-007835", borrowerName: "Tanisha Jackson", propertyAddress: "510 Flat Shoals Ave SE, Atlanta, GA 30316", loanAmount: 225000, status: "clear_to_close", conditionsCount: 0, portalId: "rocket_pro", portalName: "Rocket Pro TPO", lockExpiration: new Date(Date.now() + 20 * 24 * 60 * 60_000).toISOString() },
-  { loanNumber: "RPT-2026-007840", borrowerName: "Andrew Kim", propertyAddress: "1890 Piedmont Ave NE, Atlanta, GA 30324", loanAmount: 415000, status: "processing", conditionsCount: 0, portalId: "rocket_pro", portalName: "Rocket Pro TPO" },
-  { loanNumber: "L1-2026-004501", borrowerName: "Marathon Empire LLC", propertyAddress: "1233 Donald Lee Hollowell Pkwy, Atlanta, GA 30318", loanAmount: 180000, status: "conditional_approval", conditionsCount: 4, portalId: "lima_one", portalName: "Lima One", lockExpiration: new Date(Date.now() + 6 * 24 * 60 * 60_000).toISOString() },
-  { loanNumber: "L1-2026-004489", borrowerName: "Marathon Empire LLC", propertyAddress: "789 Simpson Rd NW, Atlanta, GA 30314", loanAmount: 155000, status: "funded", conditionsCount: 0, portalId: "lima_one", portalName: "Lima One" },
-  { loanNumber: "AO-2026-012345", borrowerName: "Patricia Gonzalez", propertyAddress: "2401 Campbellton Rd SW, Atlanta, GA 30311", loanAmount: 290000, status: "conditional_approval", conditionsCount: 6, portalId: "angel_oak", portalName: "Angel Oak", lockExpiration: new Date(Date.now() + 4 * 24 * 60 * 60_000).toISOString() },
+const PORTAL_REGISTRY: { id: string; name: string }[] = [
+  { id: "uwm", name: "UWM (United Wholesale Mortgage)" },
+  { id: "rocket_pro", name: "Rocket Pro TPO" },
+  { id: "kiavi", name: "Kiavi" },
+  { id: "lima_one", name: "Lima One Capital" },
+  { id: "angel_oak", name: "Angel Oak Mortgage Solutions" },
+  { id: "carrington", name: "Carrington Wholesale" },
+  { id: "newfi", name: "NewFi Wholesale" },
+  { id: "corevest", name: "CoreVest Finance" },
+  { id: "logan_finance", name: "Logan Finance" },
 ]
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const STATUS_LABELS: Record<LoanStatusValue, string> = {
-  processing: "Processing",
-  submitted: "Submitted",
-  conditional_approval: "Conditional",
-  clear_to_close: "Clear to Close",
-  funded: "Funded",
-  suspended: "Suspended",
-  denied: "Denied",
-}
-
-function getStatusColor(status: LoanStatusValue): string {
-  switch (status) {
-    case "clear_to_close":
-    case "funded":
-      return "bg-green-100 text-green-800"
-    case "conditional_approval":
-    case "submitted":
-    case "processing":
-      return "bg-[#fff5e1] text-[#7a4a00]"
-    case "suspended":
-    case "denied":
-      return "bg-red-100 text-red-800"
-    default:
-      return "bg-gray-100 text-gray-800"
-  }
-}
-
-function getRowHighlight(loan: LoanRow): string {
-  if (loan.status === "clear_to_close" || loan.status === "funded") return "border-l-4 border-l-green-500"
-  if (loan.status === "suspended" || loan.status === "denied") return "border-l-4 border-l-red-500"
-  if (loan.lockExpiration) {
-    const daysUntilExpiry = (new Date(loan.lockExpiration).getTime() - Date.now()) / (24 * 60 * 60_000)
-    if (daysUntilExpiry <= 5) return "border-l-4 border-l-red-500"
-  }
-  if (loan.conditionsCount > 0) return "border-l-4 border-l-[#997100]"
-  return "border-l-4 border-l-transparent"
-}
-
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount)
 }
 
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diff / 60_000)
-  if (mins < 1) return "just now"
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  return `${Math.floor(hrs / 24)}d ago`
+function daysUntilClosing(dateStr: string | null): number | null {
+  if (!dateStr) return null
+  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (24 * 60 * 60_000))
 }
 
-function daysUntil(iso: string): string {
-  const days = Math.ceil((new Date(iso).getTime() - Date.now()) / (24 * 60 * 60_000))
-  if (days <= 0) return "EXPIRED"
-  if (days === 1) return "1 day"
-  return `${days} days`
+function getRowHighlight(loan: LoanRow): string {
+  if (loan.status === "Closed") return "border-l-4 border-l-green-500"
+  if (loan.status === "Suspended" || loan.status === "Cancelled") return "border-l-4 border-l-red-500"
+  if (loan.closing_date) {
+    const days = daysUntilClosing(loan.closing_date)
+    if (days !== null && days <= 5) return "border-l-4 border-l-red-500"
+  }
+  if (loan.conditions_open > 0) return "border-l-4 border-l-[#997100]"
+  return "border-l-4 border-l-transparent"
 }
 
-// ---------------------------------------------------------------------------
-// Portal Status Card
-// ---------------------------------------------------------------------------
-
-function PortalCard({
-  portal,
-  onRefresh,
-  refreshing,
-}: {
-  portal: PortalInfo
-  onRefresh: (id: string) => void
-  refreshing: boolean
-}) {
-  const statusIcon =
-    portal.status === "connected" ? (
-      <Wifi size={16} className="text-green-500" />
-    ) : portal.status === "error" ? (
-      <AlertTriangle size={16} className="text-red-500" />
-    ) : (
-      <WifiOff size={16} className="text-muted-foreground" />
-    )
-
-  const statusLabel =
-    portal.status === "connected"
-      ? "Connected"
-      : portal.status === "error"
-        ? "Error"
-        : "Not configured"
-
-  return (
-    <Card className="border-border/60">
-      <CardContent className="p-4 flex items-center gap-4">
-        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-          <Building2 size={20} className="text-muted-foreground" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate">{portal.portalName}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            {statusIcon}
-            <span className="text-xs text-muted-foreground">{statusLabel}</span>
-            {portal.lastSyncedAt && (
-              <span className="text-xs text-muted-foreground">
-                &middot; synced {timeAgo(portal.lastSyncedAt)}
-              </span>
-            )}
-          </div>
-          {portal.error && (
-            <p className="text-xs text-red-500 mt-1 truncate">{portal.error}</p>
-          )}
-        </div>
-        <div className="text-right shrink-0">
-          {portal.activeLoanCount > 0 && (
-            <p className="text-lg font-bold">{portal.activeLoanCount}</p>
-          )}
-          <button
-            onClick={() => onRefresh(portal.portalId)}
-            disabled={refreshing || portal.status === "disconnected"}
-            className="mt-1 inline-flex items-center gap-1 text-xs text-[#997100] hover:text-[#b8850a] disabled:text-muted-foreground disabled:cursor-not-allowed"
-          >
-            {refreshing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-            Refresh
-          </button>
-        </div>
-      </CardContent>
-    </Card>
-  )
+function getStatusColor(status: string): string {
+  switch (status) {
+    case "Active":
+      return "bg-[#fff5e1] text-[#7a4a00]"
+    case "Closed":
+      return "bg-green-100 text-green-800"
+    case "Cancelled":
+    case "Suspended":
+      return "bg-red-100 text-red-800"
+    default:
+      return "bg-gray-100 text-gray-800"
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -245,38 +136,146 @@ function SummaryCard({
 }
 
 // ---------------------------------------------------------------------------
+// Portal Status Card
+// ---------------------------------------------------------------------------
+
+function PortalCard({ portal }: { portal: PortalInfo }) {
+  const statusIcon =
+    portal.status === "connected" ? (
+      <Wifi size={16} className="text-green-500" />
+    ) : (
+      <WifiOff size={16} className="text-muted-foreground" />
+    )
+
+  return (
+    <Card className="border-border/60">
+      <CardContent className="p-4 flex items-center gap-4">
+        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+          <Building2 size={20} className="text-muted-foreground" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate">{portal.portalName}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            {statusIcon}
+            <span className="text-xs text-muted-foreground">
+              {portal.status === "connected" ? "Has loans" : "No active loans"}
+            </span>
+          </div>
+        </div>
+        {portal.activeLoanCount > 0 && (
+          <div className="text-right shrink-0">
+            <p className="text-lg font-bold">{portal.activeLoanCount}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Page Component
 // ---------------------------------------------------------------------------
 
 export default function PortalsPage() {
-  const [portals] = useState<PortalInfo[]>(MOCK_PORTALS)
-  const [loans] = useState<LoanRow[]>(MOCK_LOANS)
-  const [refreshingPortal, setRefreshingPortal] = useState<string | null>(null)
+  const { user, loading: authLoading, signOut } = useAuth()
+  const router = useRouter()
+  const [loans, setLoans] = useState<LoanRow[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const handleRefresh = async (portalId: string) => {
-    setRefreshingPortal(portalId)
-    try {
-      await fetch("/api/portals/status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ portalId }),
-      })
-    } catch {
-      // Silently fail for demo
-    } finally {
-      setTimeout(() => setRefreshingPortal(null), 1500)
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/auth?next=/portals")
+    }
+  }, [user, authLoading, router])
+
+  useEffect(() => {
+    async function fetchLoans() {
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from("loans")
+          .select("*")
+          .order("updated_at", { ascending: false })
+
+        if (!error && data) {
+          setLoans(data)
+        }
+      } catch {
+        // Failed to load
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchLoans()
+  }, [])
+
+  // Build portal status from real loan data
+  const lenderCounts = new Map<string, number>()
+  for (const loan of loans) {
+    if (loan.status === "Active") {
+      const key = loan.lender.toLowerCase().replace(/\s+/g, "_")
+      lenderCounts.set(key, (lenderCounts.get(key) || 0) + 1)
+      // Also match by lender name directly
+      lenderCounts.set(loan.lender, (lenderCounts.get(loan.lender) || 0) + 1)
     }
   }
 
+  const portals: PortalInfo[] = PORTAL_REGISTRY.map((p) => {
+    const count = lenderCounts.get(p.id) || lenderCounts.get(p.name) || 0
+    return {
+      portalId: p.id,
+      portalName: p.name,
+      status: count > 0 ? "connected" : "disconnected",
+      activeLoanCount: count,
+    }
+  })
+
+  // Also add any lenders from actual data that aren't in the registry
+  const registryNames = new Set(PORTAL_REGISTRY.map((p) => p.name))
+  const registryIds = new Set(PORTAL_REGISTRY.map((p) => p.id))
+  const seenLenders = new Set<string>()
+  for (const loan of loans) {
+    if (loan.status === "Active" && !seenLenders.has(loan.lender)) {
+      seenLenders.add(loan.lender)
+      const key = loan.lender.toLowerCase().replace(/\s+/g, "_")
+      if (!registryNames.has(loan.lender) && !registryIds.has(key)) {
+        const count = loans.filter((l) => l.lender === loan.lender && l.status === "Active").length
+        portals.push({
+          portalId: key,
+          portalName: loan.lender,
+          status: "connected",
+          activeLoanCount: count,
+        })
+      }
+    }
+  }
+
+  // Sort portals: connected first, then alphabetical
+  portals.sort((a, b) => {
+    if (a.status !== b.status) return a.status === "connected" ? -1 : 1
+    return a.portalName.localeCompare(b.portalName)
+  })
+
   // Summary stats
-  const connectedCount = portals.filter((p) => p.status === "connected").length
-  const totalActiveLoans = loans.length
-  const conditionsOutstanding = loans.reduce((sum, l) => sum + l.conditionsCount, 0)
-  const lockExpiringSoon = loans.filter((l) => {
-    if (!l.lockExpiration) return false
-    const days = (new Date(l.lockExpiration).getTime() - Date.now()) / (24 * 60 * 60_000)
-    return days <= 5 && days > 0
+  const activeLoans = loans.filter((l) => l.status === "Active")
+  const totalActiveLoans = activeLoans.length
+  const conditionsOutstanding = activeLoans.reduce((sum, l) => sum + l.conditions_open, 0)
+  const closingSoon = activeLoans.filter((l) => {
+    const days = daysUntilClosing(l.closing_date)
+    return days !== null && days <= 7 && days > 0
   }).length
+  const connectedCount = portals.filter((p) => p.status === "connected").length
+
+  if (loading || authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#997100] mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading portals...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -293,14 +292,25 @@ export default function PortalsPage() {
             <Badge className="bg-black text-white">Lender Portals</Badge>
           </div>
           <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground hidden md:inline">
+              {user?.firstName} {user?.lastName}
+            </span>
             <Button variant="outline" size="sm" className="border-border text-muted-foreground hover:bg-muted" asChild>
               <Link href="/lender">
                 <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-                Back to Lender
+                Lender Dashboard
               </Link>
             </Button>
-            <Button variant="outline" size="sm" className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-white" asChild>
-              <Link href="/admin">Admin</Link>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-border text-muted-foreground hover:bg-muted bg-transparent"
+              onClick={() => {
+                signOut()
+                window.location.href = "/"
+              }}
+            >
+              Sign Out
             </Button>
           </div>
         </div>
@@ -314,16 +324,16 @@ export default function PortalsPage() {
             <h1 className="text-2xl font-bold">Lender Portals</h1>
           </div>
           <p className="text-muted-foreground">
-            Monitor loan status across all connected wholesale lender portals
+            Monitor loan status across all wholesale lender portals
           </p>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <SummaryCard icon={<Wifi size={18} className="text-green-500" />} label="Connected" value={`${connectedCount}/${portals.length}`} />
+          <SummaryCard icon={<Wifi size={18} className="text-green-500" />} label="Lenders" value={`${connectedCount} active`} />
           <SummaryCard icon={<Building2 size={18} className="text-[#997100]" />} label="Active Loans" value={totalActiveLoans.toString()} />
-          <SummaryCard icon={<FileWarning size={18} className="text-[#b8850a]" />} label="Conditions" value={conditionsOutstanding.toString()} />
-          <SummaryCard icon={<Clock size={18} className="text-red-500" />} label="Lock Expiring" value={lockExpiringSoon.toString()} subtitle="within 5 days" />
+          <SummaryCard icon={<FileWarning size={18} className="text-[#b8850a]" />} label="Open Conditions" value={conditionsOutstanding.toString()} />
+          <SummaryCard icon={<Clock size={18} className="text-red-500" />} label="Closing Soon" value={closingSoon.toString()} subtitle="within 7 days" />
         </div>
 
         {/* Portal Status Grid */}
@@ -331,97 +341,118 @@ export default function PortalsPage() {
           <h2 className="text-lg font-semibold mb-3">Portal Status</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {portals.map((portal) => (
-              <PortalCard
-                key={portal.portalId}
-                portal={portal}
-                onRefresh={handleRefresh}
-                refreshing={refreshingPortal === portal.portalId}
-              />
+              <PortalCard key={portal.portalId} portal={portal} />
             ))}
           </div>
         </div>
 
         {/* Active Loans Table */}
         <div>
-          <h2 className="text-lg font-semibold mb-3">Active Loans</h2>
-          <Card className="border-border/60 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted">
-                    <th className="text-left px-4 py-3 font-semibold">Loan #</th>
-                    <th className="text-left px-4 py-3 font-semibold">Borrower</th>
-                    <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">Property</th>
-                    <th className="text-right px-4 py-3 font-semibold">Amount</th>
-                    <th className="text-center px-4 py-3 font-semibold">Status</th>
-                    <th className="text-center px-4 py-3 font-semibold hidden lg:table-cell">Conditions</th>
-                    <th className="text-center px-4 py-3 font-semibold hidden lg:table-cell">Lock Exp.</th>
-                    <th className="text-left px-4 py-3 font-semibold hidden xl:table-cell">Portal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loans.map((loan) => {
-                    const lockDaysLeft = loan.lockExpiration
-                      ? (new Date(loan.lockExpiration).getTime() - Date.now()) / (24 * 60 * 60_000)
-                      : null
+          <h2 className="text-lg font-semibold mb-3">Loans</h2>
+          {loans.length === 0 ? (
+            <Card className="border-border/60">
+              <CardContent className="py-16 text-center">
+                <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No loans yet</h3>
+                <p className="text-muted-foreground text-sm">
+                  Loans will appear here once they are imported from lender portals or added manually.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-border/60 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="text-left px-4 py-3 font-semibold">Loan #</th>
+                      <th className="text-left px-4 py-3 font-semibold">Borrower</th>
+                      <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">Property</th>
+                      <th className="text-right px-4 py-3 font-semibold">Amount</th>
+                      <th className="text-center px-4 py-3 font-semibold">Status</th>
+                      <th className="text-center px-4 py-3 font-semibold hidden lg:table-cell">Conditions</th>
+                      <th className="text-center px-4 py-3 font-semibold hidden lg:table-cell">Closing</th>
+                      <th className="text-left px-4 py-3 font-semibold hidden xl:table-cell">Lender</th>
+                      <th className="text-center px-4 py-3 font-semibold w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loans.map((loan) => {
+                      const closeDays = daysUntilClosing(loan.closing_date)
 
-                    return (
-                      <tr
-                        key={`${loan.portalId}-${loan.loanNumber}`}
-                        className={`border-t border-border/60 hover:bg-muted/50 ${getRowHighlight(loan)}`}
-                      >
-                        <td className="px-4 py-3 font-mono text-xs">
-                          {loan.loanNumber}
-                        </td>
-                        <td className="px-4 py-3 font-medium">{loan.borrowerName}</td>
-                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell max-w-[240px] truncate">
-                          {loan.propertyAddress}
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium">
-                          {formatCurrency(loan.loanAmount)}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(loan.status)}`}
-                          >
-                            {STATUS_LABELS[loan.status]}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center hidden lg:table-cell">
-                          {loan.conditionsCount > 0 ? (
-                            <span className="inline-flex items-center gap-1 text-[#997100] font-semibold text-xs">
-                              <FileWarning size={14} />
-                              {loan.conditionsCount}
-                            </span>
-                          ) : (
-                            <CheckCircle2 size={16} className="text-green-500 mx-auto" />
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center hidden lg:table-cell">
-                          {loan.lockExpiration ? (
+                      return (
+                        <tr
+                          key={loan.id}
+                          onClick={() => router.push(`/portals/${loan.id}`)}
+                          className={`border-t border-border/60 hover:bg-muted/50 cursor-pointer ${getRowHighlight(loan)}`}
+                        >
+                          <td className="px-4 py-3 font-mono text-xs">
+                            {loan.loan_number}
+                          </td>
+                          <td className="px-4 py-3 font-medium">
+                            {loan.borrower_name || <span className="text-muted-foreground">--</span>}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground hidden md:table-cell max-w-[240px] truncate">
+                            {loan.property_address || "--"}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium">
+                            {loan.loan_amount ? formatCurrency(loan.loan_amount) : "--"}
+                          </td>
+                          <td className="px-4 py-3 text-center">
                             <span
-                              className={`text-xs font-medium ${
-                                lockDaysLeft !== null && lockDaysLeft <= 5
-                                  ? "text-red-600 font-bold"
-                                  : "text-muted-foreground"
-                              }`}
+                              className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(loan.status)}`}
                             >
-                              {daysUntil(loan.lockExpiration)}
+                              {loan.status}
                             </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">--</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 hidden xl:table-cell">
-                          <span className="text-xs text-muted-foreground">{loan.portalName}</span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                          </td>
+                          <td className="px-4 py-3 text-center hidden lg:table-cell">
+                            {loan.conditions_open > 0 ? (
+                              <span className="inline-flex items-center gap-1 text-[#997100] font-semibold text-xs">
+                                <FileWarning size={14} />
+                                {loan.conditions_open} open
+                              </span>
+                            ) : loan.conditions_total > 0 ? (
+                              <span className="inline-flex items-center gap-1 text-green-600 text-xs">
+                                <CheckCircle2 size={14} />
+                                All cleared
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">--</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-center hidden lg:table-cell">
+                            {loan.closing_date ? (
+                              <span
+                                className={`text-xs font-medium ${
+                                  closeDays !== null && closeDays <= 5
+                                    ? "text-red-600 font-bold"
+                                    : "text-muted-foreground"
+                                }`}
+                              >
+                                {closeDays !== null && closeDays <= 0
+                                  ? "PAST DUE"
+                                  : closeDays === 1
+                                    ? "1 day"
+                                    : `${closeDays} days`}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">--</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 hidden xl:table-cell">
+                            <span className="text-xs text-muted-foreground">{loan.lender}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <ChevronRight size={16} className="text-muted-foreground" />
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </div>

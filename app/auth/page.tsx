@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Mail, Lock, Eye, EyeOff } from "lucide-react"
+import { Mail, Lock, Eye, EyeOff, Building2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signUp, signInWithMagicLink } from "@/lib/auth"
@@ -96,19 +96,31 @@ export default function AuthPage() {
         return
       }
 
+      // Fetch the user's actual role from the profile table
+      const profileRes = await fetch("/api/auth/me")
+      const profileData = profileRes.ok ? await profileRes.json() : null
+      const userRole = profileData?.user?.role || data.user.user_metadata?.role || "applicant"
+
       // Set user in context from the auth response
       setUser({
         id: data.user.id,
         email: data.user.email,
-        role: data.user.user_metadata?.role || "applicant",
-        firstName: data.user.user_metadata?.first_name,
-        lastName: data.user.user_metadata?.last_name,
+        role: userRole,
+        firstName: profileData?.user?.firstName || data.user.user_metadata?.first_name,
+        lastName: profileData?.user?.lastName || data.user.user_metadata?.last_name,
       })
 
       setStatus("Redirecting...")
 
+      // Route lender/admin users to lender dashboard if no specific next URL was set
+      const defaultNext = searchParams.get("next")
+      let redirectUrl = nextUrl
+      if (!defaultNext && (userRole === "lender" || userRole === "admin")) {
+        redirectUrl = "/lender"
+      }
+
       // Hard navigation — guarantees middleware sees fresh auth cookies
-      window.location.href = nextUrl
+      window.location.href = redirectUrl
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         setError("Sign in timed out. Please try again.")
@@ -199,7 +211,9 @@ export default function AuthPage() {
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-2xl text-gray-900">Welcome</CardTitle>
             <CardDescription className="text-gray-600">
-              Sign in to your account or create a new one
+              {nextUrl.includes("/lender") || nextUrl.includes("/portals")
+                ? "Sign in with your lender credentials"
+                : "Sign in to your account or create a new one"}
             </CardDescription>
           </CardHeader>
 
@@ -467,6 +481,21 @@ export default function AuthPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Lender Access Section */}
+        <div className="mt-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-[#997100]/10 flex items-center justify-center shrink-0">
+              <Building2 className="h-5 w-5 text-[#997100]" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-900">Lender or Loan Officer?</p>
+              <p className="text-xs text-gray-500">
+                Sign in above with your lender credentials to access the Lender Portal, pipeline, and conditions tracker.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

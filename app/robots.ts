@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next"
+import { getBaseUrl } from "@/lib/config"
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -20,6 +21,6 @@ export default function robots(): MetadataRoute.Robots {
         "/start",
       ],
     },
-    sitemap: "https://www.premerealestate.com/sitemap.xml",
+    sitemap: `${getBaseUrl()}/sitemap.xml`,
   }
 }

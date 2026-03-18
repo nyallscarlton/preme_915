@@ -10,6 +10,7 @@ import {
 } from "@/lib/conditions"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { extractConditionsFromFile } from "@/lib/extract-conditions"
+import { getBaseUrl } from "@/lib/config"
 
 export const dynamic = "force-dynamic"
 
@@ -168,7 +169,7 @@ export async function POST(
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
-      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.premerealestate.com")
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : getBaseUrl())
     const portalUrl = `${baseUrl}/portal/${app.guest_token}`
 
     const resendKey = process.env.RESEND_API_KEY

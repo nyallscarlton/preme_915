@@ -1,4 +1,7 @@
 import type { Metadata } from "next"
+import { getBaseUrl } from "@/lib/config"
+
+const siteUrl = getBaseUrl()
 
 export const metadata: Metadata = {
   title: "Loan Programs",
@@ -7,10 +10,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Loan Programs | PREME Home Loans",
     description: "DSCR, Bridge, Fix & Flip, and more — explore our loan programs for real estate investors.",
-    url: "https://www.premerealestate.com/loan-programs",
+    url: `${siteUrl}/loan-programs`,
   },
   alternates: {
-    canonical: "https://www.premerealestate.com/loan-programs",
+    canonical: `${siteUrl}/loan-programs`,
   },
 }
 

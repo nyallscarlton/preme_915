@@ -146,6 +146,22 @@ export const LENDER_PORTALS: LenderPortal[] = [
       conditionsSection: '.conditions-list',
     },
   },
+  {
+    id: 'logan_finance',
+    name: 'Logan Finance',
+    loginUrl: 'https://www.loganconnect.com/login',
+    credentialEnvPrefix: 'LOGAN',
+    // Login requires selecting "Commercial Broker" (value="CB") from the MUI
+    // channel dropdown (.MuiSelect-select) before filling email/password.
+    selectors: {
+      usernameField: '#email',
+      passwordField: '#password',
+      submitButton: 'button[type="submit"]',
+      pipelineTable: undefined,  // Navigate to "Loan Pipeline" in sidebar
+      loanStatusField: undefined,
+      conditionsSection: undefined,
+    },
+  },
 ]
 
 /**

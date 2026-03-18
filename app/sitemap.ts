@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next"
+import { getBaseUrl } from "@/lib/config"
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://www.premerealestate.com"
+  const baseUrl = getBaseUrl()
 
   return [
     {

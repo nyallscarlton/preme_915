@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { getBaseUrl } from "@/lib/config"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -150,7 +151,7 @@ const homepageSchemas = [
     provider: {
       "@type": "Organization",
       name: "PREME Home Loans",
-      url: "https://www.premerealestate.com",
+      url: getBaseUrl(),
     },
     amount: {
       "@type": "MonetaryAmount",

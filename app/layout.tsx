@@ -3,6 +3,9 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/hooks/use-auth"
+import { getBaseUrl } from "@/lib/config"
+
+const siteUrl = getBaseUrl()
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -28,7 +31,7 @@ export const metadata: Metadata = {
     title: "PREME Home Loans - Funding for Modern Real Estate Investors",
     description:
       "DSCR loans, fix & flip financing, and private capital—without the bank headaches. Close in 7-14 days.",
-    url: "https://www.premerealestate.com",
+    url: siteUrl,
     siteName: "PREME Home Loans",
     type: "website",
     locale: "en_US",
@@ -39,9 +42,9 @@ export const metadata: Metadata = {
     description:
       "DSCR loans, fix & flip financing, and private capital—without the bank headaches. Close in 7-14 days.",
   },
-  metadataBase: new URL("https://www.premerealestate.com"),
+  metadataBase: new URL(siteUrl),
   alternates: {
-    canonical: "https://www.premerealestate.com",
+    canonical: siteUrl,
   },
   robots: {
     index: true,
@@ -58,7 +61,7 @@ export default function RootLayout({
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "PREME Home Loans",
-    url: "https://www.premerealestate.com",
+    url: siteUrl,
     telephone: "(470) 942-5787",
     email: "lending@premehomeloans.com",
     address: {

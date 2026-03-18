@@ -17,7 +17,7 @@ export async function middleware(request: NextRequest) {
 
   // Protected routes that require authentication
   const protectedPaths = ["/dashboard", "/portal"]
-  const lenderPaths = ["/lender"]
+  const lenderPaths = ["/lender", "/portals", "/conditions"]
   const adminPaths = ["/admin"]
 
   const isProtected = protectedPaths.some((p) => url.pathname.startsWith(p))
