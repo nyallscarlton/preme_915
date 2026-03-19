@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import { getBaseUrl } from "@/lib/config"
 import Link from "next/link"
+import { gtagCallConversion } from "@/lib/gtag"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -284,7 +285,7 @@ export default function DSCRLandingPage() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </ApplyButton>
                   <Button size="lg" className="bg-white text-black hover:bg-gray-100" asChild>
-                    <Link href="tel:+14709425787">
+                    <Link href="tel:+14709425787" onClick={gtagCallConversion}>
                       <Phone className="mr-2 h-4 w-4" />
                       Talk to a Specialist
                     </Link>
@@ -521,7 +522,7 @@ export default function DSCRLandingPage() {
                 </p>
                 <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
                   <Button size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-white text-lg px-8 py-6" asChild>
-                    <Link href="tel:+14709425787">
+                    <Link href="tel:+14709425787" onClick={gtagCallConversion}>
                       <Phone className="mr-2 h-5 w-5" />
                       (470) 942-5787
                     </Link>
