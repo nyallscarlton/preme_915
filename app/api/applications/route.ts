@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { notifyMCNewApplication } from "@/lib/mc-webhook"
+import { sendApplicationConfirmationEmail } from "@/lib/follow-up"
+import { sendNewApplicationTelegram } from "@/lib/notifications"
+import { triggerApplicationFollowUp } from "@/lib/lead-followup"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -40,8 +43,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    // Fire-and-forget MC notification
+    // --- POST-INSERT ACTIONS (all fire-and-forget) ---
+
+    const applicantName = application.applicant_name || "Unknown"
+    const firstName = applicantName.split(" ")[0] || "there"
+    const applicantPhone = application.applicant_phone || ""
+    const applicantEmail = application.applicant_email || ""
+    const loanPurpose = application.loan_purpose || application.loan_type || null
+
+    // 1. MC notification
     notifyMCNewApplication(application).catch(() => {})
+
+    // 2. Confirmation email (immediate)
+    if (applicantEmail && !applicantEmail.endsWith("@placeholder.preme")) {
+      sendApplicationConfirmationEmail({
+        email: applicantEmail,
+        firstName,
+        applicationNumber,
+        loanAmount: application.loan_amount,
+        propertyAddress: application.property_address,
+        propertyType: application.property_type,
+        loanPurpose,
+        creditScore: application.credit_score_range,
+        guestToken: application.guest_token,
+      }).catch((err) => console.error("[applications] Confirmation email error:", err))
+    }
+
+    // 3. Telegram alert (immediate)
+    sendNewApplicationTelegram({
+      applicantName,
+      applicantPhone,
+      applicantEmail,
+      loanAmount: application.loan_amount,
+      propertyType: application.property_type,
+      propertyAddress: application.property_address,
+      creditScore: application.credit_score_range,
+      loanPurpose,
+      applicationNumber,
+    }).catch((err) => console.error("[applications] Telegram alert error:", err))
+
+    // 4. Create lead record + queue follow-up cadence (if phone provided)
+    if (applicantPhone) {
+      createLeadAndQueueFollowUp(adminClient, {
+        firstName,
+        lastName: applicantName.split(" ").slice(1).join(" ") || "",
+        phone: applicantPhone,
+        email: applicantEmail,
+        loanType: loanPurpose,
+        applicationId: application.id,
+      }).catch((err) => console.error("[applications] Lead creation error:", err))
+    }
 
     return NextResponse.json({
       success: true,
@@ -52,6 +103,79 @@ export async function POST(request: NextRequest) {
     console.error("API error:", error)
     return NextResponse.json({ error: "Failed to submit application" }, { status: 500 })
   }
+}
+
+/**
+ * Create a lead record from the application and trigger the application follow-up cadence.
+ */
+async function createLeadAndQueueFollowUp(
+  adminClient: ReturnType<typeof createAdminClient>,
+  params: {
+    firstName: string
+    lastName: string
+    phone: string
+    email: string
+    loanType: string | null
+    applicationId: string
+  },
+) {
+  // Check if lead already exists for this phone
+  const digits = params.phone.replace(/\D/g, "")
+  const e164 = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
+
+  const { data: existingLead } = await adminClient
+    .from("leads")
+    .select("id")
+    .eq("phone", e164)
+    .maybeSingle()
+
+  let leadId: string
+
+  if (existingLead) {
+    leadId = existingLead.id
+    // Update existing lead with latest info
+    await adminClient
+      .from("leads")
+      .update({
+        loan_type: params.loanType,
+        source: "application",
+        status: "new",
+      })
+      .eq("id", leadId)
+  } else {
+    // Insert new lead
+    const { data: newLead, error } = await adminClient
+      .from("leads")
+      .insert({
+        first_name: params.firstName,
+        last_name: params.lastName,
+        phone: e164,
+        email: params.email,
+        loan_type: params.loanType,
+        source: "application",
+        status: "new",
+      })
+      .select("id")
+      .single()
+
+    if (error || !newLead) {
+      console.error("[applications] Failed to create lead:", error?.message)
+      return
+    }
+
+    leadId = newLead.id
+  }
+
+  // Queue the application follow-up cadence
+  await triggerApplicationFollowUp({
+    id: leadId,
+    first_name: params.firstName,
+    last_name: params.lastName,
+    phone: e164,
+    email: params.email,
+    loan_type: params.loanType,
+    source: "application",
+  })
 }
 
 // GET - Get applications for current user (or all for admin)

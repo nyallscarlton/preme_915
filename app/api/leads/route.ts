@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { triggerLeadFollowUp } from "@/lib/lead-followup"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -71,6 +72,20 @@ export async function POST(request: NextRequest) {
       }),
     }).catch(() => {})
 
+    // Trigger immediate follow-up cadence (call + SMS + email sequence)
+    if (lead.phone) {
+      triggerLeadFollowUp({
+        id: lead.id,
+        first_name: lead.first_name,
+        last_name: lead.last_name,
+        phone: lead.phone,
+        email: lead.email,
+        loan_type: lead.loan_type,
+        source: lead.source,
+        status: lead.status,
+      }).catch((err) => console.error("[leads] Follow-up trigger failed:", err))
+    }
+
     return NextResponse.json({ success: true, id: lead.id })
   } catch (error) {
     console.error("[leads] API error:", error)
@@ -101,7 +116,10 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const { data: leads, error } = await supabase
+    // Use admin client to bypass RLS — auth check above is sufficient
+    const adminClient = createAdminClient()
+
+    const { data: leads, error } = await adminClient
       .from("leads")
       .select("*")
       .order("created_at", { ascending: false })
@@ -114,5 +132,63 @@ export async function GET() {
   } catch (error) {
     console.error("[leads] API error:", error)
     return NextResponse.json({ error: "Failed to fetch leads" }, { status: 500 })
+  }
+}
+
+// PATCH - Bulk update leads (admin/lender only)
+export async function PATCH(request: NextRequest) {
+  try {
+    const supabase = createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single()
+
+    if (!profile || !["lender", "admin"].includes(profile.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+
+    const { ids, status } = await request.json()
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: "ids array is required" }, { status: 400 })
+    }
+
+    if (!status) {
+      return NextResponse.json({ error: "status is required" }, { status: 400 })
+    }
+
+    const validStatuses = ["new", "contacted", "qualified", "nurturing", "converted", "dead"]
+    if (!validStatuses.includes(status)) {
+      return NextResponse.json({ error: `Invalid status. Must be one of: ${validStatuses.join(", ")}` }, { status: 400 })
+    }
+
+    const adminClient = createAdminClient()
+
+    const { data: updated, error } = await adminClient
+      .from("leads")
+      .update({ status, updated_at: new Date().toISOString() })
+      .in("id", ids)
+      .select()
+
+    if (error) {
+      console.error("[leads] Bulk update error:", error)
+      return NextResponse.json({ error: "Failed to update leads" }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, updated: updated?.length || 0 })
+  } catch (error) {
+    console.error("[leads] API error:", error)
+    return NextResponse.json({ error: "Failed to update leads" }, { status: 500 })
   }
 }

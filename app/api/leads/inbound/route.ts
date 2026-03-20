@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { triggerLeadFollowUp } from "@/lib/lead-followup"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -70,6 +71,20 @@ export async function POST(request: NextRequest) {
     }).catch(() => {})
 
     console.log("[inbound] Zentryx lead received:", lead.id, leadData.email)
+
+    // Trigger follow-up cadence if phone exists
+    if (lead.phone) {
+      triggerLeadFollowUp({
+        id: lead.id,
+        first_name: lead.first_name,
+        last_name: lead.last_name,
+        phone: lead.phone,
+        email: lead.email,
+        loan_type: lead.loan_type,
+        source: lead.source,
+        status: lead.status,
+      }).catch((err) => console.error("[inbound] Follow-up trigger failed:", err))
+    }
 
     return NextResponse.json({
       success: true,

@@ -226,3 +226,63 @@ export async function sendStatusNotification(params: StatusNotificationParams): 
 
   await Promise.allSettled(promises)
 }
+
+// ---------------------------------------------------------------------------
+// New Application Telegram Alert
+// ---------------------------------------------------------------------------
+
+interface NewApplicationAlert {
+  applicantName: string
+  applicantPhone: string
+  applicantEmail: string
+  loanAmount: string | number | null
+  propertyType: string | null
+  propertyAddress: string | null
+  creditScore: string | null
+  loanPurpose: string | null
+  applicationNumber: string
+}
+
+export async function sendNewApplicationTelegram(app: NewApplicationAlert): Promise<void> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN
+  const chatId = process.env.TELEGRAM_CHAT_ID
+  if (!botToken || !chatId) return
+
+  const amount = app.loanAmount
+    ? `$${Number(app.loanAmount).toLocaleString("en-US")}`
+    : "Not specified"
+  const property = app.propertyAddress || "Address pending"
+  const propType = app.propertyType || "Not specified"
+  const credit = app.creditScore || "Not provided"
+  const purpose = app.loanPurpose || "Not specified"
+
+  const lines = [
+    `\u{1F3E6} *NEW APPLICATION*`,
+    ``,
+    `${app.applicantName}`,
+    `\u{1F4DE} ${app.applicantPhone}`,
+    `\u{1F4E7} ${app.applicantEmail}`,
+    ``,
+    `\u{1F4B0} Loan: ${amount}`,
+    `\u{1F3E0} ${propType} — ${property}`,
+    `\u{1F4CA} Credit: ${credit}`,
+    `\u{1F3AF} Purpose: ${purpose}`,
+    ``,
+    `Ref: ${app.applicationNumber}`,
+  ]
+
+  try {
+    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: lines.join("\n"),
+        parse_mode: "Markdown",
+        disable_web_page_preview: true,
+      }),
+    })
+  } catch (err) {
+    console.error("[notifications] New application Telegram error:", err)
+  }
+}

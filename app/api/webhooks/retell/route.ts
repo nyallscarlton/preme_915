@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 // Allow up to 120s — recording downloads from Retell can be slow
 export const maxDuration = 120
@@ -72,6 +73,54 @@ export async function POST(request: NextRequest) {
           persistRecording(call.call_id, recordingUrl).catch((err) =>
             console.error("[retell-preme] Recording persistence failed (call_ended):", err)
           )
+        }
+
+        // Update the call entry in lead_messages with duration, recording, transcript
+        try {
+          const adminSb = createAdminClient()
+          const durationSec = call.duration_ms ? Math.round(call.duration_ms / 1000) : 0
+          const durationStr = durationSec > 0 ? `${Math.floor(durationSec / 60)}m ${durationSec % 60}s` : "0s"
+          const statusText = noAnswer ? "No answer" : `Connected (${durationStr})`
+
+          await adminSb
+            .from("lead_messages")
+            .update({
+              body: `📞 Call ${noAnswer ? "— No answer" : `— ${durationStr}`}${callSummary ? `\n\n${callSummary}` : ""}`,
+              metadata: {
+                call_id: call.call_id,
+                status: noAnswer ? "no_answer" : "completed",
+                duration_ms: call.duration_ms,
+                duration_str: durationStr,
+                recording_url: recordingUrl,
+                transcript: transcript,
+                disconnection_reason: call.disconnection_reason,
+              },
+            })
+            .eq("type", "call")
+            .filter("metadata->>call_id", "eq", call.call_id)
+        } catch (err) {
+          console.error("[retell-preme] Failed to update call message entry:", err)
+        }
+
+        // Check if this was a follow-up call and cancel remaining cadence if answered
+        if (leadId && !noAnswer && call.duration_ms > 30000) {
+          // >30s = meaningful conversation — cancel remaining follow-ups
+          try {
+            const adminSb = createAdminClient()
+            await adminSb
+              .from("lead_followup_queue")
+              .update({
+                status: "cancelled",
+                result: { reason: "call_answered", call_id: call.call_id, duration_ms: call.duration_ms },
+                completed_at: new Date().toISOString(),
+              })
+              .eq("lead_id", leadId)
+              .eq("status", "pending")
+
+            console.log(`[retell-preme] Cancelled remaining follow-ups for lead ${leadId} (call answered)`)
+          } catch (err) {
+            console.error("[retell-preme] Failed to cancel follow-ups:", err)
+          }
         }
         break
       }
@@ -149,6 +198,30 @@ export async function POST(request: NextRequest) {
             }
           } catch (err) {
             console.error("[retell-preme] DB error (non-fatal):", err)
+          }
+        }
+
+        // --- Cancel follow-up cadence for qualified leads ---
+        if (isQualified && leadId) {
+          try {
+            const adminSb = createAdminClient()
+            await adminSb
+              .from("lead_followup_queue")
+              .update({
+                status: "cancelled",
+                result: { reason: "lead_qualified", temperature: leadTemperature },
+                completed_at: new Date().toISOString(),
+              })
+              .eq("lead_id", leadId)
+              .eq("status", "pending")
+
+            // Update lead status to qualified
+            await adminSb
+              .from("leads")
+              .update({ status: "qualified" })
+              .eq("id", leadId)
+          } catch (err) {
+            console.error("[retell-preme] Failed to cancel follow-ups on qualification:", err)
           }
         }
 

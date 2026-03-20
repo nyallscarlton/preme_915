@@ -28,6 +28,14 @@ export async function GET(request: Request) {
       )
     }
 
+    // Track first open
+    if (!application.first_opened_at) {
+      await supabase
+        .from("loan_applications")
+        .update({ first_opened_at: new Date().toISOString() })
+        .eq("id", application.id)
+    }
+
     // Map to the shape the guest dashboard expects
     const mapped = {
       id: application.application_number || application.id,
