@@ -91,33 +91,6 @@ export function ReviewSubmitForm({
             </div>
           </div>
 
-          {formData.hasSponsor && (
-            <>
-              <Separator className="bg-border" />
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-foreground">Sponsor Information</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Sponsor Name:</span>
-                    <p className="font-medium text-foreground">{formData.sponsorName}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Relationship:</span>
-                    <p className="font-medium text-foreground">{formData.sponsorRelationship}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Sponsor Income:</span>
-                    <p className="font-medium text-foreground">{formatCurrency(formData.sponsorIncome)}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Sponsor Credit:</span>
-                    <p className="font-medium text-foreground">{formData.sponsorCreditScore || "Not provided"}</p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
           <Separator className="bg-border" />
 
           {/* Liquidity Summary */}

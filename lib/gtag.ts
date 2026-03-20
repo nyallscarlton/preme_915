@@ -9,10 +9,9 @@ const STEP_NAMES: Record<number, string> = {
   2: "property_info",
   3: "loan_details",
   4: "financial_info",
-  5: "sponsor_info",
-  6: "liquidity",
-  7: "documents",
-  8: "review_submit",
+  5: "liquidity",
+  6: "documents",
+  7: "review_submit",
 }
 
 // Fire the Lead Form Submission conversion ($350 value)

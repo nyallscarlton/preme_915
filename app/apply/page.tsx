@@ -13,7 +13,6 @@ import { GuestContactForm } from "@/components/application/guest-contact-form"
 import { LoanDetailsForm } from "@/components/application/loan-details-form"
 import { PropertyInfoForm } from "@/components/application/property-info-form"
 import { FinancialInfoForm } from "@/components/application/financial-info-form"
-import { SponsorInfoForm } from "@/components/application/sponsor-info-form"
 import { LiquidityInfoForm } from "@/components/application/liquidity-info-form"
 import { DocumentUploadForm } from "@/components/application/document-upload-form"
 import { ReviewSubmitForm } from "@/components/application/review-submit-form"
@@ -22,21 +21,19 @@ const steps = [
   { id: 1, title: "Contact Info", description: "Your contact information" },
   { id: 2, title: "Property Info", description: "Property details" },
   { id: 3, title: "Loan Details", description: "Basic loan information" },
-  { id: 4, title: "Financial Info", description: "Income and employment" },
-  { id: 5, title: "Sponsor Info", description: "Sponsor details (if applicable)" },
-  { id: 6, title: "Liquidity", description: "Assets and reserves" },
-  { id: 7, title: "Documents", description: "Upload required documents" },
-  { id: 8, title: "Review & Submit", description: "Final review" },
+  { id: 4, title: "Financial Info", description: "Credit profile" },
+  { id: 5, title: "Liquidity", description: "Assets and reserves" },
+  { id: 6, title: "Documents", description: "Upload required documents" },
+  { id: 7, title: "Review & Submit", description: "Final review" },
 ]
 
 const accountSteps = [
   { id: 1, title: "Property Info", description: "Property details" },
   { id: 2, title: "Loan Details", description: "Basic loan information" },
-  { id: 3, title: "Financial Info", description: "Income and employment" },
-  { id: 4, title: "Sponsor Info", description: "Sponsor details (if applicable)" },
-  { id: 5, title: "Liquidity", description: "Assets and reserves" },
-  { id: 6, title: "Documents", description: "Upload required documents" },
-  { id: 7, title: "Review & Submit", description: "Final review" },
+  { id: 3, title: "Financial Info", description: "Credit profile" },
+  { id: 4, title: "Liquidity", description: "Assets and reserves" },
+  { id: 5, title: "Documents", description: "Upload required documents" },
+  { id: 6, title: "Review & Submit", description: "Final review" },
 ]
 
 export default function LoanApplicationPage() {
@@ -126,16 +123,7 @@ export default function LoanApplicationPage() {
         property_value: Number.parseFloat(formData.propertyValue) || 0,
 
         // Financial info
-        annual_income: Number.parseFloat(formData.annualIncome) || 0,
-        employment_status: formData.employmentStatus || "",
-        employer_name: formData.employerName || "",
         credit_score_range: formData.creditScore || "",
-
-        // Sponsor info
-        has_sponsor: formData.hasSponsor || false,
-        sponsor_name: formData.sponsorName || "",
-        sponsor_email: formData.sponsorEmail || "",
-        sponsor_phone: formData.sponsorPhone || "",
 
         // Liquidity info
         cash_reserves: Number.parseFloat(formData.cashReserves) || 0,
@@ -232,15 +220,6 @@ export default function LoanApplicationPage() {
           )
         case 5:
           return (
-            <SponsorInfoForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 6:
-          return (
             <LiquidityInfoForm
               onNext={handleNext}
               onPrevious={handlePrevious}
@@ -248,7 +227,7 @@ export default function LoanApplicationPage() {
               initialData={formData}
             />
           )
-        case 7:
+        case 6:
           return (
             <DocumentUploadForm
               onNext={handleNext}
@@ -259,7 +238,7 @@ export default function LoanApplicationPage() {
               guestToken={existingGuestToken || undefined}
             />
           )
-        case 8:
+        case 7:
           return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
         default:
           return null
@@ -296,15 +275,6 @@ export default function LoanApplicationPage() {
           )
         case 4:
           return (
-            <SponsorInfoForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 5:
-          return (
             <LiquidityInfoForm
               onNext={handleNext}
               onPrevious={handlePrevious}
@@ -312,7 +282,7 @@ export default function LoanApplicationPage() {
               initialData={formData}
             />
           )
-        case 6:
+        case 5:
           return (
             <DocumentUploadForm
               onNext={handleNext}
@@ -323,7 +293,7 @@ export default function LoanApplicationPage() {
               guestToken={existingGuestToken || undefined}
             />
           )
-        case 7:
+        case 6:
           return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
         default:
           return null
@@ -358,14 +328,7 @@ export default function LoanApplicationPage() {
             propertyValue: app.propertyValue || "",
             loanAmount: app.loanAmount || "",
             loanPurpose: app.loanPurpose || "",
-            annualIncome: app.annualIncome || "",
-            employmentStatus: app.employmentStatus || "",
-            employerName: app.employerName || "",
             creditScore: app.creditScore || "",
-            hasSponsor: app.hasSponsor || false,
-            sponsorName: app.sponsorName || "",
-            sponsorEmail: app.sponsorEmail || "",
-            sponsorPhone: app.sponsorPhone || "",
             cashReserves: app.cashReserves || "",
             investmentAccounts: app.investmentAccounts || "",
             retirementAccounts: app.retirementAccounts || "",
