@@ -47,10 +47,6 @@ export function ReviewSubmitForm({
                 <p className="font-medium text-foreground">{formatCurrency(formData.loanAmount)}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Loan Term:</span>
-                <p className="font-medium text-foreground">{formData.loanTermMonths} months</p>
-              </div>
-              <div className="col-span-2">
                 <span className="text-muted-foreground">Property Type:</span>
                 <p className="font-medium text-foreground">{formData.propertyType}</p>
               </div>

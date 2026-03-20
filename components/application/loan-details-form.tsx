@@ -19,7 +19,6 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
   const [formData, setFormData] = useState({
     loanAmount: initialData.loanAmount || "",
     loanPurpose: initialData.loanPurpose || "",
-    loanTermMonths: initialData.loanTermMonths || "",
     propertyType: initialData.propertyType || "",
     ...initialData,
   })
@@ -34,7 +33,7 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
     onNext()
   }
 
-  const isFormValid = formData.loanAmount && formData.loanPurpose && formData.loanTermMonths && formData.propertyType
+  const isFormValid = formData.loanAmount && formData.loanPurpose && formData.propertyType
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -44,41 +43,18 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
           <CardDescription className="text-muted-foreground">Tell us about the loan you're seeking</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="loanAmount" className="text-foreground">
-                Loan Amount *
-              </Label>
-              <Input
-                id="loanAmount"
-                type="number"
-                placeholder="500000"
-                value={formData.loanAmount}
-                onChange={(e) => handleInputChange("loanAmount", e.target.value)}
-                className="bg-input border-border text-foreground focus:border-primary"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="loanTermMonths" className="text-foreground">
-                Loan Term (Months) *
-              </Label>
-              <Select
-                value={formData.loanTermMonths}
-                onValueChange={(value) => handleInputChange("loanTermMonths", value)}
-              >
-                <SelectTrigger className="bg-input border-border text-foreground focus:border-primary">
-                  <SelectValue placeholder="Select term" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="120">10 Years (120 months)</SelectItem>
-                  <SelectItem value="180">15 Years (180 months)</SelectItem>
-                  <SelectItem value="240">20 Years (240 months)</SelectItem>
-                  <SelectItem value="300">25 Years (300 months)</SelectItem>
-                  <SelectItem value="360">30 Years (360 months)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="loanAmount" className="text-foreground">
+              Loan Amount *
+            </Label>
+            <Input
+              id="loanAmount"
+              type="number"
+              placeholder="500000"
+              value={formData.loanAmount}
+              onChange={(e) => handleInputChange("loanAmount", e.target.value)}
+              className="bg-input border-border text-foreground focus:border-primary"
+            />
           </div>
 
           <div className="space-y-2">
