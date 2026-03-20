@@ -55,24 +55,6 @@ export async function POST(request: NextRequest) {
       event_timestamp: created_at,
     })
 
-    // Send Telegram alert for opens (so you know when a lead engages)
-    if (type === "email.opened" && applicationNumber) {
-      await sendTelegramAlert(
-        `\uD83D\uDCE7 *EMAIL OPENED*\n\n` +
-        `*${applicationNumber}*\n` +
-        `${recipientEmail} just opened: "${data.subject}"`
-      )
-    }
-
-    // Alert on clicks (lead is actively engaging)
-    if (type === "email.clicked" && applicationNumber) {
-      await sendTelegramAlert(
-        `\uD83D\uDD17 *LINK CLICKED*\n\n` +
-        `*${applicationNumber}*\n` +
-        `${recipientEmail} clicked: ${data.click?.link || "unknown link"}`
-      )
-    }
-
     return NextResponse.json({ received: true })
   } catch (error) {
     console.error("[resend-webhook] Error:", error)
@@ -83,25 +65,4 @@ export async function POST(request: NextRequest) {
 function extractAppNumber(subject: string): string | null {
   const match = subject?.match(/PREME-[A-Z0-9]+/)
   return match?.[0] || null
-}
-
-async function sendTelegramAlert(text: string) {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN
-  const chatId = process.env.TELEGRAM_CHAT_ID
-  if (!botToken || !chatId) return
-
-  try {
-    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: "Markdown",
-        disable_web_page_preview: true,
-      }),
-    })
-  } catch (err) {
-    console.error("[resend-webhook] Telegram error:", err)
-  }
 }
