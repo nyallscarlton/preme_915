@@ -81,6 +81,9 @@ async function sendMagicLinkEmail(
         from: fromEmail,
         to: toEmail,
         subject: "Your Preme Home Loans Application Link",
+        tags: [
+          { name: "email_type", value: "magic_link" },
+        ],
         html: `
 <!DOCTYPE html>
 <html>

@@ -158,6 +158,10 @@ async function sendStatusEmail(params: StatusNotificationParams): Promise<boolea
         to: params.email,
         subject: `${content.subject} — ${params.applicationNumber}`,
         html: buildEmailHtml(params),
+        tags: [
+          { name: "application_number", value: params.applicationNumber },
+          { name: "status", value: params.newStatus },
+        ],
       }),
     })
 

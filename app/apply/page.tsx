@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { CheckCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { gtagLeadConversion } from "@/lib/gtag"
+import { gtagLeadConversion, gtagFormStep, gtagFormStepComplete, gtagApplicationStart, gtagFormAbandon } from "@/lib/gtag"
 import { GuestContactForm } from "@/components/application/guest-contact-form"
 import { LoanDetailsForm } from "@/components/application/loan-details-form"
 import { PropertyInfoForm } from "@/components/application/property-info-form"
@@ -62,11 +62,16 @@ export default function LoanApplicationPage() {
   const handleAuthChoice = (choice: "account" | "guest") => {
     setAuthChoice(choice)
     setCurrentStep(1)
+    gtagApplicationStart(choice)
+    gtagFormStep(1, choice)
   }
 
   const handleNext = () => {
     if (currentStep < currentSteps.length) {
+      const mode = authChoice || "guest"
+      gtagFormStepComplete(currentStep, mode)
       setCurrentStep(currentStep + 1)
+      gtagFormStep(currentStep + 1, mode)
     }
   }
 
@@ -75,6 +80,17 @@ export default function LoanApplicationPage() {
       setCurrentStep(currentStep - 1)
     }
   }
+
+  // Track form abandonment on page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (authChoice && currentStep > 0 && !isSubmitted) {
+        gtagFormAbandon(currentStep, authChoice)
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [authChoice, currentStep, isSubmitted])
 
   const handleStepData = (stepData: Record<string, unknown>) => {
     setFormData((prev: Record<string, unknown>) => ({ ...prev, ...stepData }))
@@ -326,6 +342,8 @@ export default function LoanApplicationPage() {
         const data = await res.json()
 
         if (data.ok && data.application) {
+          gtagApplicationStart("guest")
+          gtagFormStep(1, "guest")
           const app = data.application
           const prefilled: Record<string, unknown> = {
             firstName: app.firstName || "",

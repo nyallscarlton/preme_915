@@ -6,6 +6,7 @@ import { AuthProvider } from "@/hooks/use-auth"
 import { getBaseUrl } from "@/lib/config"
 
 const GA_CONVERSION_ID = "AW-17997920712"
+const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_ID || ""
 
 const siteUrl = getBaseUrl()
 
@@ -116,19 +117,20 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
         />
         <script
+          async
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_CONVERSION_ID}`}
+        ></script>
+        <script
           dangerouslySetInnerHTML={{
             __html: `
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
               gtag('config', '${GA_CONVERSION_ID}');
+              ${GA4_MEASUREMENT_ID ? `gtag('config', '${GA4_MEASUREMENT_ID}');` : ''}
             `,
           }}
         />
-        <script
-          async
-          src={`https://www.googletagmanager.com/gtag/js?id=${GA_CONVERSION_ID}`}
-        ></script>
         <script
           async
           defer
