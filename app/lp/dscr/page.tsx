@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { gtagCallConversion } from "@/lib/gtag"
+import { CallLinkInline } from "@/components/call-link-inline"
+
+export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "DSCR Loans | Close in 14 Days, No Tax Returns | Preme Home Loans",
@@ -238,13 +240,9 @@ export default function DSCRLandingPage() {
           </div>
           <p className="mt-6 text-gray-500">
             Or call us:{" "}
-            <a
-              href="tel:+14709425787"
-              onClick={gtagCallConversion}
-              className="font-semibold text-[#0a0a0a] underline decoration-[#997100] underline-offset-4"
-            >
+            <CallLinkInline className="font-semibold text-[#0a0a0a] underline decoration-[#997100] underline-offset-4">
               (470) 942-5787
-            </a>
+            </CallLinkInline>
           </p>
         </div>
       </section>

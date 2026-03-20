@@ -91,7 +91,7 @@ Return ONLY valid JSON with this structure:
   "top_fixes": ["<fix 1>", "<fix 2>", "<fix 3>"],
   "coaching_notes": "<Full coaching analysis as markdown text. For each category include the score and 2-3 sentences of coaching with exact quotes.>",
   "what_went_well": "<1-2 things the agent did right>",
-  "prompt_patch": "<If CRITICAL or HIGH severity, specific text to add/change in the system prompt. null if no patch needed.>"
+  "prompt_patch": "<If CRITICAL, HIGH, or MODERATE severity (score under 85), provide specific text to add to the system prompt to fix the top issue. Keep it under 3 sentences — concise and actionable. null only if LOW severity.>"
 }`
 
 interface ReviewResult {
@@ -287,15 +287,18 @@ export async function storeReview(params: {
 }
 
 /**
- * Apply a prompt patch to Riley's LLM if the review found CRITICAL or HIGH issues.
- * Uses raw fetch (not retell-sdk) for reliability on Vercel.
+ * Apply a prompt patch to Riley's LLM.
+ * Triggers on CRITICAL, HIGH, or MODERATE (score < 85) severity.
+ * Maintains a ROLLING WINDOW of max 5 learnings — oldest get pruned.
  */
 export async function applyPromptPatch(
   review: ReviewResult,
   callId: string
 ): Promise<string | null> {
   if (!review.prompt_patch) return null
-  if (review.severity !== "CRITICAL" && review.severity !== "HIGH") return null
+  // Patch on CRITICAL, HIGH, or MODERATE severity
+  const patchSeverities = ["CRITICAL", "HIGH", "MODERATE"]
+  if (!patchSeverities.includes(review.severity)) return null
 
   const retellKey = process.env.RETELL_API_KEY
   const llmId = process.env.RETELL_PREME_LLM_ID
@@ -316,14 +319,56 @@ export async function applyPromptPatch(
     const llmData = await getRes.json()
     const currentPrompt: string = llmData.general_prompt || ""
 
-    // Check if this patch is already applied (avoid duplicates)
-    if (currentPrompt.includes(review.prompt_patch.substring(0, 50))) {
+    // Check if this exact patch is already applied (avoid duplicates)
+    if (review.prompt_patch.length > 50 && currentPrompt.includes(review.prompt_patch.substring(0, 50))) {
       console.log("[call-reviewer] Patch already applied for", callId)
       return "Patch already applied"
     }
 
-    // Append patch under a LEARNED section
-    const patchSection = `\n\n==============================\nLEARNED FROM CALL REVIEW (${callId})\n==============================\n${review.prompt_patch}`
+    // --- Rolling window: keep max 5 LEARNED sections ---
+    // Split prompt at each LEARNED FROM CALL REVIEW boundary
+    const LEARNED_SEPARATOR = "\n\n==============================\nLEARNED FROM CALL REVIEW"
+    const firstLearnedIdx = currentPrompt.indexOf("==============================\nLEARNED FROM CALL REVIEW")
+    let basePrompt: string
+    let existingLearnings: string[]
+
+    if (firstLearnedIdx === -1) {
+      // No existing learnings
+      basePrompt = currentPrompt
+      existingLearnings = []
+    } else {
+      // Split base from learnings
+      basePrompt = currentPrompt.substring(0, firstLearnedIdx).replace(/\n+$/, "")
+      const learnedBlock = currentPrompt.substring(firstLearnedIdx)
+      // Split individual learned sections by finding each "======" header
+      existingLearnings = []
+      const sectionStarts: number[] = []
+      let searchFrom = 0
+      while (true) {
+        const idx = learnedBlock.indexOf("==============================\nLEARNED FROM CALL REVIEW", searchFrom)
+        if (idx === -1) break
+        sectionStarts.push(idx)
+        searchFrom = idx + 1
+      }
+      for (let i = 0; i < sectionStarts.length; i++) {
+        const start = sectionStarts[i]
+        const end = i + 1 < sectionStarts.length ? sectionStarts[i + 1] : learnedBlock.length
+        existingLearnings.push(learnedBlock.substring(start, end).trim())
+      }
+    }
+
+    // Add new learning
+    const newLearning = `==============================\nLEARNED FROM CALL REVIEW (${callId})\n==============================\n${review.prompt_patch}`
+    existingLearnings.push(newLearning)
+
+    // Keep only the 5 most recent learnings (drop oldest)
+    const MAX_LEARNINGS = 5
+    const trimmedLearnings = existingLearnings.slice(-MAX_LEARNINGS)
+
+    // Rebuild prompt
+    const updatedPrompt = trimmedLearnings.length > 0
+      ? basePrompt + "\n\n" + trimmedLearnings.join("\n\n")
+      : basePrompt
 
     const patchRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
       method: "PATCH",
@@ -331,7 +376,7 @@ export async function applyPromptPatch(
         "Content-Type": "application/json",
         Authorization: `Bearer ${retellKey}`,
       },
-      body: JSON.stringify({ general_prompt: currentPrompt + patchSection }),
+      body: JSON.stringify({ general_prompt: updatedPrompt }),
     })
 
     if (!patchRes.ok) {
@@ -339,7 +384,8 @@ export async function applyPromptPatch(
       return null
     }
 
-    console.log(`[call-reviewer] Prompt patched for call ${callId}: ${review.prompt_patch.substring(0, 80)}...`)
+    const pruned = existingLearnings.length - trimmedLearnings.length
+    console.log(`[call-reviewer] Prompt patched for call ${callId} (${trimmedLearnings.length}/5 learnings${pruned > 0 ? `, pruned ${pruned} old` : ""}): ${review.prompt_patch.substring(0, 80)}...`)
 
     // Mark patch as applied in zx_contact_interactions
     try {
@@ -348,7 +394,6 @@ export async function applyPromptPatch(
       const key = process.env.SUPABASE_SERVICE_ROLE_KEY
       if (url && key) {
         const supabase = createClient(url, key)
-        // Update the review row's metadata to mark patch as applied
         const { data: rows } = await supabase
           .from("zx_contact_interactions")
           .select("id, metadata")
@@ -380,9 +425,11 @@ export async function applyPromptPatch(
 }
 
 /**
- * Send a Telegram summary of the review to the team.
+ * sendReviewTelegram — DISABLED
+ * Score alerts are no longer sent. Reviews are stored in Supabase
+ * and auto-patch the prompt. No notification needed unless actionable.
  */
-export async function sendReviewTelegram(params: {
+export async function sendReviewTelegram(_params: {
   callerName: string
   callerPhone: string
   score: number
@@ -391,33 +438,7 @@ export async function sendReviewTelegram(params: {
   recordingUrl: string | null
   patchApplied: string | null
 }) {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN
-  const chatId = process.env.TELEGRAM_CHAT_ID
-  if (!botToken || !chatId) return
-
-  const emoji = params.score >= 80 ? "🟢" : params.score >= 60 ? "🟡" : params.score >= 40 ? "🟠" : "🔴"
-
-  const lines = [
-    `🎓 *RILEY CALL REVIEW*`,
-    ``,
-    `${emoji} *Score: ${params.score}/100* (${params.severity})`,
-    `📞 ${params.callerName || "Unknown"} — ${params.callerPhone}`,
-    ``,
-    `*Top Fixes:*`,
-    ...params.topFixes.map((f, i) => `${i + 1}. ${f}`),
-    ``,
-    params.patchApplied ? `🔧 *Prompt auto-patched:* ${params.patchApplied.substring(0, 100)}...` : null,
-    params.recordingUrl ? `[🎧 Listen](${params.recordingUrl})` : null,
-  ].filter(Boolean).join("\n")
-
-  fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: lines,
-      parse_mode: "Markdown",
-      disable_web_page_preview: true,
-    }),
-  }).catch((err) => console.error("[call-reviewer] Telegram error:", err))
+  // Intentionally disabled — no Telegram score alerts.
+  // Reviews are stored in Supabase and visible in Mission Control.
+  return
 }

@@ -1,7 +1,8 @@
 import { Suspense } from "react"
 import { getBaseUrl } from "@/lib/config"
 import Link from "next/link"
-import { gtagCallConversion } from "@/lib/gtag"
+
+export const dynamic = "force-dynamic"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -23,6 +24,7 @@ import {
   Timer,
 } from "lucide-react"
 import { ApplyButton } from "@/components/apply-button"
+import { CallLink } from "@/components/call-link"
 
 const stats = [
   { label: "Average Close", value: "7–14 days" },
@@ -284,12 +286,10 @@ export default function DSCRLandingPage() {
                     Start My DSCR Application
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </ApplyButton>
-                  <Button size="lg" className="bg-white text-black hover:bg-gray-100" asChild>
-                    <Link href="tel:+14709425787" onClick={gtagCallConversion}>
-                      <Phone className="mr-2 h-4 w-4" />
-                      Talk to a Specialist
-                    </Link>
-                  </Button>
+                  <CallLink size="lg" className="bg-white text-black hover:bg-gray-100">
+                    <Phone className="mr-2 h-4 w-4" />
+                    Talk to a Specialist
+                  </CallLink>
                 </div>
                 <div className="mt-10 grid gap-4 sm:grid-cols-3 text-sm text-gray-300">
                   <div className="flex items-center"><CheckCircle2 className="mr-2 h-4 w-4 text-[#997100]" /> No personal income verification</div>
@@ -521,12 +521,10 @@ export default function DSCRLandingPage() {
                   Have questions about your deal? Our lending specialists are available Monday–Friday, 8AM–8PM EST. No pressure, no obligations.
                 </p>
                 <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <Button size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-white text-lg px-8 py-6" asChild>
-                    <Link href="tel:+14709425787" onClick={gtagCallConversion}>
-                      <Phone className="mr-2 h-5 w-5" />
-                      (470) 942-5787
-                    </Link>
-                  </Button>
+                  <CallLink size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-white text-lg px-8 py-6">
+                    <Phone className="mr-2 h-5 w-5" />
+                    (470) 942-5787
+                  </CallLink>
                 </div>
               </div>
             </div>

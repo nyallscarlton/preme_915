@@ -17,6 +17,12 @@ const MC_AUTH = "Basic YWRtaW46Mll1bmdueWFsbHMh"
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID
 
+// Internal team numbers used for role-play training — skip lead creation & alerts
+const TRAINING_PHONES = new Set([
+  "+14706225965",
+  "+19453088322",
+])
+
 const NO_ANSWER_REASONS = [
   "dial_busy",
   "dial_failed",
@@ -91,8 +97,10 @@ export async function POST(request: NextRequest) {
         const existingApplication = analysis.existing_application || null
         const callerIntent: string | null = analysis.caller_intent || null
 
+        const isTraining = TRAINING_PHONES.has(callerPhone) || TRAINING_PHONES.has(call.from_number || "")
+
         const isQualified =
-          leadTemperature === "Hot" || (leadTemperature === "Warm" && wantsCallback)
+          !isTraining && (leadTemperature === "Hot" || (leadTemperature === "Warm" && wantsCallback))
 
         // Caller name
         const callerName = [
@@ -159,7 +167,7 @@ export async function POST(request: NextRequest) {
 
         // --- Telegram notification for qualified leads ---
         if (isQualified) {
-          sendTelegramAlert({
+          sendLeadAlert({
             callerName,
             callerPhone,
             temperature: leadTemperature,
@@ -204,6 +212,7 @@ export async function POST(request: NextRequest) {
                   score,
                   loan_type: loanType,
                   recording_url: call.recording_url,
+                  is_training: isTraining,
                 },
               }) // Silently fail if table doesn't exist
             }
@@ -223,6 +232,7 @@ export async function POST(request: NextRequest) {
           loan_type: loanType,
           property_address: propertyAddress,
           caller_intent: callerIntent,
+          is_training: isTraining,
         })
 
         // Persist recording to Supabase Storage (fire-and-forget)
@@ -249,7 +259,7 @@ export async function POST(request: NextRequest) {
           callerIntent,
           callSummary: call.call_analysis?.call_summary || null,
           callAt: new Date().toISOString(),
-          analysis: analysis,
+          analysis: { ...analysis, is_training: isTraining },
         })
 
         break
@@ -279,8 +289,8 @@ function logToMC(eventType: string, data: Record<string, unknown>) {
   }).catch(() => {})
 }
 
-/** Send Telegram alert for qualified leads */
-function sendTelegramAlert(data: {
+/** Send iMessage alert for qualified leads via AppleScript on Mac mini */
+function sendLeadAlert(data: {
   callerName: string
   callerPhone: string
   temperature: string | null
@@ -300,45 +310,59 @@ function sendTelegramAlert(data: {
   recordingUrl: string | null
   callSummary: string | null
 }) {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return
-
   const lines = [
-    `🏦 *PREME — New Qualified Lead*`,
+    `PREME — New Qualified Lead`,
     ``,
-    `*${data.callerName}*`,
-    `📞 ${data.callerPhone}`,
-    `🌡️ ${data.temperature || "Unknown"} ${data.score ? `(Score: ${data.score}/100)` : ""}`,
+    `${data.callerName}`,
+    `Phone: ${data.callerPhone}`,
+    `Temp: ${data.temperature || "Unknown"}${data.score ? ` (${data.score}/100)` : ""}`,
     ``,
-    `*Loan Details:*`,
-    data.loanType ? `• Type: ${data.loanType}` : null,
-    data.propertyType ? `• Property: ${data.propertyType}` : null,
-    data.loanAmount ? `• Amount: ${data.loanAmount}` : null,
-    data.propertyValue ? `• Value: ${data.propertyValue}` : null,
-    data.creditScoreRange ? `• Credit: ${data.creditScoreRange}` : null,
-    data.timeline ? `• Timeline: ${data.timeline}` : null,
-    data.hasEntity ? `• Entity: Yes` : null,
-    data.experienceLevel ? `• Experience: ${data.experienceLevel}` : null,
+    data.loanType ? `Loan: ${data.loanType}` : null,
+    data.propertyType ? `Property: ${data.propertyType}` : null,
+    data.loanAmount ? `Amount: ${data.loanAmount}` : null,
+    data.propertyValue ? `Value: ${data.propertyValue}` : null,
+    data.creditScoreRange ? `Credit: ${data.creditScoreRange}` : null,
+    data.timeline ? `Timeline: ${data.timeline}` : null,
+    data.wantsCallback ? `WANTS CALLBACK` : null,
     ``,
-    data.callerIntent ? `*Intent:* ${data.callerIntent}` : null,
-    data.objections ? `*Objections:* ${data.objections}` : null,
-    data.wantsCallback ? `✅ *Wants callback*` : null,
-    ``,
-    data.callSummary ? `*Summary:* ${data.callSummary}` : null,
-    data.recordingUrl ? `[🎧 Listen to recording](${data.recordingUrl})` : null,
-    ``,
-    `_Reply to assign to LO_`,
+    data.callSummary ? data.callSummary : null,
   ].filter(Boolean).join("\n")
 
-  fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: TELEGRAM_CHAT_ID,
-      text: lines,
-      parse_mode: "Markdown",
-      disable_web_page_preview: true,
-    }),
-  }).catch((err) => console.error("[retell-preme] Telegram error:", err))
+  const OWNER_PHONE = "9453088322"
+
+  // Send via iMessage (AppleScript on local Mac)
+  const escaped = lines.replace(/"/g, '\\"').replace(/\n/g, "\\n")
+  const script = `
+    tell application "Messages"
+      set targetService to 1st account whose service type = iMessage
+      set targetBuddy to participant "+1${OWNER_PHONE}" of targetService
+      send "${escaped}" to targetBuddy
+    end tell
+  `
+
+  import("child_process").then(({ exec }) => {
+    exec(`osascript -e '${script.replace(/'/g, "'\\''")}'`, (err) => {
+      if (err) {
+        console.error("[retell-preme] iMessage failed, falling back to Telegram:", err.message)
+        // Fallback to Telegram if iMessage fails (e.g. running on Vercel not Mac)
+        if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+          fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: TELEGRAM_CHAT_ID,
+              text: lines,
+              disable_web_page_preview: true,
+            }),
+          }).catch(() => {})
+        }
+      } else {
+        console.log("[retell-preme] iMessage sent to owner")
+      }
+    })
+  }).catch((err) => {
+    console.error("[retell-preme] Failed to import child_process:", err)
+  })
 }
 
 /**
@@ -477,8 +501,20 @@ async function triggerCallReview(params: {
       review,
     })
 
-    // Auto-patch prompt for critical/high issues
+    // Auto-patch prompt for critical/high/moderate issues
     await applyPromptPatch(review, params.callId)
+
+    // Check if compression should run (every 10+ uncompressed reviews)
+    try {
+      const { shouldCompress, compressLearnings } = await import("@/lib/call-reviewer-compress")
+      if (await shouldCompress()) {
+        console.log("[call-reviewer] Triggering compression run...")
+        const result = await compressLearnings()
+        console.log(`[call-reviewer] Compression: ${result.rulesGenerated} core rules from ${result.reviewsCompressed} reviews`)
+      }
+    } catch (compressErr) {
+      console.error("[call-reviewer] Compression check failed (non-fatal):", compressErr)
+    }
 
     console.log(`[call-reviewer] Review complete: ${params.callId} — ${review.total}/110 (${review.severity})`)
   } catch (err) {

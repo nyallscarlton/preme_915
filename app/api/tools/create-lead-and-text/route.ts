@@ -10,6 +10,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getBaseUrl } from "@/lib/config"
 
+// Internal team numbers used for role-play training — never create leads for these
+const TRAINING_PHONES = new Set([
+  "+14706225965",
+  "+19453088322",
+])
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -40,6 +46,15 @@ export async function POST(request: NextRequest) {
     if (!phone || phone.length < 6) {
       return NextResponse.json({
         result: "I couldn't determine the caller's phone number. A loan officer will follow up manually.",
+      })
+    }
+
+    // Block training/role-play calls from creating real leads
+    const callerPhone = call.from_number || phone
+    if (TRAINING_PHONES.has(callerPhone) || TRAINING_PHONES.has(phone)) {
+      console.log(`[retell-preme] Training call detected (${callerPhone}) — skipping lead creation`)
+      return NextResponse.json({
+        result: "Got it! I've noted the details. A loan officer will follow up shortly.",
       })
     }
 
