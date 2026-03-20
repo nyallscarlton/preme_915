@@ -85,18 +85,6 @@ export function ReviewSubmitForm({
             <h3 className="text-lg font-semibold mb-3 text-foreground">Financial Information</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-muted-foreground">Annual Income:</span>
-                <p className="font-medium text-foreground">{formatCurrency(formData.annualIncome)}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Employment Status:</span>
-                <p className="font-medium text-foreground">{formData.employmentStatus}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Employer:</span>
-                <p className="font-medium text-foreground">{formData.employerName}</p>
-              </div>
-              <div>
                 <span className="text-muted-foreground">Credit Score:</span>
                 <p className="font-medium text-foreground">{formData.creditScore || "Not provided"}</p>
               </div>
