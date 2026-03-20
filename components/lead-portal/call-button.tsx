@@ -36,12 +36,12 @@ export function CallButton({
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const sdkLoadedRef = useRef(false)
 
-  // Load Twilio Client SDK
+  // Load Twilio Voice SDK v2
   useEffect(() => {
     if (sdkLoadedRef.current) return
     if (typeof window !== "undefined" && !(window as any).Twilio?.Device) {
       const script = document.createElement("script")
-      script.src = "https://sdk.twilio.com/js/client/v1.14/twilio.min.js"
+      script.src = "https://sdk.twilio.com/js/client/v2.1/twilio.min.js"
       script.async = true
       script.onload = () => {
         sdkLoadedRef.current = true
@@ -93,46 +93,48 @@ export function CallButton({
         throw new Error("Voice SDK not loaded. Please refresh and try again.")
       }
 
-      // Setup Twilio Device
+      // Setup Twilio Device (v2 API)
       const device = new Twilio.Device(tokenData.token, {
-        debug: false,
-        enableRingingState: true,
+        logLevel: "error",
+        codecPreferences: ["opus", "pcmu"],
       })
 
       deviceRef.current = device
 
-      device.on("ready", () => {
-        // Device ready — make the call
-        const digits = phone.replace(/\D/g, "")
-        const toNumber = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
-
-        const conn = device.connect({
-          To: toNumber,
-          lead_id: leadId,
-        })
-
-        connectionRef.current = conn
-
-        conn.on("ringing", () => setCallState("ringing"))
-        conn.on("accept", () => setCallState("connected"))
-        conn.on("disconnect", () => {
-          setCallState("ended")
-          device.destroy()
-        })
-        conn.on("error", (err: any) => {
-          setErrorMsg(err?.message || "Call error")
-          setCallState("error")
-          device.destroy()
-        })
-        conn.on("cancel", () => {
-          setCallState("ended")
-          device.destroy()
-        })
-      })
-
       device.on("error", (err: any) => {
         setErrorMsg(err?.message || "Device error")
         setCallState("error")
+      })
+
+      // Register device then connect
+      await device.register()
+
+      const digits = phone.replace(/\D/g, "")
+      const toNumber = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
+
+      const call = await device.connect({
+        params: {
+          To: toNumber,
+          lead_id: leadId,
+        },
+      })
+
+      connectionRef.current = call
+
+      call.on("ringing", () => setCallState("ringing"))
+      call.on("accept", () => setCallState("connected"))
+      call.on("disconnect", () => {
+        setCallState("ended")
+        device.destroy()
+      })
+      call.on("error", (err: any) => {
+        setErrorMsg(err?.message || "Call error")
+        setCallState("error")
+        device.destroy()
+      })
+      call.on("cancel", () => {
+        setCallState("ended")
+        device.destroy()
       })
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Call failed")
@@ -172,7 +174,7 @@ export function CallButton({
       connectionRef.current.disconnect()
     }
     if (deviceRef.current) {
-      deviceRef.current.disconnectAll()
+      deviceRef.current.unregister()
       deviceRef.current.destroy()
     }
     setCallState("ended")
@@ -180,8 +182,9 @@ export function CallButton({
 
   const toggleMute = () => {
     if (connectionRef.current) {
-      connectionRef.current.mute(!muted)
-      setMuted(!muted)
+      const newMuted = !muted
+      connectionRef.current.mute(newMuted)
+      setMuted(newMuted)
     }
   }
 
