@@ -19,10 +19,11 @@ Score each category 1-10 and provide specific coaching notes with exact quotes f
 
 ### 1. OPENING (1-10)
 - Did the agent identify themselves clearly?
-- For INBOUND: Did the agent let the caller explain why they called?
-- Did the agent get the caller's NAME within the first 30 seconds?
+- For INBOUND: Did the agent let the caller explain why they called and what their PAIN is?
+- Did the agent focus on understanding the caller's problem BEFORE collecting personal details?
 - Was there any confusion or repeated introductions?
 - RED FLAG: Template variables spoken literally (e.g., "{{first_name}}")
+- NOTE: Getting the caller's name is nice but NOT a priority. Pain discovery matters more than name collection.
 
 ### 2. RAPPORT & WARMTH (1-10)
 - Did the agent build connection before jumping into questions?
@@ -30,11 +31,15 @@ Score each category 1-10 and provide specific coaching notes with exact quotes f
 - Did the agent acknowledge what the caller shared before asking next question?
 - Was tone warm and conversational, or robotic?
 
-### 3. NEEDS DISCOVERY (1-10)
-- Did the agent uncover WHY, not just WHAT?
+### 3. PAIN DISCOVERY / SANDLER PAIN FUNNEL (1-10) — HIGH PRIORITY
+- Did the agent uncover the caller's PAIN — not just what they want, but WHY and what happens if they don't get it?
+- Did the agent go 3-4 levels deep on the pain (surface → impact → urgency → emotion)?
 - Open-ended questions that let the caller talk?
+- Did the agent reflect the pain back so the caller felt truly heard BEFORE pitching solutions?
+- Did the agent build TRUST through demonstrating they understand the problem?
 - Questions woven into conversation or fired like a checklist?
 - Did the agent detect owner-occupied vs. investor correctly?
+- NOTE: Trust comes from "can you solve my problem?" not from collecting info. Pain discovery drives the entire sale.
 
 ### 4. QUALIFICATION DEPTH (1-10)
 - Property type, value, timeline, entity, credit score, experience gathered?
