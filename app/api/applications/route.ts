@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { notifyMCNewApplication } from "@/lib/mc-webhook"
 import { sendApplicationConfirmationEmail } from "@/lib/follow-up"
 import { sendNewApplicationTelegram } from "@/lib/notifications"
-import { triggerApplicationFollowUp } from "@/lib/lead-followup"
+import { triggerApplicationFollowUp, cancelPendingFollowUps } from "@/lib/lead-followup"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -165,6 +165,9 @@ async function createLeadAndQueueFollowUp(
 
     leadId = newLead.id
   }
+
+  // Cancel any existing lead follow-up cadence (Path 2/3) to prevent double-queuing
+  await cancelPendingFollowUps(leadId)
 
   // Queue the application follow-up cadence
   await triggerApplicationFollowUp({

@@ -175,3 +175,87 @@ export async function triggerLeadFollowUp(lead: LeadForFollowUp): Promise<void> 
     console.log(`[lead-followup] Scheduled ${rows.length} follow-up steps for lead ${lead.id}`)
   }
 }
+
+// ---------------------------------------------------------------------------
+// PATH 3: Email-Only Leads (no phone — website forms, landing pages, etc.)
+// ---------------------------------------------------------------------------
+
+/**
+ * Queue email-only follow-ups for leads that have an email but no phone.
+ * Skips calls and SMS — just sends the email nurture sequence.
+ *
+ * Called from lead creation endpoints when phone is missing but email exists.
+ */
+export async function triggerEmailOnlyFollowUp(lead: LeadForFollowUp): Promise<void> {
+  if (!lead.email || lead.email.endsWith("@placeholder.preme")) {
+    console.log(`[lead-followup] Skipping email-only cadence — no valid email for lead ${lead.id}`)
+    return
+  }
+
+  if (lead.status && SKIP_STATUSES.has(lead.status)) {
+    console.log(`[lead-followup] Skipping lead ${lead.id} with status: ${lead.status}`)
+    return
+  }
+
+  console.log(`[lead-followup] Starting EMAIL-ONLY cadence for lead ${lead.id} (${lead.first_name} ${lead.last_name})`)
+
+  const supabase = createAdminClient()
+  const now = new Date()
+
+  const steps = [
+    { step: 1, action_type: "email", delayMinutes: 5 },           // Quick intro email
+    { step: 2, action_type: "day1_email", delayMinutes: 1440 },   // 24hr
+    { step: 3, action_type: "day3_email", delayMinutes: 4320 },   // 72hr
+  ]
+
+  const rows = steps.map((s) => ({
+    lead_id: lead.id,
+    step: s.step,
+    action_type: s.action_type,
+    scheduled_at: new Date(now.getTime() + s.delayMinutes * 60 * 1000).toISOString(),
+    status: "pending",
+  }))
+
+  const { error } = await supabase.from("lead_followup_queue").insert(rows)
+
+  if (error) {
+    console.error("[lead-followup] Failed to schedule email-only follow-ups:", error.message)
+  } else {
+    console.log(`[lead-followup] Scheduled ${rows.length} email-only follow-up steps for lead ${lead.id}`)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Deduplication: cancel existing pending follow-ups before re-queuing
+// ---------------------------------------------------------------------------
+
+/**
+ * Cancel any pending follow-up queue entries for a lead.
+ * Called before queuing application follow-ups to avoid double-cadence
+ * when a lead who already received Path 2/3 follow-ups submits an application.
+ */
+export async function cancelPendingFollowUps(leadId: string): Promise<number> {
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from("lead_followup_queue")
+    .update({
+      status: "cancelled",
+      result: { reason: "superseded_by_application" },
+      completed_at: new Date().toISOString(),
+    })
+    .eq("lead_id", leadId)
+    .eq("status", "pending")
+    .select("id")
+
+  if (error) {
+    console.error(`[lead-followup] Failed to cancel pending follow-ups for lead ${leadId}:`, error.message)
+    return 0
+  }
+
+  const count = data?.length || 0
+  if (count > 0) {
+    console.log(`[lead-followup] Cancelled ${count} pending follow-ups for lead ${leadId} (superseded by application)`)
+  }
+  return count
+}

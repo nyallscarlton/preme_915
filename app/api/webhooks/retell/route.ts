@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { triggerEmailOnlyFollowUp, type LeadForFollowUp } from "@/lib/lead-followup"
 
 // Allow up to 120s — recording downloads from Retell can be slow
 export const maxDuration = 120
@@ -198,6 +199,83 @@ export async function POST(request: NextRequest) {
             }
           } catch (err) {
             console.error("[retell-preme] DB error (non-fatal):", err)
+          }
+
+          // Create a lead record and queue email follow-ups for qualified voice leads
+          try {
+            const adminSb = createAdminClient()
+            const callerEmail = analysis.email || null
+            const nameParts = callerName.split(" ")
+            const firstName = nameParts[0] || "there"
+            const lastName = nameParts.slice(1).join(" ") || ""
+
+            // Check if a lead already exists for this phone
+            const digits = callerPhone.replace(/\D/g, "").slice(-10)
+            const { data: existingLead } = await adminSb
+              .from("leads")
+              .select("id")
+              .or(`phone.ilike.%${digits}%`)
+              .maybeSingle()
+
+            if (!existingLead) {
+              const e164 = digits.length === 10 ? `+1${digits}` : `+${digits}`
+              const { data: newLead, error: leadErr } = await adminSb
+                .from("leads")
+                .insert({
+                  first_name: firstName,
+                  last_name: lastName,
+                  phone: e164,
+                  email: callerEmail || `${digits}@placeholder.preme`,
+                  loan_type: loanType || propertyType || null,
+                  source: "retell_voice",
+                  status: "qualified",
+                })
+                .select("id")
+                .single()
+
+              if (!leadErr && newLead && callerEmail) {
+                // Queue email follow-ups for the new voice lead
+                triggerEmailOnlyFollowUp({
+                  id: newLead.id,
+                  first_name: firstName,
+                  last_name: lastName,
+                  phone: e164,
+                  email: callerEmail,
+                  loan_type: loanType || propertyType || null,
+                  source: "retell_voice",
+                  status: "qualified",
+                }).catch((err) =>
+                  console.error("[retell-preme] Email follow-up trigger failed:", err)
+                )
+                console.log(`[retell-preme] Created lead ${newLead.id} with email follow-ups for ${callerEmail}`)
+              }
+            } else if (callerEmail) {
+              // Lead exists — check if they already have pending follow-ups
+              const { data: pendingActions } = await adminSb
+                .from("lead_followup_queue")
+                .select("id")
+                .eq("lead_id", existingLead.id)
+                .eq("status", "pending")
+                .limit(1)
+
+              if (!pendingActions || pendingActions.length === 0) {
+                // No pending follow-ups — queue email nurture
+                triggerEmailOnlyFollowUp({
+                  id: existingLead.id,
+                  first_name: firstName,
+                  last_name: lastName,
+                  phone: callerPhone,
+                  email: callerEmail,
+                  loan_type: loanType || propertyType || null,
+                  source: "retell_voice",
+                  status: "qualified",
+                }).catch((err) =>
+                  console.error("[retell-preme] Email follow-up trigger failed:", err)
+                )
+              }
+            }
+          } catch (err) {
+            console.error("[retell-preme] Lead creation for voice lead failed (non-fatal):", err)
           }
         }
 

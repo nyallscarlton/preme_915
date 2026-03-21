@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { triggerLeadFollowUp } from "@/lib/lead-followup"
+import { triggerLeadFollowUp, triggerEmailOnlyFollowUp } from "@/lib/lead-followup"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     console.log("[inbound] Zentryx lead received:", lead.id, leadData.email)
 
-    // Trigger follow-up cadence if phone exists
+    // Trigger follow-up cadence: full cadence if phone exists, email-only otherwise
     if (lead.phone) {
       triggerLeadFollowUp({
         id: lead.id,
@@ -84,6 +84,17 @@ export async function POST(request: NextRequest) {
         source: lead.source,
         status: lead.status,
       }).catch((err) => console.error("[inbound] Follow-up trigger failed:", err))
+    } else if (lead.email) {
+      triggerEmailOnlyFollowUp({
+        id: lead.id,
+        first_name: lead.first_name,
+        last_name: lead.last_name,
+        phone: "",
+        email: lead.email,
+        loan_type: lead.loan_type,
+        source: lead.source,
+        status: lead.status,
+      }).catch((err) => console.error("[inbound] Email-only follow-up trigger failed:", err))
     }
 
     return NextResponse.json({

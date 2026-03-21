@@ -42,7 +42,7 @@ export function CallButton({
     if (sdkLoadedRef.current) return
     if (typeof window !== "undefined" && !(window as any).Twilio?.Device) {
       const script = document.createElement("script")
-      script.src = "https://sdk.twilio.com/js/client/v2.1/twilio.min.js"
+      script.src = "https://cdn.jsdelivr.net/npm/@twilio/voice-sdk/dist/twilio.min.js"
       script.async = true
       script.onload = () => { sdkLoadedRef.current = true }
       document.head.appendChild(script)

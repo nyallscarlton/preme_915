@@ -95,10 +95,11 @@ export async function GET(request: Request) {
         continue
       }
 
-      // Skip excluded phones
+      // Skip excluded phones (but allow email-only actions through for phoneless leads)
       const digits = (lead.phone || "").replace(/\D/g, "")
       const e164 = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
-      if (EXCLUDED_PHONES.has(e164) || !digits) {
+      const isEmailAction = ["email", "day1_email", "day3_email"].includes(action.action_type)
+      if (EXCLUDED_PHONES.has(e164) || (!digits && !isEmailAction)) {
         await cancelAction(supabase, action.id, "excluded_or_invalid_phone")
         cancelled++
         continue
