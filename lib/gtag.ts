@@ -1,6 +1,6 @@
-export const GA_CONVERSION_ID = "AW-17997920712"
+export const GA_CONVERSION_ID = "AW-18002213129"
 export const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_ID || ""
-export const LEAD_FORM_LABEL = "DbVFCPGs_aMcEM3jslYD"
+export const LEAD_FORM_LABEL = "sBpgCM6HlIscEInyj4hD"
 export const CALL_CLICK_LABEL = "K43bCNLH-YscEMjziYZD"
 
 // Application form step names (used for funnel tracking)

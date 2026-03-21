@@ -5,7 +5,7 @@ import "./globals.css"
 import { AuthProvider } from "@/hooks/use-auth"
 import { getBaseUrl } from "@/lib/config"
 
-const GA_CONVERSION_ID = "AW-17997920712"
+const GA_CONVERSION_ID = "AW-18002213129"
 const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_ID || ""
 
 const siteUrl = getBaseUrl()
