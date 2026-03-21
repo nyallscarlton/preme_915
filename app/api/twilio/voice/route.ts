@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 
 export const dynamic = "force-dynamic"
 
-const PREME_NUMBER = process.env.RETELL_PREME_PHONE_NUMBER || "+14709425787"
+const TWILIO_NUMBER = process.env.TWILIO_PHONE_NUMBER || "+14709167713"
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
         direction: "outbound",
         type: "call",
         body: `📞 Calling...`,
-        from_number: PREME_NUMBER,
+        from_number: TWILIO_NUMBER,
         to_number: toNumber,
         metadata: { status: "initiated", mode: "browser" },
       }).catch(() => {})
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     // TwiML: dial the lead with Preme caller ID, record the call
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Dial callerId="${PREME_NUMBER}" record="record-from-answer-dual" recordingStatusCallback="https://www.premerealestate.com/api/webhooks/twilio-recording${leadId ? `?lead_id=${leadId}` : ""}">
+  <Dial callerId="${TWILIO_NUMBER}" record="record-from-answer-dual" recordingStatusCallback="https://www.premerealestate.com/api/webhooks/twilio-recording${leadId ? `?lead_id=${leadId}` : ""}">
     <Number>${toNumber}</Number>
   </Dial>
 </Response>`

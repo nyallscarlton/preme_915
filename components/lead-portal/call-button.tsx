@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -31,8 +31,9 @@ export function CallButton({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [muted, setMuted] = useState(false)
   const [duration, setDuration] = useState(0)
+  const [callMode, setCallMode] = useState<"browser" | "ai" | null>(null)
   const deviceRef = useRef<any>(null)
-  const connectionRef = useRef<any>(null)
+  const callRef = useRef<any>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const sdkLoadedRef = useRef(false)
 
@@ -43,9 +44,7 @@ export function CallButton({
       const script = document.createElement("script")
       script.src = "https://sdk.twilio.com/js/client/v2.1/twilio.min.js"
       script.async = true
-      script.onload = () => {
-        sdkLoadedRef.current = true
-      }
+      script.onload = () => { sdkLoadedRef.current = true }
       document.head.appendChild(script)
     } else {
       sdkLoadedRef.current = true
@@ -74,13 +73,13 @@ export function CallButton({
     return `${m}:${s.toString().padStart(2, "0")}`
   }
 
-  const handleDirectCall = async () => {
+  const handleBrowserCall = async () => {
     if (callState !== "idle") return
     setCallState("connecting")
+    setCallMode("browser")
     setErrorMsg(null)
 
     try {
-      // Get Twilio token
       const tokenRes = await fetch("/api/twilio/token")
       const tokenData = await tokenRes.json()
 
@@ -93,7 +92,6 @@ export function CallButton({
         throw new Error("Voice SDK not loaded. Please refresh and try again.")
       }
 
-      // Setup Twilio Device (v2 API)
       const device = new Twilio.Device(tokenData.token, {
         logLevel: "error",
         codecPreferences: ["opus", "pcmu"],
@@ -106,7 +104,6 @@ export function CallButton({
         setCallState("error")
       })
 
-      // Register device then connect
       await device.register()
 
       const digits = phone.replace(/\D/g, "")
@@ -119,7 +116,7 @@ export function CallButton({
         },
       })
 
-      connectionRef.current = call
+      callRef.current = call
 
       call.on("ringing", () => setCallState("ringing"))
       call.on("accept", () => setCallState("connected"))
@@ -145,6 +142,7 @@ export function CallButton({
   const handleAiCall = async () => {
     if (callState !== "idle") return
     setCallState("connecting")
+    setCallMode("ai")
     setErrorMsg(null)
 
     try {
@@ -170,8 +168,8 @@ export function CallButton({
   }
 
   const handleHangup = () => {
-    if (connectionRef.current) {
-      connectionRef.current.disconnect()
+    if (callRef.current) {
+      callRef.current.disconnect()
     }
     if (deviceRef.current) {
       deviceRef.current.unregister()
@@ -181,9 +179,9 @@ export function CallButton({
   }
 
   const toggleMute = () => {
-    if (connectionRef.current) {
+    if (callRef.current) {
       const newMuted = !muted
-      connectionRef.current.mute(newMuted)
+      callRef.current.mute(newMuted)
       setMuted(newMuted)
     }
   }
@@ -191,9 +189,10 @@ export function CallButton({
   const reset = () => {
     setCallState("idle")
     setErrorMsg(null)
+    setCallMode(null)
     setMuted(false)
     setDuration(0)
-    connectionRef.current = null
+    callRef.current = null
     deviceRef.current = null
   }
 
@@ -202,7 +201,7 @@ export function CallButton({
       <div className="flex items-center gap-2">
         <Button
           className="bg-[#997100] hover:bg-[#b8850a] text-black font-semibold"
-          onClick={handleDirectCall}
+          onClick={handleBrowserCall}
         >
           <Phone className="h-4 w-4 mr-2" />
           Call {firstName}
@@ -218,7 +217,7 @@ export function CallButton({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleDirectCall}>
+            <DropdownMenuItem onClick={handleBrowserCall}>
               <Phone className="h-3.5 w-3.5 mr-2" />
               Call from browser
             </DropdownMenuItem>
@@ -265,21 +264,23 @@ export function CallButton({
       <div className="flex items-center gap-2">
         <Button className="bg-emerald-700 text-white font-semibold" disabled>
           <Phone className="h-4 w-4 mr-2 animate-pulse" />
-          {formatDuration(duration)}
+          {callMode === "ai" ? "Riley on call" : formatDuration(duration)}
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className={`bg-transparent ${muted ? "border-red-600 text-red-400" : "border-border text-muted-foreground hover:bg-muted"}`}
-          onClick={toggleMute}
-        >
-          {muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-        </Button>
+        {callMode === "browser" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className={`bg-transparent ${muted ? "border-red-600 text-red-400" : "border-border text-muted-foreground hover:bg-muted"}`}
+            onClick={toggleMute}
+          >
+            {muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
           className="border-red-800 text-red-400 hover:bg-red-950 bg-transparent"
-          onClick={handleHangup}
+          onClick={callMode === "browser" ? handleHangup : () => setCallState("ended")}
         >
           <PhoneOff className="h-4 w-4" />
         </Button>
