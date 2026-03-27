@@ -1,104 +1,92 @@
 import Link from "next/link"
 
 export const metadata = {
-  title: "SMS Consent | Preme Home Loans",
-  description: "SMS messaging consent and opt-in policy for Preme Home Loans.",
+  title: "SMS Consent & Opt-In | Preme Home Loans",
+  description: "SMS messaging consent, opt-in policy, and opt-out instructions for Preme Home Loans.",
 }
 
 export default function SmsConsentPage() {
   return (
-    <div className="min-h-screen bg-black text-white">
-      <nav className="border-b border-gray-800">
+    <div className="min-h-screen bg-white">
+      <nav className="border-b border-gray-200">
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center">
               <div className="relative">
-                <span className="text-2xl font-bold tracking-wide">PR<span className="relative">E<span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-[#997100]"></span></span>ME</span>
+                <span className="text-2xl font-bold tracking-wide text-black">PR<span className="relative">E<span className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-[#997100]"></span></span>ME</span>
               </div>
             </Link>
           </div>
         </div>
       </nav>
 
-      <main className="container mx-auto px-6 py-16 max-w-3xl">
-        <h1 className="text-4xl font-bold mb-8">SMS Messaging Consent</h1>
+      <main className="container mx-auto px-6 py-16 max-w-4xl">
+        <h1 className="text-4xl font-bold text-black mb-2">SMS Consent &amp; Opt-In</h1>
+        <p className="text-lg text-gray-600 mb-12">Preme Home Loans SMS Communication Policy</p>
 
-        <div className="space-y-8 text-gray-300 leading-relaxed">
+        <div className="space-y-10 text-gray-700 leading-relaxed">
+          {/* Disclosure Text */}
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">Opt-In &amp; Consent</h2>
+            <h2 className="text-2xl font-semibold text-black mb-4">Consent Disclosure</h2>
             <p>
-              By calling Preme Home Loans or submitting a loan application on our website,
-              you consent to receive SMS text messages from Preme Home Loans related to
-              your loan inquiry, application status, and next steps. During your phone call
-              with our team, you will be verbally informed that a text message with your
-              application link will be sent to your phone number, and your verbal
-              confirmation serves as opt-in consent.
+              By checking this box, I provide my express written consent to receive text messages
+              and phone calls (including via automated dialing systems and artificial intelligence)
+              about my inquiry from Preme Home Loans at the phone number provided. Consent is not
+              a condition of purchase. Message frequency varies. Message and data rates may apply.
+              I can revoke consent at any time by replying STOP or calling (470) 942-5787.
             </p>
           </section>
 
+          {/* Opt-In Checkbox Mockup */}
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">What Messages You Will Receive</h2>
+            <h2 className="text-2xl font-semibold text-black mb-4">Opt-In Example</h2>
+            <p className="mb-4 text-sm text-gray-500">Example of our opt-in checkbox on forms:</p>
+            <div className="border border-gray-200 rounded-lg p-6 bg-gray-50">
+              <div className="flex items-start space-x-3">
+                <input
+                  type="checkbox"
+                  disabled
+                  className="mt-1 h-4 w-4 rounded border-gray-300 accent-[#997100]"
+                />
+                <span className="text-xs text-gray-500 leading-relaxed">
+                  By checking this box, I provide my express written consent to receive text messages
+                  and phone calls (including via automated dialing systems and artificial intelligence)
+                  about my inquiry from Preme Home Loans at the phone number provided. Consent is not
+                  a condition of purchase. Message frequency varies. Message and data rates may apply.
+                  I can revoke consent at any time by replying STOP or calling (470) 942-5787.
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* How to Opt Out */}
+          <section>
+            <h2 className="text-2xl font-semibold text-black mb-4">How to Opt Out</h2>
             <ul className="list-disc list-inside space-y-2">
-              <li>A link to your pre-filled loan application for review and submission</li>
-              <li>Application status updates</li>
-              <li>Follow-up messages from your assigned loan officer</li>
+              <li>Reply <strong>STOP</strong> to any message</li>
+              <li>Call <strong>(470) 942-5787</strong></li>
+              <li>Email <a href="mailto:loans@premerealestate.com" className="text-[#997100] underline">loans@premerealestate.com</a></li>
             </ul>
           </section>
 
+          {/* Message Details */}
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">Message Frequency</h2>
-            <p>
-              Message frequency varies based on your loan application activity.
-              Typically 1–5 messages per loan inquiry. No recurring marketing messages
-              will be sent without additional consent.
-            </p>
+            <h2 className="text-2xl font-semibold text-black mb-4">Message Details</h2>
+            <ul className="list-disc list-inside space-y-2">
+              <li>Message frequency varies</li>
+              <li>Message and data rates may apply</li>
+              <li>Consent is not required to use our services</li>
+            </ul>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">Opt-Out</h2>
-            <p>
-              You may opt out of SMS messages at any time by replying <strong>STOP</strong> to
-              any message from Preme Home Loans. You will receive a confirmation message
-              and no further texts will be sent. You may also contact us at{" "}
-              <a href="mailto:info@premerealestate.com" className="text-[#997100] underline">
-                info@premerealestate.com
-              </a>{" "}
-              to request removal.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">Help</h2>
-            <p>
-              Reply <strong>HELP</strong> to any message for assistance, or contact us at{" "}
-              <a href="mailto:info@premerealestate.com" className="text-[#997100] underline">
-                info@premerealestate.com
-              </a>.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">Rates &amp; Carriers</h2>
-            <p>
-              Message and data rates may apply. Preme Home Loans is not responsible for
-              carrier charges. Compatible with all major US carriers.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-white mb-4">Privacy</h2>
-            <p>
-              Your phone number and personal information are handled in accordance with our{" "}
-              <Link href="/privacy" className="text-[#997100] underline">
-                Privacy Policy
-              </Link>. We do not sell or share your phone number with third parties for
-              marketing purposes.
-            </p>
-          </section>
-
-          <section className="border-t border-gray-800 pt-8 text-sm text-gray-500">
-            <p>Preme Home Loans | premerealestate.com</p>
-            <p>For questions: info@premerealestate.com</p>
+          {/* Footer Links */}
+          <section className="border-t border-gray-200 pt-8 flex space-x-6 text-sm">
+            <Link href="/privacy" className="text-[#997100] underline hover:text-[#b8850a]">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="text-[#997100] underline hover:text-[#b8850a]">
+              Terms of Service
+            </Link>
           </section>
         </div>
       </main>

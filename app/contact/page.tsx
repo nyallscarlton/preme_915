@@ -149,7 +149,7 @@ function ContactPageInner() {
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold mb-2">Email</h3>
-                      <p className="text-gray-300 mb-1">lending@premehomeloans.com</p>
+                      <p className="text-gray-300 mb-1">loans@premerealestate.com</p>
                       <p className="text-gray-400 text-sm">We respond within 2 hours</p>
                     </div>
                   </div>
@@ -306,10 +306,9 @@ function ContactPageInner() {
                             checked={formData.tcpa_consent}
                             onChange={(e) => setFormData((prev) => ({ ...prev, tcpa_consent: e.target.checked }))}
                             className="mt-1 h-4 w-4 rounded border-gray-700 text-[#997100] focus:ring-[#997100] accent-[#997100]"
-                            required
                           />
                           <label htmlFor="tcpa_consent" className="text-xs text-gray-400 leading-relaxed cursor-pointer">
-                            By checking this box, I provide my express written consent to receive calls (including via automated dialing systems, prerecorded messages, and artificial intelligence), texts, and emails about my inquiry from Preme Home Loans and its partners at the phone number provided. Consent is not a condition of purchase. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787.
+                            By checking this box, I provide my express written consent to receive text messages and phone calls (including via automated dialing systems and artificial intelligence) about my inquiry from Preme Home Loans at the phone number provided. Consent is not a condition of purchase. Message frequency varies. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787.
                           </label>
                         </div>
 

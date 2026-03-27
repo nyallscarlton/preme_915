@@ -141,10 +141,9 @@ export function ReviewSubmitForm({
               checked={tcpaConsent}
               onChange={(e) => setTcpaConsent(e.target.checked)}
               className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-[hsl(var(--primary))]"
-              required
             />
             <label htmlFor="tcpaConsent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-              By checking this box, I provide my express written consent to receive calls (including via automated dialing systems, prerecorded messages, and artificial intelligence), texts, and emails about my inquiry from Preme Home Loans and its partners at the phone number provided. Consent is not a condition of purchase. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787.
+              By checking this box, I provide my express written consent to receive text messages and phone calls (including via automated dialing systems and artificial intelligence) about my inquiry from Preme Home Loans at the phone number provided. Consent is not a condition of purchase. Message frequency varies. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787.
             </label>
           </div>
 
@@ -161,7 +160,7 @@ export function ReviewSubmitForm({
             <Button
               onClick={onSubmit}
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8"
-              disabled={isSubmitting || !tcpaConsent}
+              disabled={isSubmitting}
             >
               {isSubmitting ? (
                 <>

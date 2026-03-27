@@ -13,7 +13,6 @@ export default function robots(): MetadataRoute.Robots {
         "/portal",
         "/api",
         "/auth",
-        "/apply",
         "/guest-access",
         "/guest-dashboard",
         "/convert-account",

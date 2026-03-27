@@ -1,0 +1,9 @@
+{
+  "skills": {
+    "10dlc-compliance": {
+      "type": "skill",
+      "path": ".claude/skills/10dlc-compliance/skill.md",
+      "description": "Audit and fix 10DLC SMS compliance — run after rejections, before submissions, or after form changes. Checks robots.txt, consent text, checkbox requirements, and crawlable proof pages."
+    }
+  }
+}
