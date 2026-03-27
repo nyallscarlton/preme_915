@@ -392,9 +392,11 @@ export default function LoanApplicationPage() {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
-        if (!user && !isGuestMode && currentStep === 0) {
-          router.push(`/auth?next=${encodeURIComponent("/apply")}`)
-        }
+        // Don't redirect — let the page show the "Start Your Loan Application" choice
+      // so users (and 10DLC crawlers) can see the guest option
+      if (!user && !isGuestMode && currentStep === 0) {
+        return
+      }
       } catch (error) {
         console.error("Error in auth guard:", error)
       }
@@ -556,11 +558,14 @@ export default function LoanApplicationPage() {
           <div className="max-w-2xl mx-auto text-center">
             <h1 className="text-4xl font-bold mb-4 text-gray-900">Start Your Loan Application</h1>
             <p className="text-xl text-gray-600 mb-8">Choose how you'd like to proceed with your application.</p>
-            <div className="space-y-4">
-              <Button asChild className="w-full max-w-md bg-[#997100] hover:bg-[#997100]/90 text-white">
-                <Link href="/start?next=/apply">Get Started</Link>
+            <div className="space-y-4 max-w-md mx-auto">
+              <Button asChild className="w-full bg-[#997100] hover:bg-[#997100]/90 text-white">
+                <Link href="/start?next=/apply">Create Account & Apply</Link>
               </Button>
-              <p className="text-sm text-gray-600">You can create an account or apply as a guest on the next page.</p>
+              <Button asChild variant="outline" className="w-full border-[#997100] text-[#997100] hover:bg-[#997100]/10">
+                <Link href="/apply?guest=1">Continue as Guest</Link>
+              </Button>
+              <p className="text-sm text-gray-500">Guest applications don't require an account. You'll receive a secure link to track your progress.</p>
             </div>
           </div>
         </main>
