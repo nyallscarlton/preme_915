@@ -75,7 +75,7 @@ export default function RootLayout({
     name: "PREME Home Loans",
     url: siteUrl,
     telephone: "(470) 942-5787",
-    email: "lending@premehomeloans.com",
+    email: "loans@premerealestate.com",
     address: {
       "@type": "PostalAddress",
       addressLocality: "Atlanta",

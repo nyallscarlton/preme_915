@@ -1,11 +1,9 @@
 /**
  * Generate a Twilio access token for browser-based Voice calling.
- * The token grants the browser permission to make outbound calls
- * through the TwiML App.
  */
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import jwt from "jsonwebtoken"
+import twilio from "twilio"
 
 export const dynamic = "force-dynamic"
 
@@ -33,33 +31,23 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    // Build Twilio access token manually using JWT
-    const now = Math.floor(Date.now() / 1000)
-    const payload = {
-      jti: `${TWILIO_API_KEY_SID}-${now}`,
-      iss: TWILIO_API_KEY_SID,
-      sub: TWILIO_ACCOUNT_SID,
-      exp: now + 3600, // 1 hour
-      grants: {
-        identity: `preme-admin-${user.id.substring(0, 8)}`,
-        voice: {
-          outgoing: {
-            application_sid: TWILIO_TWIML_APP_SID,
-          },
-        },
-      },
-    }
+    const { AccessToken } = twilio.jwt
+    const { VoiceGrant } = AccessToken
 
-    const token = jwt.sign(payload, TWILIO_API_KEY_SECRET, {
-      algorithm: "HS256",
-      header: {
-        typ: "JWT",
-        alg: "HS256",
-        cty: "twilio-fpa;v=1",
-      },
+    const token = new AccessToken(
+      TWILIO_ACCOUNT_SID,
+      TWILIO_API_KEY_SID,
+      TWILIO_API_KEY_SECRET,
+      { identity: `preme-admin-${user.id.substring(0, 8)}`, ttl: 3600 }
+    )
+
+    const voiceGrant = new VoiceGrant({
+      outgoingApplicationSid: TWILIO_TWIML_APP_SID,
+      incomingAllow: false,
     })
+    token.addGrant(voiceGrant)
 
-    return NextResponse.json({ token })
+    return NextResponse.json({ token: token.toJwt() })
   } catch (err) {
     console.error("[twilio/token] Error:", err)
     return NextResponse.json({ error: "Failed to generate token" }, { status: 500 })

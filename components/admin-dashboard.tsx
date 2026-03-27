@@ -54,6 +54,7 @@ export function AdminDashboard() {
   const [applications, setApplications] = useState<Application[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [pendingAppId, setPendingAppId] = useState<string | null>(null)
 
   const fetchApplications = useCallback(async () => {
     setIsLoading(true)
@@ -372,7 +373,11 @@ export function AdminDashboard() {
                 ) : (
                   <div className="space-y-4">
                     {applications.slice(0, 5).map((app) => (
-                      <div key={app.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                      <div
+                        key={app.id}
+                        className="flex items-center justify-between p-4 bg-muted rounded-lg cursor-pointer hover:bg-accent transition-colors"
+                        onClick={() => { setPendingAppId(app.id); setActiveTab("applications") }}
+                      >
                         <div className="flex items-center space-x-4">
                           {getStatusIcon(app.status)}
                           <div>
@@ -387,15 +392,7 @@ export function AdminDashboard() {
                             <p className="font-medium text-foreground">${app.loanAmount.toLocaleString()}</p>
                             <Badge className={getStatusColor(app.status)}>{formatStatus(app.status)}</Badge>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-border text-foreground hover:bg-muted bg-transparent"
-                            onClick={() => setActiveTab("applications")}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Review
-                          </Button>
+                          <Eye className="h-4 w-4 text-muted-foreground" />
                         </div>
                       </div>
                     ))}
@@ -471,7 +468,7 @@ export function AdminDashboard() {
 
           {/* Applications Tab - Pass real applications and refresh callback */}
           <TabsContent value="applications" className="mt-6">
-            <ApplicationsManagement applications={applications} onRefresh={fetchApplications} />
+            <ApplicationsManagement applications={applications} onRefresh={fetchApplications} initialSelectedId={pendingAppId} onSelectedCleared={() => setPendingAppId(null)} />
           </TabsContent>
 
           {/* Conditions Tab */}

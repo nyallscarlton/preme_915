@@ -95,9 +95,11 @@ interface ConditionsData {
 interface ApplicationsManagementProps {
   applications: Application[]
   onRefresh?: () => void
+  initialSelectedId?: string | null
+  onSelectedCleared?: () => void
 }
 
-export function ApplicationsManagement({ applications, onRefresh }: ApplicationsManagementProps) {
+export function ApplicationsManagement({ applications, onRefresh, initialSelectedId, onSelectedCleared }: ApplicationsManagementProps) {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
@@ -118,6 +120,18 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
   const [sendingSms, setSendingSms] = useState(false)
   const [smsStatus, setSmsStatus] = useState<"idle" | "sent" | "error">("idle")
   const [copiedPortal, setCopiedPortal] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  // Auto-select application when navigating from dashboard
+  useEffect(() => {
+    if (initialSelectedId && applications.length > 0) {
+      const found = applications.find((a) => a.id === initialSelectedId)
+      if (found) {
+        setSelectedApp(found)
+        onSelectedCleared?.()
+      }
+    }
+  }, [initialSelectedId, applications, onSelectedCleared])
 
   const filteredApplications = applications.filter((app) => {
     const matchesStatus = statusFilter === "all" || app.status === statusFilter
@@ -294,6 +308,22 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
     await handleStatusUpdate(appId, "archived")
   }
 
+  const handleDelete = async (appId: string) => {
+    if (!confirm("Permanently delete this application? This cannot be undone.")) return
+    setDeletingId(appId)
+    try {
+      const response = await fetch(`/api/applications/${appId}`, { method: "DELETE" })
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || "Failed to delete")
+      if (selectedApp && selectedApp.dbId === appId) setSelectedApp(null)
+      if (onRefresh) onRefresh()
+    } catch (error) {
+      setUpdateError(error instanceof Error ? error.message : "Failed to delete application")
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════
   // SELECTED APPLICATION DETAIL VIEW
   // ═══════════════════════════════════════════════════════════
@@ -325,6 +355,15 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
             >
               {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2 h-4 w-4" />}
               Archive
+            </Button>
+            <Button
+              variant="outline"
+              className="border-red-500 text-red-500 hover:bg-red-600 hover:text-white bg-transparent"
+              onClick={() => handleDelete(selectedApp.dbId)}
+              disabled={deletingId === selectedApp.dbId}
+            >
+              {deletingId === selectedApp.dbId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Delete
             </Button>
           </div>
         </div>
@@ -803,7 +842,11 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
       {/* Applications List */}
       <div className="grid gap-4">
         {filteredApplications.map((app) => (
-          <Card key={app.id} className="bg-card border-border hover:border-muted-foreground transition-colors">
+          <Card
+            key={app.id}
+            className="bg-card border-border hover:border-[#997100]/50 transition-colors cursor-pointer"
+            onClick={() => setSelectedApp(app)}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
@@ -822,24 +865,33 @@ export function ApplicationsManagement({ applications, onRefresh }: Applications
                     <p className="text-sm text-muted-foreground">{formatDate(app.submittedAt)}</p>
                     <Badge className={getStatusColor(app.status)}>{formatStatus(app.status)}</Badge>
                   </div>
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                    <a
+                      href={`tel:${app.applicantPhone}`}
+                      className="inline-flex items-center justify-center rounded-md border border-green-600 text-green-600 hover:bg-green-600 hover:text-white bg-transparent h-8 w-8 transition"
+                      title="Call"
+                    >
+                      <Phone className="h-4 w-4" />
+                    </a>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-white bg-transparent"
-                      onClick={() => setSelectedApp(app)}
+                      className="border-gray-400 text-gray-500 hover:bg-gray-500 hover:text-white bg-transparent h-8 w-8 p-0"
+                      onClick={() => handleArchive(app.dbId)}
+                      disabled={isUpdating || app.status === "archived"}
+                      title="Archive"
                     >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Review
+                      <Archive className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-gray-400 text-gray-500 hover:bg-gray-500 hover:text-white bg-transparent"
-                      onClick={() => handleArchive(app.dbId)}
-                      disabled={isUpdating || app.status === "archived"}
+                      className="border-red-400 text-red-500 hover:bg-red-600 hover:text-white bg-transparent h-8 w-8 p-0"
+                      onClick={() => handleDelete(app.dbId)}
+                      disabled={deletingId === app.dbId}
+                      title="Delete"
                     >
-                      <Archive className="h-4 w-4" />
+                      {deletingId === app.dbId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                     </Button>
                   </div>
                 </div>

@@ -107,6 +107,52 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
+// DELETE - Delete application (admin only)
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const { id } = params
+    const supabase = createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Verify admin role
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single()
+
+    if (!profile || profile.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden — admin only" }, { status: 403 })
+    }
+
+    // Delete related conditions first
+    const adminClient = createAdminClient()
+    await adminClient.from("conditions").delete().eq("application_id", id)
+
+    // Delete the application
+    const { error } = await adminClient
+      .from("loan_applications")
+      .delete()
+      .eq("id", id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("API error:", error)
+    return NextResponse.json({ error: "Failed to delete application" }, { status: 500 })
+  }
+}
+
 // PUT - Guest submits/updates their application (authenticated via guest_token)
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {

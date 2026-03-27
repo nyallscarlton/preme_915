@@ -37,7 +37,7 @@ export default function PrivacyPolicyPage() {
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">Privacy Policy</h1>
-            <p className="text-gray-400 mb-12">Last updated: March 14, 2026</p>
+            <p className="text-gray-400 mb-12">Last updated: March 23, 2026</p>
 
             <div className="prose prose-invert prose-lg max-w-none space-y-10">
               {/* Introduction */}
@@ -107,7 +107,7 @@ export default function PrivacyPolicyPage() {
                 <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
                   <li><strong className="text-white">Text messages:</strong> Reply <strong className="text-[#997100]">STOP</strong> to any text message you receive from us</li>
                   <li><strong className="text-white">Phone:</strong> Call us at <a href="tel:+14709425787" className="text-[#997100] hover:underline">(470) 942-5787</a> and request to be removed from our contact list</li>
-                  <li><strong className="text-white">Email:</strong> Send an opt-out request to <a href="mailto:lending@premehomeloans.com" className="text-[#997100] hover:underline">lending@premehomeloans.com</a></li>
+                  <li><strong className="text-white">Email:</strong> Send an opt-out request to <a href="mailto:loans@premerealestate.com" className="text-[#997100] hover:underline">loans@premerealestate.com</a></li>
                 </ul>
                 <p className="text-gray-300 leading-relaxed mt-4">
                   We will process your opt-out request within a reasonable timeframe, typically within 10 business days for calls and texts, and within 10 business days for email.
@@ -144,7 +144,7 @@ export default function PrivacyPolicyPage() {
                   <li><strong className="text-white">Legal and regulatory authorities:</strong> When required by law, regulation, or legal process</li>
                 </ul>
                 <p className="text-gray-300 leading-relaxed mt-4">
-                  We do not sell your personal information to third parties for their own marketing purposes.
+                  We do not sell your personal information to third parties for their own marketing purposes. No mobile information will be shared with third parties/affiliates for marketing/promotional purposes. All the above categories exclude text messaging originator opt-in data and consent; this information will not be shared with any third parties.
                 </p>
               </section>
 
@@ -152,7 +152,7 @@ export default function PrivacyPolicyPage() {
               <section>
                 <h2 className="text-2xl font-bold text-white mb-4">Data Retention</h2>
                 <p className="text-gray-300 leading-relaxed">
-                  We retain your personal information for as long as necessary to fulfill the purposes outlined in this policy, unless a longer retention period is required or permitted by law. For loan applications, we retain records for a minimum of 25 months after final action is taken on the application, in accordance with the Equal Credit Opportunity Act (ECOA) and Regulation B. After this period, your data may be securely deleted or anonymized.
+                  We retain your personal information for as long as necessary to fulfill the purposes outlined in this policy, unless a longer retention period is required or permitted by law. For loan applications, we retain records for a minimum of 25 months after final action is taken on the application, in accordance with the Equal Credit Opportunity Act (ECOA) and Regulation B. After this period, your data may be securely deleted or anonymized. We retain your SMS opt-in data for as long as you remain subscribed to our messaging program. You may request deletion at any time by contacting us.
                 </p>
               </section>
 
@@ -178,7 +178,7 @@ export default function PrivacyPolicyPage() {
                   <li><strong className="text-white">Right to Non-Discrimination:</strong> We will not discriminate against you for exercising your CCPA rights</li>
                 </ul>
                 <p className="text-gray-300 leading-relaxed mt-4">
-                  To exercise your CCPA rights, contact us at <a href="mailto:lending@premehomeloans.com" className="text-[#997100] hover:underline">lending@premehomeloans.com</a> or call <a href="tel:+14709425787" className="text-[#997100] hover:underline">(470) 942-5787</a>. We will verify your identity before processing your request.
+                  To exercise your CCPA rights, contact us at <a href="mailto:loans@premerealestate.com" className="text-[#997100] hover:underline">loans@premerealestate.com</a> or call <a href="tel:+14709425787" className="text-[#997100] hover:underline">(470) 942-5787</a>. We will verify your identity before processing your request.
                 </p>
               </section>
 
@@ -235,7 +235,7 @@ export default function PrivacyPolicyPage() {
                     Phone: <a href="tel:+14709425787" className="text-[#997100] hover:underline">(470) 942-5787</a>
                   </p>
                   <p className="text-gray-300">
-                    Email: <a href="mailto:lending@premehomeloans.com" className="text-[#997100] hover:underline">lending@premehomeloans.com</a>
+                    Email: <a href="mailto:loans@premerealestate.com" className="text-[#997100] hover:underline">loans@premerealestate.com</a>
                   </p>
                   <p className="text-gray-300">NMLS ID: 2560616</p>
                 </div>

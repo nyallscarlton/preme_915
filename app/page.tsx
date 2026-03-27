@@ -565,9 +565,9 @@ export default function DSCRLandingPage() {
                         Launch My Application
                       </ApplyButton>
                       <Button size="lg" variant="outline" className="border-black text-black" asChild>
-                        <Link href="mailto:lending@premehomeloans.com">
+                        <Link href="mailto:loans@premerealestate.com">
                           <Mail className="mr-2 h-4 w-4" />
-                          lending@premehomeloans.com
+                          loans@premerealestate.com
                         </Link>
                       </Button>
                     </div>
