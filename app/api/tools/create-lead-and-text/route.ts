@@ -75,11 +75,15 @@ export async function POST(request: NextRequest) {
       const applyUrl = token
         ? `${getBaseUrl()}/apply?guest=1&token=${token}`
         : `${getBaseUrl()}/apply?guest=1`
-      const sent = await sendApplicationLink(email, applyUrl, existing.application_number, first_name)
+      const sent = await sendApplicationLink(email, phone, applyUrl, existing.application_number, first_name)
+      if (!sent) {
+        return NextResponse.json({
+          result: `This caller already has application ${existing.application_number} (status: ${existing.status}). A loan officer will follow up with them directly.`,
+        })
+      }
+      const channels = [sent.email && "email", sent.sms && "text"].filter(Boolean).join(" and ")
       return NextResponse.json({
-        result: sent === "email"
-          ? `This caller already has application ${existing.application_number} (status: ${existing.status}). I've emailed them a link to continue their application.`
-          : `This caller already has application ${existing.application_number} (status: ${existing.status}). A loan officer will follow up with them.`,
+        result: `This caller already has application ${existing.application_number} (status: ${existing.status}). I've sent the link via ${channels}.`,
       })
     }
 
@@ -112,12 +116,17 @@ export async function POST(request: NextRequest) {
     }
 
     const applyUrl = `${getBaseUrl()}/apply?guest=1&token=${guestToken}`
-    const sent = await sendApplicationLink(email, applyUrl, appNumber, first_name)
+    const sent = await sendApplicationLink(email, phone, applyUrl, appNumber, first_name)
 
+    if (!sent) {
+      return NextResponse.json({
+        result: `Lead created (${appNumber}). I wasn't able to send the link right now — let me have a loan officer send that to you directly. They'll reach out shortly.`,
+      })
+    }
+
+    const channels = [sent.email && "email", sent.sms && "text"].filter(Boolean).join(" and ")
     return NextResponse.json({
-      result: sent === "email"
-        ? `Lead created (${appNumber}) and application link emailed to ${email}. Tell the caller to check their email for the application link.`
-        : `Lead created (${appNumber}). I wasn't able to send the link right now, but a loan officer will follow up with the application link shortly.`,
+      result: `Lead created (${appNumber}) and application link sent via ${channels}. Tell the caller to check their ${channels} for the link.`,
     })
   } catch (error) {
     console.error("[retell-preme] create-lead-and-text error:", error)
@@ -128,24 +137,30 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Send the application link via email.
- * Returns "email" on success, null on failure.
- * TODO: Re-enable SMS once Twilio toll-free/10DLC verification clears.
+ * Send the application link via email and SMS.
+ * Returns object with email/sms boolean flags, or null if both fail.
  */
 async function sendApplicationLink(
   toEmail: string | undefined,
+  toPhone: string | undefined,
   applyUrl: string,
   appNumber: string,
   firstName?: string
-): Promise<"email" | null> {
+): Promise<{ email: boolean; sms: boolean } | null> {
   const realEmail = toEmail && !toEmail.endsWith("@placeholder.preme") ? toEmail : null
-  if (realEmail) {
-    const emailSent = await sendEmail(realEmail, appNumber, applyUrl, firstName)
-    if (emailSent) return "email"
+  const realPhone = toPhone && toPhone.replace(/\D/g, "").length >= 10 ? toPhone : null
+
+  const [emailSent, smsSent] = await Promise.all([
+    realEmail ? sendEmail(realEmail, appNumber, applyUrl, firstName) : Promise.resolve(false),
+    realPhone ? sendSms(realPhone, applyUrl, firstName) : Promise.resolve(false),
+  ])
+
+  if (!emailSent && !smsSent) {
+    console.error("[retell-preme] Both email and SMS failed for", appNumber)
+    return null
   }
 
-  console.error("[retell-preme] Email failed or no email provided for", appNumber)
-  return null
+  return { email: emailSent, sms: smsSent }
 }
 
 async function sendEmail(
@@ -187,8 +202,7 @@ async function sendEmail(
           <!-- Header -->
           <tr>
             <td style="background-color: #0a0a0a; padding: 28px 40px; text-align: center;">
-              <span style="color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 3px; position: relative; display: inline-block;">PR<span style="position: relative;">E<span style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 16px; height: 4px; background-color: #997100; display: block;"></span></span>ME</span>
-              <span style="color: #997100; font-size: 14px; display: block; margin-top: 4px; letter-spacing: 1px;">HOME LOANS</span>
+              <img src="https://preme915.vercel.app/PremeLogo_TextWhite_Transparent.png" alt="Preme Home Loans" width="160" style="display: block; margin: 0 auto; max-width: 160px;" />
             </td>
           </tr>
 
@@ -278,6 +292,53 @@ async function sendEmail(
     return true
   } catch (err) {
     console.error("[retell-preme] Email error:", err)
+    return false
+  }
+}
+
+async function sendSms(toPhone: string, applyUrl: string, firstName?: string): Promise<boolean> {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID
+  const authToken = process.env.TWILIO_AUTH_TOKEN
+  const messagingServiceSid = "MG0247ce788faa6836a9d98cff698406c7" // Sole Proprietor A2P — APPROVED
+
+  if (!accountSid || !authToken) {
+    console.error("[retell-preme] Twilio not configured — skipping SMS")
+    return false
+  }
+
+  const name = firstName || "there"
+  const body = `Hey ${name}, it's Riley from Preme Home Loans. Your application link is ready — tap here to review and submit: ${applyUrl}\n\nQuestions? Call us at (470) 942-5787.`
+
+  try {
+    const params = new URLSearchParams({
+      To: toPhone,
+      MessagingServiceSid: messagingServiceSid,
+      Body: body,
+    })
+
+    const res = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+        },
+        body: params.toString(),
+      }
+    )
+
+    if (!res.ok) {
+      const err = await res.text()
+      console.error("[retell-preme] SMS failed:", err)
+      return false
+    }
+
+    const data = await res.json()
+    console.log(`[retell-preme] SMS sent to ${toPhone}: ${data.sid}`)
+    return true
+  } catch (err) {
+    console.error("[retell-preme] SMS error:", err)
     return false
   }
 }

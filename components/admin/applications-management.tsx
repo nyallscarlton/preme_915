@@ -34,6 +34,12 @@ import {
   ChevronDown,
   ChevronUp,
   Link2,
+  Users,
+  AlertTriangle,
+  CircleCheck,
+  Pencil,
+  RotateCcw,
+  Save,
 } from "lucide-react"
 
 interface Application {
@@ -51,6 +57,10 @@ interface Application {
   propertyValue: number
   progress: number
   assignedTo: string | null
+  completenessPercent: number
+  missingFields: string[]
+  guestToken: string | null
+  raw: Record<string, any>
 }
 
 interface Condition {
@@ -114,13 +124,23 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
   const [addingCond, setAddingCond] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
   const [portalUrl, setPortalUrl] = useState("")
-  const [showLenderDetail, setShowLenderDetail] = useState(false)
+  const [showLenderDetail, setShowLenderDetail] = useState(true)
   const [showTemplates, setShowTemplates] = useState(false)
   const [smsText, setSmsText] = useState("")
   const [sendingSms, setSendingSms] = useState(false)
   const [smsStatus, setSmsStatus] = useState<"idle" | "sent" | "error">("idle")
   const [copiedPortal, setCopiedPortal] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [fullApp, setFullApp] = useState<Record<string, any> | null>(null)
+  const [fullAppLoading, setFullAppLoading] = useState(false)
+  const [completenessFilter, setCompletenessFilter] = useState<"all" | "complete" | "incomplete">("all")
+  const [followUpId, setFollowUpId] = useState<string | null>(null)
+
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedFields, setEditedFields] = useState<Record<string, any>>({})
+  const [originalApp, setOriginalApp] = useState<Record<string, any> | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   // Auto-select application when navigating from dashboard
   useEffect(() => {
@@ -139,8 +159,15 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
       app.applicantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.propertyAddress.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesStatus && matchesSearch
+    const matchesCompleteness =
+      completenessFilter === "all" ||
+      (completenessFilter === "complete" && app.completenessPercent === 100) ||
+      (completenessFilter === "incomplete" && app.completenessPercent < 100)
+    return matchesStatus && matchesSearch && matchesCompleteness
   })
+
+  const completeApps = filteredApplications.filter((a) => a.completenessPercent === 100)
+  const incompleteApps = filteredApplications.filter((a) => a.completenessPercent < 100)
 
   // Fetch conditions + lender data when an app is selected
   const fetchConditions = useCallback(async (dbId: string) => {
@@ -152,16 +179,133 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
     setCondLoading(false)
   }, [])
 
+  // Fetch full application data when selected
+  const fetchFullApp = useCallback(async (dbId: string) => {
+    setFullAppLoading(true)
+    try {
+      const res = await fetch(`/api/applications/${dbId}`)
+      if (res.ok) {
+        const json = await res.json()
+        const app = json.application || null
+        setFullApp(app)
+        // Store original snapshot on first load
+        if (app && !originalApp) setOriginalApp({ ...app })
+      }
+    } catch { /* ignore */ }
+    setFullAppLoading(false)
+  }, [originalApp])
+
   useEffect(() => {
     if (selectedApp) {
       fetchConditions(selectedApp.dbId)
+      fetchFullApp(selectedApp.dbId)
     } else {
       setCondData(null)
+      setFullApp(null)
+      setOriginalApp(null)
+      setEditedFields({})
+      setIsEditing(false)
       setPortalUrl("")
       setSmsText("")
       setSmsStatus("idle")
     }
-  }, [selectedApp, fetchConditions])
+  }, [selectedApp, fetchConditions, fetchFullApp])
+
+  // Get the display value for a field — edited value takes priority over DB value
+  const getFieldValue = (key: string) => {
+    if (key in editedFields) return editedFields[key]
+    return fullApp?.[key] ?? ""
+  }
+
+  const setField = (key: string, value: any) => {
+    setEditedFields((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const hasEdits = Object.keys(editedFields).length > 0
+
+  // Check if a specific field was modified from the original
+  const isFieldModified = (key: string) => {
+    if (!(key in editedFields)) return false
+    return editedFields[key] !== (originalApp?.[key] ?? "")
+  }
+
+  // Save edits and refresh lender match
+  const saveEdits = async () => {
+    if (!selectedApp || !hasEdits) return
+    setIsSaving(true)
+    setUpdateError(null)
+    try {
+      const res = await fetch(`/api/applications/${selectedApp.dbId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editedFields),
+      })
+      const result = await res.json()
+      if (!res.ok || !result.success) throw new Error(result.error || "Failed to save")
+
+      // Update local state with saved data
+      setFullApp(result.application)
+      setEditedFields({})
+      setIsEditing(false)
+
+      // Re-fetch lender match with updated data
+      fetchConditions(selectedApp.dbId)
+
+      // Refresh parent list
+      if (onRefresh) onRefresh()
+    } catch (err) {
+      setUpdateError(err instanceof Error ? err.message : "Failed to save changes")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Reset to original application data
+  const resetToOriginal = async () => {
+    if (!selectedApp || !originalApp) return
+    setIsSaving(true)
+    setUpdateError(null)
+    try {
+      // Build a payload of only the fields that differ from original
+      const resetPayload: Record<string, any> = {}
+      const keysToCheck = [
+        "loan_amount", "loan_type", "loan_purpose", "credit_score_range",
+        "property_value", "property_type", "property_address", "property_city",
+        "property_state", "property_zip", "applicant_name", "applicant_email",
+        "applicant_phone",
+      ]
+      for (const key of keysToCheck) {
+        if (fullApp?.[key] !== originalApp[key]) {
+          resetPayload[key] = originalApp[key]
+        }
+      }
+
+      if (Object.keys(resetPayload).length === 0) {
+        setEditedFields({})
+        setIsEditing(false)
+        setIsSaving(false)
+        return
+      }
+
+      const res = await fetch(`/api/applications/${selectedApp.dbId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(resetPayload),
+      })
+      const result = await res.json()
+      if (!res.ok || !result.success) throw new Error(result.error || "Failed to reset")
+
+      setFullApp(result.application)
+      setEditedFields({})
+      setIsEditing(false)
+      fetchConditions(selectedApp.dbId)
+      if (onRefresh) onRefresh()
+    } catch (err) {
+      setUpdateError(err instanceof Error ? err.message : "Failed to reset")
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   // ─── Conditions actions ───
 
@@ -308,6 +452,33 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
     await handleStatusUpdate(appId, "archived")
   }
 
+  const handleFollowUp = async (app: Application) => {
+    setFollowUpId(app.dbId)
+    try {
+      const missingList = app.missingFields.join(", ")
+      const firstName = app.applicantName.split(" ")[0] || "there"
+      const message = `Hi ${firstName}, this is Preme Home Loans. We received your loan application but it looks like we're still missing some info (${missingList}). Could you complete it so we can get you matched with a lender? Reply STOP to opt out.`
+
+      // Try SMS first if phone exists
+      if (app.applicantPhone) {
+        const res = await fetch(`/api/applications/${app.dbId}/sms`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        })
+        if (res.ok) {
+          setFollowUpId(null)
+          return
+        }
+      }
+
+      // Fallback: open SMS compose in detail view
+      setSelectedApp(app)
+      setSmsText(message)
+    } catch { /* ignore */ }
+    setFollowUpId(null)
+  }
+
   const handleDelete = async (appId: string) => {
     if (!confirm("Permanently delete this application? This cannot be undone.")) return
     setDeletingId(appId)
@@ -368,6 +539,29 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
           </div>
         </div>
 
+        {/* Incomplete Application Warning */}
+        {selectedApp.completenessPercent < 100 && (
+          <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg bg-orange-500/10 border border-orange-500/30">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-orange-500">Incomplete Application ({selectedApp.completenessPercent}%)</p>
+                <p className="text-xs text-orange-400">Missing: {selectedApp.missingFields.join(", ")}</p>
+              </div>
+            </div>
+            {selectedApp.applicantPhone && (
+              <Button
+                className="bg-orange-500 hover:bg-orange-600 text-white shrink-0"
+                onClick={() => handleFollowUp(selectedApp)}
+                disabled={followUpId === selectedApp.dbId}
+              >
+                {followUpId === selectedApp.dbId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                Text to Complete
+              </Button>
+            )}
+          </div>
+        )}
+
         {updateError && (
           <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
             <p className="text-sm font-medium">Error: {updateError}</p>
@@ -377,49 +571,417 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ═══ LEFT: Application Details + SMS + Conditions ═══ */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Application Info */}
-            <Card className="bg-card border-border">
+            {/* Application Info — Editable */}
+            <Card className={`bg-card ${isEditing ? "border-[#997100]" : "border-border"}`}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-foreground text-2xl">{selectedApp.id}</CardTitle>
-                    <CardDescription className="text-muted-foreground text-lg">
-                      {selectedApp.applicantName} &bull; {selectedApp.applicantEmail}
-                      {selectedApp.applicantPhone && <span> &bull; {selectedApp.applicantPhone}</span>}
+                    <CardTitle className="text-foreground text-2xl">{getFieldValue("applicant_name") || selectedApp.applicantName}</CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      {selectedApp.id} &bull; {getFieldValue("applicant_email") || selectedApp.applicantEmail}
+                      {(getFieldValue("applicant_phone") || selectedApp.applicantPhone) && <span> &bull; {getFieldValue("applicant_phone") || selectedApp.applicantPhone}</span>}
                     </CardDescription>
                   </div>
-                  <Badge className={getStatusColor(selectedApp.status)}>
-                    {getStatusIcon(selectedApp.status)}
-                    <span className="ml-2">{formatStatus(selectedApp.status)}</span>
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusColor(selectedApp.status)}>
+                      {getStatusIcon(selectedApp.status)}
+                      <span className="ml-2">{formatStatus(selectedApp.status)}</span>
+                    </Badge>
+                    {!isEditing ? (
+                      <Button
+                        variant="outline"
+                        className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+                        onClick={() => setIsEditing(true)}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={saveEdits}
+                          disabled={isSaving || !hasEdits}
+                          className="bg-[#997100] hover:bg-[#b8850a] text-black"
+                        >
+                          {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                          Save & Re-Match
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="border-border text-muted-foreground hover:bg-muted bg-transparent"
+                          onClick={() => { setEditedFields({}); setIsEditing(false) }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
+                {/* Modified indicator + Reset to Original */}
+                {fullApp && originalApp && (
+                  (() => {
+                    const keysToCheck = ["loan_amount", "credit_score_range", "property_value", "property_type", "property_state", "loan_type", "loan_purpose"]
+                    const modified = keysToCheck.filter((k) => String(fullApp[k] ?? "") !== String(originalApp[k] ?? ""))
+                    if (modified.length === 0) return null
+                    return (
+                      <div className="flex items-center justify-between mt-3 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <p className="text-xs text-blue-400">
+                          Modified from original: {modified.map((k) => k.replace(/_/g, " ")).join(", ")}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-blue-400 text-blue-400 hover:bg-blue-500 hover:text-white bg-transparent text-xs h-7"
+                          onClick={resetToOriginal}
+                          disabled={isSaving}
+                        >
+                          <RotateCcw className="h-3 w-3 mr-1" />
+                          Reset to Original
+                        </Button>
+                      </div>
+                    )
+                  })()
+                )}
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {fullAppLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <>
+                    {/* Loan Details — these are the key lender-matching fields */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-[#997100] mb-3 flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" /> Loan Details
+                        {isEditing && <span className="text-xs font-normal text-muted-foreground">(edit these to see which lenders qualify)</span>}
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            Loan Amount
+                            {isFieldModified("loan_amount") && <span className="text-blue-400">*</span>}
+                          </p>
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              value={getFieldValue("loan_amount") || ""}
+                              onChange={(e) => setField("loan_amount", e.target.value ? Number(e.target.value) : null)}
+                              className="bg-muted border-border text-foreground mt-1 text-lg font-semibold"
+                            />
+                          ) : (
+                            <p className="text-lg font-semibold text-foreground">{getFieldValue("loan_amount") ? `$${Number(getFieldValue("loan_amount")).toLocaleString()}` : "—"}</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            Credit Score
+                            {isFieldModified("credit_score_range") && <span className="text-blue-400">*</span>}
+                          </p>
+                          {isEditing ? (
+                            <Select value={getFieldValue("credit_score_range") || ""} onValueChange={(v) => setField("credit_score_range", v)}>
+                              <SelectTrigger className="bg-muted border-border text-foreground mt-1 text-lg font-semibold">
+                                <SelectValue placeholder="Select..." />
+                              </SelectTrigger>
+                              <SelectContent className="bg-card border-border">
+                                <SelectItem value="800+">800+</SelectItem>
+                                <SelectItem value="740-799">740-799</SelectItem>
+                                <SelectItem value="670-739">670-739</SelectItem>
+                                <SelectItem value="620-669">620-669</SelectItem>
+                                <SelectItem value="580-619">580-619</SelectItem>
+                                <SelectItem value="Below 580">Below 580</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <p className="text-lg font-semibold text-foreground">{getFieldValue("credit_score_range") || "—"}</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            Loan Type
+                            {isFieldModified("loan_type") && <span className="text-blue-400">*</span>}
+                          </p>
+                          {isEditing ? (
+                            <Input
+                              value={getFieldValue("loan_type") || ""}
+                              onChange={(e) => setField("loan_type", e.target.value)}
+                              className="bg-muted border-border text-foreground mt-1"
+                            />
+                          ) : (
+                            <p className="text-lg font-semibold text-foreground">{getFieldValue("loan_type") || "—"}</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            Loan Purpose
+                            {isFieldModified("loan_purpose") && <span className="text-blue-400">*</span>}
+                          </p>
+                          {isEditing ? (
+                            <Input
+                              value={getFieldValue("loan_purpose") || ""}
+                              onChange={(e) => setField("loan_purpose", e.target.value)}
+                              className="bg-muted border-border text-foreground mt-1"
+                            />
+                          ) : (
+                            <p className="text-lg font-semibold text-foreground">{getFieldValue("loan_purpose") || "—"}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <hr className="border-border" />
+
+                    {/* Property Info */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-[#997100] mb-3 flex items-center gap-2">
+                        <Building2 className="h-4 w-4" /> Property Information
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="col-span-2">
+                          <p className="text-xs text-muted-foreground">Property Address</p>
+                          {isEditing ? (
+                            <Input
+                              value={getFieldValue("property_address") || ""}
+                              onChange={(e) => setField("property_address", e.target.value)}
+                              className="bg-muted border-border text-foreground mt-1"
+                            />
+                          ) : (
+                            <p className="text-sm font-medium text-foreground">
+                              {fullApp
+                                ? [fullApp.property_address, fullApp.property_city, fullApp.property_state, fullApp.property_zip].filter(Boolean).join(", ")
+                                : selectedApp.propertyAddress}
+                            </p>
+                          )}
+                        </div>
+                        {isEditing && (
+                          <>
+                            <div>
+                              <p className="text-xs text-muted-foreground">State</p>
+                              <Input
+                                value={getFieldValue("property_state") || ""}
+                                onChange={(e) => setField("property_state", e.target.value)}
+                                placeholder="GA"
+                                className="bg-muted border-border text-foreground mt-1"
+                              />
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Zip</p>
+                              <Input
+                                value={getFieldValue("property_zip") || ""}
+                                onChange={(e) => setField("property_zip", e.target.value)}
+                                className="bg-muted border-border text-foreground mt-1"
+                              />
+                            </div>
+                          </>
+                        )}
+                        <div>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            Property Value
+                            {isFieldModified("property_value") && <span className="text-blue-400">*</span>}
+                          </p>
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              value={getFieldValue("property_value") || ""}
+                              onChange={(e) => setField("property_value", e.target.value ? Number(e.target.value) : null)}
+                              className="bg-muted border-border text-foreground mt-1 text-lg font-semibold"
+                            />
+                          ) : (
+                            <p className="text-lg font-semibold text-foreground">
+                              {getFieldValue("property_value") ? `$${Number(getFieldValue("property_value")).toLocaleString()}` : "—"}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            Property Type
+                            {isFieldModified("property_type") && <span className="text-blue-400">*</span>}
+                          </p>
+                          {isEditing ? (
+                            <Input
+                              value={getFieldValue("property_type") || ""}
+                              onChange={(e) => setField("property_type", e.target.value)}
+                              className="bg-muted border-border text-foreground mt-1"
+                            />
+                          ) : (
+                            <p className="text-lg font-semibold text-foreground">{getFieldValue("property_type") || "—"}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <hr className="border-border" />
+
+                    {/* Contact Info */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-[#997100] mb-3 flex items-center gap-2">
+                        <User className="h-4 w-4" /> Applicant Information
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Full Name</p>
+                          {isEditing ? (
+                            <Input value={getFieldValue("applicant_name") || ""} onChange={(e) => setField("applicant_name", e.target.value)} className="bg-muted border-border text-foreground mt-1" />
+                          ) : (
+                            <p className="text-sm font-medium text-foreground">{getFieldValue("applicant_name") || selectedApp.applicantName}</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Email</p>
+                          {isEditing ? (
+                            <Input value={getFieldValue("applicant_email") || ""} onChange={(e) => setField("applicant_email", e.target.value)} className="bg-muted border-border text-foreground mt-1" />
+                          ) : (
+                            <p className="text-sm font-medium text-foreground">{getFieldValue("applicant_email") || selectedApp.applicantEmail}</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Phone</p>
+                          {isEditing ? (
+                            <Input value={getFieldValue("applicant_phone") || ""} onChange={(e) => setField("applicant_phone", e.target.value)} className="bg-muted border-border text-foreground mt-1" />
+                          ) : (
+                            <p className="text-sm font-medium text-foreground">{getFieldValue("applicant_phone") || selectedApp.applicantPhone || "—"}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Financial / Liquidity */}
+                    {(fullApp?.annual_income || fullApp?.cash_reserves || fullApp?.investment_accounts || fullApp?.retirement_accounts || isEditing) && (
+                      <>
+                        <hr className="border-border" />
+                        <div>
+                          <h4 className="text-sm font-semibold text-[#997100] mb-3 flex items-center gap-2">
+                            <DollarSign className="h-4 w-4" /> Financial Information
+                          </h4>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Cash Reserves</p>
+                              {isEditing ? (
+                                <Input type="number" value={getFieldValue("cash_reserves") || ""} onChange={(e) => setField("cash_reserves", e.target.value ? Number(e.target.value) : null)} className="bg-muted border-border text-foreground mt-1" />
+                              ) : (
+                                <p className="text-sm font-medium text-foreground">{getFieldValue("cash_reserves") ? `$${Number(getFieldValue("cash_reserves")).toLocaleString()}` : "—"}</p>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Investment Accounts</p>
+                              {isEditing ? (
+                                <Input type="number" value={getFieldValue("investment_accounts") || ""} onChange={(e) => setField("investment_accounts", e.target.value ? Number(e.target.value) : null)} className="bg-muted border-border text-foreground mt-1" />
+                              ) : (
+                                <p className="text-sm font-medium text-foreground">{getFieldValue("investment_accounts") ? `$${Number(getFieldValue("investment_accounts")).toLocaleString()}` : "—"}</p>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Retirement Accounts</p>
+                              {isEditing ? (
+                                <Input type="number" value={getFieldValue("retirement_accounts") || ""} onChange={(e) => setField("retirement_accounts", e.target.value ? Number(e.target.value) : null)} className="bg-muted border-border text-foreground mt-1" />
+                              ) : (
+                                <p className="text-sm font-medium text-foreground">{getFieldValue("retirement_accounts") ? `$${Number(getFieldValue("retirement_accounts")).toLocaleString()}` : "—"}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    <p className="text-xs text-muted-foreground">Submitted {formatDate(selectedApp.submittedAt)}</p>
+
+                    {/* Bottom save bar when editing */}
+                    {isEditing && hasEdits && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-[#997100]/10 border border-[#997100]/30">
+                        <p className="text-sm text-[#997100] font-medium">
+                          {Object.keys(editedFields).length} field{Object.keys(editedFields).length > 1 ? "s" : ""} changed — save to update lender matches
+                        </p>
+                        <Button
+                          onClick={saveEdits}
+                          disabled={isSaving}
+                          className="bg-[#997100] hover:bg-[#b8850a] text-black"
+                        >
+                          {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                          Save & Re-Match Lenders
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* ═══ LENDER MATCH — Primary Panel ═══ */}
+            <Card className="bg-card border-[#997100]/30">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-foreground text-xl flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-[#997100]" />
+                    Lender Match
+                  </CardTitle>
+                  {condData?.lenderMatch && (
+                    <Badge className={`text-sm px-3 py-1 ${condData.lenderMatch.stats.qualified > 0 ? "bg-green-600 text-white" : "bg-red-500 text-white"}`}>
+                      {condData.lenderMatch.stats.qualified} of {condData.lenderMatch.stats.total} lenders qualified
+                    </Badge>
+                  )}
+                </div>
+                <CardDescription className="text-muted-foreground">
+                  Lenders matched against this application&apos;s credit score, loan amount, and property state
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Loan Amount</p>
-                    <p className="text-lg font-semibold text-foreground">${selectedApp.loanAmount.toLocaleString()}</p>
+                {condLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Property Type</p>
-                    <p className="text-lg font-semibold text-foreground">{selectedApp.loanType}</p>
+                ) : !condData?.lenderMatch || condData.lenderMatch.matches.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4">No DSCR lenders in database yet. Add lenders in the DSCR Matcher tool.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Qualified lenders first */}
+                    {condData.lenderMatch.matches.filter((m) => m.qualified).length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-green-500 uppercase tracking-wide mb-2">Qualified Lenders</p>
+                        <div className="space-y-2">
+                          {condData.lenderMatch.matches.filter((m) => m.qualified).map((m) => (
+                            <div key={m.lender.id} className="rounded-lg border border-green-600/30 bg-green-600/5 p-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-semibold text-foreground">{m.lender.name}</p>
+                                  <p className="text-sm text-muted-foreground">{m.lender.short_name}</p>
+                                </div>
+                                <Shield className="h-5 w-5 text-green-500" />
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                                <span>Min DSCR: {m.lender.min_dscr}</span>
+                                <span>Min FICO: {m.lender.min_fico}</span>
+                                <span>Loan: ${m.lender.min_loan.toLocaleString()}+</span>
+                                {m.lender.max_loan && <span>Max: ${m.lender.max_loan.toLocaleString()}</span>}
+                                {m.lender.max_term && <span>{m.lender.max_term}</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Disqualified lenders */}
+                    {condData.lenderMatch.matches.filter((m) => !m.qualified).length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-red-400 uppercase tracking-wide mb-2 mt-4">Not Qualified</p>
+                        <div className="space-y-2">
+                          {condData.lenderMatch.matches.filter((m) => !m.qualified).map((m) => (
+                            <div key={m.lender.id} className="rounded-lg border border-border bg-muted/50 p-3 opacity-70">
+                              <div className="flex items-center justify-between">
+                                <p className="font-medium text-foreground text-sm">{m.lender.name}</p>
+                                <XCircle className="h-4 w-4 text-red-400" />
+                              </div>
+                              <div className="mt-1 space-y-0.5">
+                                {m.reasons.map((r, i) => (
+                                  <p key={i} className="text-xs text-red-400">{r}</p>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Credit Score</p>
-                    <p className="text-lg font-semibold text-foreground">{selectedApp.creditScoreRange}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Property Value</p>
-                    <p className="text-lg font-semibold text-foreground">
-                      {selectedApp.propertyValue ? `$${selectedApp.propertyValue.toLocaleString()}` : "N/A"}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <p className="text-xs text-muted-foreground">Property Address</p>
-                  <p className="text-foreground">{selectedApp.propertyAddress}</p>
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">Submitted {formatDate(selectedApp.submittedAt)}</p>
+                )}
               </CardContent>
             </Card>
 
@@ -680,62 +1242,6 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
               </CardContent>
             </Card>
 
-            {/* DSCR Lender Match */}
-            {condData?.lenderMatch && condData.lenderMatch.matches.length > 0 && (
-              <Card className="bg-card border-border">
-                <CardHeader className="pb-3 cursor-pointer" onClick={() => setShowLenderDetail(!showLenderDetail)}>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-foreground text-base flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-[#997100]" />
-                      DSCR Lender Match
-                      <Badge className="bg-green-600 text-white ml-1">
-                        {condData.lenderMatch.stats.qualified} qualified
-                      </Badge>
-                    </CardTitle>
-                    {showLenderDetail ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                  </div>
-                </CardHeader>
-                {showLenderDetail && (
-                  <CardContent className="pt-0 space-y-2">
-                    {condData.lenderMatch.matches.map((m) => (
-                      <div
-                        key={m.lender.id}
-                        className={`rounded-lg border p-3 text-xs ${
-                          m.qualified ? "border-green-600/30 bg-green-600/5" : "border-border bg-muted opacity-70"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-foreground">{m.lender.name}</p>
-                            <p className="text-muted-foreground">{m.lender.short_name}</p>
-                          </div>
-                          {m.qualified ? (
-                            <Shield className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground">
-                          <span>DSCR &ge; {m.lender.min_dscr}</span>
-                          <span>FICO &ge; {m.lender.min_fico}</span>
-                          <span>Loan ${m.lender.min_loan.toLocaleString()}+</span>
-                          {m.lender.max_loan && <span>Max ${m.lender.max_loan.toLocaleString()}</span>}
-                          {m.lender.max_term && <span>{m.lender.max_term}</span>}
-                        </div>
-                        {m.reasons.length > 0 && (
-                          <div className="mt-1.5 space-y-0.5">
-                            {m.reasons.map((r, i) => (
-                              <p key={i} className="text-red-500">{r}</p>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </CardContent>
-                )}
-              </Card>
-            )}
-
             {/* Timeline */}
             <Card className="bg-card border-border">
               <CardHeader>
@@ -787,12 +1293,112 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
   // APPLICATIONS LIST VIEW
   // ═══════════════════════════════════════════════════════════
 
+  function renderAppCard(app: Application) {
+    const isComplete = app.completenessPercent === 100
+    return (
+      <Card
+        key={app.id}
+        className={`bg-card transition-colors cursor-pointer ${
+          isComplete
+            ? "border-border hover:border-[#997100]/50"
+            : "border-orange-500/40 hover:border-orange-500/70"
+        }`}
+        onClick={() => setSelectedApp(app)}
+      >
+        <CardContent className="pt-6">
+          {/* Incomplete banner */}
+          {!isComplete && (
+            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+              <AlertTriangle className="h-4 w-4 text-orange-500 shrink-0" />
+              <span className="text-sm font-medium text-orange-500">
+                Incomplete ({app.completenessPercent}%)
+              </span>
+              <span className="text-xs text-orange-400">
+                Missing: {app.missingFields.join(", ")}
+              </span>
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              {isComplete ? (
+                <CircleCheck className="h-5 w-5 text-green-500 shrink-0" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0" />
+              )}
+              <div>
+                <h3 className="font-semibold text-foreground">{app.applicantName}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {app.id} &bull; {app.applicantEmail}
+                </p>
+                <p className="text-sm text-muted-foreground">{app.propertyAddress}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="text-right">
+                <p className="font-semibold text-foreground">
+                  {app.loanAmount ? `$${app.loanAmount.toLocaleString()}` : "—"}
+                </p>
+                <p className="text-sm text-muted-foreground">{formatDate(app.submittedAt)}</p>
+                <Badge className={getStatusColor(app.status)}>{formatStatus(app.status)}</Badge>
+              </div>
+              <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                {/* Follow-up button for incomplete apps */}
+                {!isComplete && app.applicantPhone && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-orange-400 text-orange-500 hover:bg-orange-500 hover:text-white bg-transparent h-8 px-2 text-xs"
+                    onClick={() => handleFollowUp(app)}
+                    disabled={followUpId === app.dbId}
+                    title="Text to complete application"
+                  >
+                    {followUpId === app.dbId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Send className="h-3 w-3 mr-1" />}
+                    Follow Up
+                  </Button>
+                )}
+                <a
+                  href={`tel:${app.applicantPhone}`}
+                  className="inline-flex items-center justify-center rounded-md border border-green-600 text-green-600 hover:bg-green-600 hover:text-white bg-transparent h-8 w-8 transition"
+                  title="Call"
+                >
+                  <Phone className="h-4 w-4" />
+                </a>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-400 text-gray-500 hover:bg-gray-500 hover:text-white bg-transparent h-8 w-8 p-0"
+                  onClick={() => handleArchive(app.dbId)}
+                  disabled={isUpdating || app.status === "archived"}
+                  title="Archive"
+                >
+                  <Archive className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-red-400 text-red-500 hover:bg-red-600 hover:text-white bg-transparent h-8 w-8 p-0"
+                  onClick={() => handleDelete(app.dbId)}
+                  disabled={deletingId === app.dbId}
+                  title="Delete"
+                >
+                  {deletingId === app.dbId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Applications Management</h2>
-          <p className="text-muted-foreground">Review and manage loan applications</p>
+          <h2 className="text-2xl font-bold text-foreground">Loan Pipeline</h2>
+          <p className="text-muted-foreground">
+            {completeApps.length} ready to work &bull; {incompleteApps.length} incomplete
+          </p>
         </div>
         {onRefresh && (
           <Button
@@ -813,13 +1419,23 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
-                  placeholder="Search applications..."
+                  placeholder="Search by name, app number, or address..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 bg-card border-border text-foreground"
                 />
               </div>
             </div>
+            <Select value={completenessFilter} onValueChange={(v) => setCompletenessFilter(v as any)}>
+              <SelectTrigger className="w-48 bg-card border-border text-foreground">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="all">All Applications</SelectItem>
+                <SelectItem value="complete">Complete Only</SelectItem>
+                <SelectItem value="incomplete">Incomplete Only</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-48 bg-card border-border text-foreground">
                 <Filter className="mr-2 h-4 w-4" />
@@ -839,67 +1455,31 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
         </CardContent>
       </Card>
 
-      {/* Applications List */}
-      <div className="grid gap-4">
-        {filteredApplications.map((app) => (
-          <Card
-            key={app.id}
-            className="bg-card border-border hover:border-[#997100]/50 transition-colors cursor-pointer"
-            onClick={() => setSelectedApp(app)}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  {getStatusIcon(app.status)}
-                  <div>
-                    <h3 className="font-semibold text-foreground">{app.id}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {app.applicantName} &bull; {app.applicantEmail}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{app.propertyAddress}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <p className="font-semibold text-foreground">${app.loanAmount.toLocaleString()}</p>
-                    <p className="text-sm text-muted-foreground">{formatDate(app.submittedAt)}</p>
-                    <Badge className={getStatusColor(app.status)}>{formatStatus(app.status)}</Badge>
-                  </div>
-                  <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
-                    <a
-                      href={`tel:${app.applicantPhone}`}
-                      className="inline-flex items-center justify-center rounded-md border border-green-600 text-green-600 hover:bg-green-600 hover:text-white bg-transparent h-8 w-8 transition"
-                      title="Call"
-                    >
-                      <Phone className="h-4 w-4" />
-                    </a>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-gray-400 text-gray-500 hover:bg-gray-500 hover:text-white bg-transparent h-8 w-8 p-0"
-                      onClick={() => handleArchive(app.dbId)}
-                      disabled={isUpdating || app.status === "archived"}
-                      title="Archive"
-                    >
-                      <Archive className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-red-400 text-red-500 hover:bg-red-600 hover:text-white bg-transparent h-8 w-8 p-0"
-                      onClick={() => handleDelete(app.dbId)}
-                      disabled={deletingId === app.dbId}
-                      title="Delete"
-                    >
-                      {deletingId === app.dbId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Complete Applications */}
+      {completeApps.length > 0 && (completenessFilter === "all" || completenessFilter === "complete") && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <CircleCheck className="h-5 w-5 text-green-500" />
+            <h3 className="text-lg font-semibold text-foreground">Ready to Work ({completeApps.length})</h3>
+          </div>
+          <div className="grid gap-4">
+            {completeApps.map(renderAppCard)}
+          </div>
+        </div>
+      )}
+
+      {/* Incomplete Applications */}
+      {incompleteApps.length > 0 && (completenessFilter === "all" || completenessFilter === "incomplete") && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <h3 className="text-lg font-semibold text-foreground">Incomplete — Needs Follow-Up ({incompleteApps.length})</h3>
+          </div>
+          <div className="grid gap-4">
+            {incompleteApps.map(renderAppCard)}
+          </div>
+        </div>
+      )}
 
       {filteredApplications.length === 0 && (
         <Card className="bg-card border-border">

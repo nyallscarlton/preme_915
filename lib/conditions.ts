@@ -91,6 +91,7 @@ export async function matchDscrLenders(applicationId: string): Promise<{
 
   const creditScore = creditRangeToNumber(app.credit_score_range || "0")
   const loanAmount = app.loan_amount || 0
+  const propertyState = (app.property_state || "").toUpperCase().trim()
 
   const matches: LenderMatchResult[] = lenders.map((l) => {
     const reasons: string[] = []
@@ -103,6 +104,13 @@ export async function matchDscrLenders(applicationId: string): Promise<{
     }
     if (l.max_loan && loanAmount > l.max_loan) {
       reasons.push(`Loan $${loanAmount.toLocaleString()} exceeds max $${l.max_loan.toLocaleString()}`)
+    }
+    // Check state restrictions
+    if (propertyState && l.states && l.states.length > 0) {
+      const normalizedStates = l.states.map((s: string) => s.toUpperCase().trim())
+      if (!normalizedStates.includes(propertyState)) {
+        reasons.push(`Property state ${propertyState} not in lender's coverage`)
+      }
     }
 
     return {

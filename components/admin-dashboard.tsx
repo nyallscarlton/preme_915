@@ -31,6 +31,31 @@ import { AdminMessaging } from "@/components/admin/admin-messaging"
 import { SystemSettings } from "@/components/admin/system-settings"
 import { MetricsDashboard } from "@/components/admin/metrics-dashboard"
 
+// 10 key fields that make an application "workable"
+const COMPLETENESS_FIELDS = [
+  { key: "applicant_name", label: "Applicant Name" },
+  { key: "applicant_email", label: "Email" },
+  { key: "applicant_phone", label: "Phone" },
+  { key: "loan_amount", label: "Loan Amount" },
+  { key: "loan_type", label: "Loan Type" },
+  { key: "loan_purpose", label: "Loan Purpose" },
+  { key: "property_address", label: "Property Address" },
+  { key: "property_type", label: "Property Type" },
+  { key: "property_value", label: "Property Value" },
+  { key: "credit_score_range", label: "Credit Score" },
+] as const
+
+function computeCompleteness(app: Record<string, any>): { percent: number; missing: string[] } {
+  const missing: string[] = []
+  for (const f of COMPLETENESS_FIELDS) {
+    const v = app[f.key]
+    if (v === null || v === undefined || v === "" || v === 0) {
+      missing.push(f.label)
+    }
+  }
+  return { percent: Math.round(((COMPLETENESS_FIELDS.length - missing.length) / COMPLETENESS_FIELDS.length) * 100), missing }
+}
+
 interface Application {
   id: string
   dbId: string
@@ -46,6 +71,10 @@ interface Application {
   propertyValue: number
   progress: number
   assignedTo: string | null
+  completenessPercent: number
+  missingFields: string[]
+  guestToken: string | null
+  raw: Record<string, any>
 }
 
 export function AdminDashboard() {
@@ -72,23 +101,30 @@ export function AdminDashboard() {
       }
 
       // Transform API data to match component interface
-      const transformedApps = (result.applications || []).map((app: any) => ({
-        id: app.application_number || app.id,
-        dbId: app.id,
-        applicantName: app.applicant_name || "Unknown",
-        applicantEmail: app.applicant_email || "",
-        applicantPhone: app.applicant_phone || "",
-        propertyAddress:
-          [app.property_address, app.property_city, app.property_state].filter(Boolean).join(", ") || "N/A",
-        loanAmount: app.loan_amount || 0,
-        status: app.status || "submitted",
-        submittedAt: app.submitted_at || app.created_at || new Date().toISOString(),
-        loanType: app.loan_type || app.property_type || "N/A",
-        creditScoreRange: app.credit_score_range || "N/A",
-        propertyValue: app.property_value || 0,
-        progress: app.status === "approved" ? 100 : app.status === "under_review" ? 65 : 25,
-        assignedTo: null,
-      }))
+      const transformedApps = (result.applications || []).map((app: any) => {
+        const { percent, missing } = computeCompleteness(app)
+        return {
+          id: app.application_number || app.id,
+          dbId: app.id,
+          applicantName: app.applicant_name || "Unknown",
+          applicantEmail: app.applicant_email || "",
+          applicantPhone: app.applicant_phone || "",
+          propertyAddress:
+            [app.property_address, app.property_city, app.property_state].filter(Boolean).join(", ") || "N/A",
+          loanAmount: app.loan_amount || 0,
+          status: app.status || "submitted",
+          submittedAt: app.submitted_at || app.created_at || new Date().toISOString(),
+          loanType: app.loan_type || app.property_type || "N/A",
+          creditScoreRange: app.credit_score_range || "N/A",
+          propertyValue: app.property_value || 0,
+          progress: app.status === "approved" ? 100 : app.status === "under_review" ? 65 : 25,
+          assignedTo: null,
+          completenessPercent: percent,
+          missingFields: missing,
+          guestToken: app.guest_token || null,
+          raw: app,
+        }
+      })
 
       console.log("[v0] Transformed applications:", transformedApps)
       setApplications(transformedApps)
@@ -381,9 +417,9 @@ export function AdminDashboard() {
                         <div className="flex items-center space-x-4">
                           {getStatusIcon(app.status)}
                           <div>
-                            <p className="font-medium text-foreground">{app.id}</p>
+                            <p className="font-medium text-foreground">{app.applicantName}</p>
                             <p className="text-sm text-muted-foreground">
-                              {app.applicantName} • {app.propertyAddress}
+                              {app.id} • {app.propertyAddress}
                             </p>
                           </div>
                         </div>

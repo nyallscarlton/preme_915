@@ -39,12 +39,37 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-// PATCH - Update application status
+// Fields an admin is allowed to edit
+const EDITABLE_FIELDS = [
+  "status",
+  "loan_amount",
+  "loan_type",
+  "loan_purpose",
+  "credit_score_range",
+  "property_value",
+  "property_type",
+  "property_address",
+  "property_city",
+  "property_state",
+  "property_zip",
+  "applicant_name",
+  "applicant_email",
+  "applicant_phone",
+  "annual_income",
+  "employment_status",
+  "employer_name",
+  "cash_reserves",
+  "investment_accounts",
+  "retirement_accounts",
+]
+
+// PATCH - Update application fields (status, loan details, etc.)
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { status } = await request.json()
+    const body = await request.json()
     const { id } = params
     const supabase = createClient()
+    const adminClient = createAdminClient()
 
     const {
       data: { user },
@@ -54,8 +79,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Verify lender/admin role
-    const { data: profile } = await supabase
+    // Verify lender/admin role (use admin client to bypass RLS)
+    const { data: profile } = await adminClient
       .from("profiles")
       .select("role")
       .eq("id", user.id)
@@ -65,42 +90,50 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    // Get application details before update (for notifications)
-    const { data: app } = await supabase
+    // Build update payload — only allow whitelisted fields
+    const updateData: Record<string, any> = { updated_at: new Date().toISOString() }
+    for (const key of EDITABLE_FIELDS) {
+      if (key in body) updateData[key] = body[key]
+    }
+
+    // Get application details before update (for status change notifications)
+    const { data: app } = await adminClient
       .from("loan_applications")
       .select("application_number, applicant_email, applicant_name, guest_token, status")
       .eq("id", id)
       .single()
 
     const oldStatus = app?.status || "unknown"
+    const statusChanged = "status" in body && body.status !== oldStatus
 
-    const { error } = await supabase
+    const { data: updated, error } = await adminClient
       .from("loan_applications")
-      .update({ status, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq("id", id)
+      .select()
+      .single()
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    // Fire-and-forget MC notification
-    if (app?.application_number) {
-      notifyMCStatusChange(id, status, app.application_number).catch(() => {})
+    // Fire-and-forget notifications only on status change
+    if (statusChanged && app?.application_number) {
+      notifyMCStatusChange(id, body.status, app.application_number).catch(() => {})
+
+      if (app.applicant_email) {
+        sendStatusNotification({
+          email: app.applicant_email,
+          name: app.applicant_name || "",
+          applicationNumber: app.application_number,
+          oldStatus,
+          newStatus: body.status,
+          guestToken: app.guest_token || undefined,
+        }).catch(() => {})
+      }
     }
 
-    // Fire-and-forget borrower email + Telegram notification
-    if (app?.applicant_email && app?.application_number) {
-      sendStatusNotification({
-        email: app.applicant_email,
-        name: app.applicant_name || "",
-        applicationNumber: app.application_number,
-        oldStatus,
-        newStatus: status,
-        guestToken: app.guest_token || undefined,
-      }).catch(() => {})
-    }
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, application: updated })
   } catch (error) {
     console.error("API error:", error)
     return NextResponse.json({ error: "Failed to update application" }, { status: 500 })
@@ -112,6 +145,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     const { id } = params
     const supabase = createClient()
+    const adminClient = createAdminClient()
 
     const {
       data: { user },
@@ -121,8 +155,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Verify admin role
-    const { data: profile } = await supabase
+    // Use admin client for profile lookup (bypasses RLS)
+    const { data: profile } = await adminClient
       .from("profiles")
       .select("role")
       .eq("id", user.id)
@@ -133,8 +167,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     // Delete related conditions first
-    const adminClient = createAdminClient()
     await adminClient.from("conditions").delete().eq("application_id", id)
+
+    // Delete related documents
+    await adminClient.from("loan_documents").delete().eq("application_id", id)
 
     // Delete the application
     const { error } = await adminClient
