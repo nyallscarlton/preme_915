@@ -40,6 +40,10 @@ import {
   Pencil,
   RotateCcw,
   Save,
+  PhoneIncoming,
+  PhoneOutgoing,
+  Play,
+  Home,
 } from "lucide-react"
 
 interface Application {
@@ -102,6 +106,32 @@ interface ConditionsData {
   templates: Record<string, string[]>
 }
 
+interface Interaction {
+  id: string
+  phone: string
+  channel: string
+  direction: string
+  entity: string | null
+  content: string | null
+  summary: string | null
+  metadata: Record<string, any> | null
+  created_at: string
+}
+
+interface ValuationData {
+  success: boolean
+  address?: string
+  estimatedValue?: number
+  sqft?: number
+  bedrooms?: number
+  bathrooms?: number
+  yearBuilt?: number
+  lastSoldPrice?: number
+  lastSoldDate?: string
+  source?: string
+  error?: string
+}
+
 interface ApplicationsManagementProps {
   applications: Application[]
   onRefresh?: () => void
@@ -135,6 +165,16 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
   const [fullAppLoading, setFullAppLoading] = useState(false)
   const [completenessFilter, setCompletenessFilter] = useState<"all" | "complete" | "incomplete">("all")
   const [followUpId, setFollowUpId] = useState<string | null>(null)
+
+  // Interactions state
+  const [interactions, setInteractions] = useState<Interaction[]>([])
+  const [interactionsLoading, setInteractionsLoading] = useState(false)
+  const [expandedCallId, setExpandedCallId] = useState<string | null>(null)
+  const [interactionApplicantName, setInteractionApplicantName] = useState("Applicant")
+
+  // Valuation state
+  const [valuation, setValuation] = useState<ValuationData | null>(null)
+  const [valuationLoading, setValuationLoading] = useState(false)
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false)
@@ -195,10 +235,43 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
     setFullAppLoading(false)
   }, [originalApp])
 
+  // Fetch interactions for the applicant
+  const fetchInteractions = useCallback(async (dbId: string) => {
+    setInteractionsLoading(true)
+    try {
+      const res = await fetch(`/api/applications/${dbId}/interactions`)
+      if (res.ok) {
+        const json = await res.json()
+        setInteractions(json.interactions || [])
+        setInteractionApplicantName(json.applicantName || "Applicant")
+      }
+    } catch { /* ignore */ }
+    setInteractionsLoading(false)
+  }, [])
+
+  // Fetch Zillow valuation
+  const fetchValuation = useCallback(async (address: string) => {
+    setValuationLoading(true)
+    setValuation(null)
+    try {
+      const res = await fetch("/api/admin/valuation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address }),
+      })
+      const json: ValuationData = await res.json()
+      setValuation(json)
+    } catch {
+      setValuation({ success: false, error: "Valuation request failed" })
+    }
+    setValuationLoading(false)
+  }, [])
+
   useEffect(() => {
     if (selectedApp) {
       fetchConditions(selectedApp.dbId)
       fetchFullApp(selectedApp.dbId)
+      fetchInteractions(selectedApp.dbId)
     } else {
       setCondData(null)
       setFullApp(null)
@@ -208,8 +281,11 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
       setPortalUrl("")
       setSmsText("")
       setSmsStatus("idle")
+      setInteractions([])
+      setValuation(null)
+      setExpandedCallId(null)
     }
-  }, [selectedApp, fetchConditions, fetchFullApp])
+  }, [selectedApp, fetchConditions, fetchFullApp, fetchInteractions])
 
   // Get the display value for a field — edited value takes priority over DB value
   const getFieldValue = (key: string) => {
@@ -568,6 +644,183 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
           </div>
         )}
 
+        {/* ═══ COMMUNICATION THREAD ═══ */}
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-foreground text-base flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-[#997100]" />
+              Communication Thread
+              {interactions.length > 0 && (
+                <Badge variant="outline" className="border-border text-muted-foreground ml-2 text-xs">
+                  {interactions.length} interaction{interactions.length !== 1 ? "s" : ""}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {interactionsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : interactions.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">No interactions recorded yet.</p>
+            ) : (
+              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                {interactions.map((ix) => {
+                  const meta = ix.metadata || {}
+                  const isOutbound = ix.direction === "outbound"
+                  const time = new Date(ix.created_at).toLocaleString("en-US", {
+                    month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                  })
+
+                  // Determine actor label
+                  const actorLabel = (() => {
+                    if (meta.type === "call_review") return "Review"
+                    if (meta.is_training) return "Training"
+                    if (ix.channel === "voice" && isOutbound) return "Riley"
+                    if (ix.channel === "voice" && !isOutbound) {
+                      if (meta.manual_bridge) return "Nyalls"
+                      return interactionApplicantName.split(" ")[0] || "Caller"
+                    }
+                    if (ix.channel === "sms" && isOutbound) return "Preme"
+                    if (ix.channel === "sms" && !isOutbound) return interactionApplicantName.split(" ")[0] || "Applicant"
+                    if (ix.channel === "email") return isOutbound ? "Preme" : interactionApplicantName.split(" ")[0] || "Applicant"
+                    return isOutbound ? "Preme" : interactionApplicantName.split(" ")[0] || "Contact"
+                  })()
+
+                  // ── SMS ──
+                  if (ix.channel === "sms") {
+                    return (
+                      <div key={ix.id} className={`flex ${isOutbound ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[75%] rounded-xl px-3.5 py-2.5 ${
+                          isOutbound
+                            ? "bg-[#997100]/20 border border-[#997100]/30 text-foreground"
+                            : "bg-muted/50 border border-border text-foreground"
+                        }`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{actorLabel}</span>
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-blue-500/30 text-blue-400">SMS</Badge>
+                          </div>
+                          <p className="text-sm whitespace-pre-wrap">{ix.content || ix.summary || "(no content)"}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">{time}</p>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // ── VOICE CALL ──
+                  if (ix.channel === "voice") {
+                    const durationSec = meta.duration_ms ? Math.round(meta.duration_ms / 1000) : meta.duration_seconds || 0
+                    const durationStr = durationSec > 0 ? `${Math.floor(durationSec / 60)}m ${durationSec % 60}s` : ""
+                    const recordingUrl = meta.recording_storage_url || meta.recording_url || null
+                    const isExpanded = expandedCallId === ix.id
+                    const isReview = meta.type === "call_review"
+
+                    // For call reviews, skip rendering (or render minimally)
+                    if (isReview) return null
+
+                    return (
+                      <div key={ix.id} className="rounded-lg border border-border bg-muted/50 p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {isOutbound ? (
+                              <PhoneOutgoing className="h-4 w-4 text-[#997100]" />
+                            ) : (
+                              <PhoneIncoming className="h-4 w-4 text-green-500" />
+                            )}
+                            <span className="text-sm font-medium text-foreground">
+                              {isOutbound ? "Outbound Call" : "Inbound Call"}
+                            </span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{actorLabel}</span>
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-green-500/30 text-green-400">Call</Badge>
+                            {durationStr && <span className="text-xs text-muted-foreground">{durationStr}</span>}
+                            {meta.temperature && (
+                              <Badge className={`text-[9px] px-1.5 py-0 ${
+                                meta.temperature === "hot" ? "bg-red-600 text-white" :
+                                meta.temperature === "warm" ? "bg-orange-500 text-white" :
+                                "bg-blue-600 text-white"
+                              }`}>{meta.temperature}</Badge>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground">{time}</span>
+                        </div>
+                        {ix.summary && <p className="text-sm text-muted-foreground mt-2">{ix.summary}</p>}
+                        {recordingUrl && (
+                          <div className="mt-2">
+                            <audio
+                              controls
+                              preload="none"
+                              className="w-full h-8 [&::-webkit-media-controls-panel]:bg-muted"
+                              src={
+                                recordingUrl.includes("api.twilio.com")
+                                  ? `/api/admin/recording?url=${encodeURIComponent(recordingUrl)}`
+                                  : recordingUrl
+                              }
+                            />
+                          </div>
+                        )}
+                        {ix.content && (
+                          <div className="mt-2">
+                            <button
+                              onClick={() => setExpandedCallId(isExpanded ? null : ix.id)}
+                              className="text-xs text-[#997100] hover:text-[#b8850a] font-medium"
+                            >
+                              {isExpanded ? "Hide transcript" : "Show transcript"}
+                            </button>
+                            {isExpanded && (
+                              <pre className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap bg-background/50 rounded p-2 max-h-[300px] overflow-y-auto border border-border">
+                                {ix.content}
+                              </pre>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
+
+                  // ── EMAIL ──
+                  if (ix.channel === "email") {
+                    return (
+                      <div key={ix.id} className="rounded-lg border border-border bg-muted/50 p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-blue-400" />
+                            <span className="text-sm font-medium text-foreground">
+                              {meta.subject || "Email"}
+                            </span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{actorLabel}</span>
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-purple-500/30 text-purple-400">Email</Badge>
+                            {meta.status && (
+                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-border text-muted-foreground">{meta.status}</Badge>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground">{time}</span>
+                        </div>
+                        {ix.summary && <p className="text-sm text-muted-foreground mt-1">{ix.summary}</p>}
+                      </div>
+                    )
+                  }
+
+                  // ── OTHER / FALLBACK ──
+                  return (
+                    <div key={ix.id} className="rounded-lg border border-border bg-muted/50 p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-foreground">{ix.channel}</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{actorLabel}</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">{time}</span>
+                      </div>
+                      {(ix.summary || ix.content) && <p className="text-sm text-muted-foreground mt-1">{ix.summary || ix.content}</p>}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ═══ LEFT: Application Details + SMS + Conditions ═══ */}
           <div className="lg:col-span-2 space-y-6">
@@ -746,11 +999,59 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                               className="bg-muted border-border text-foreground mt-1"
                             />
                           ) : (
-                            <p className="text-sm font-medium text-foreground">
-                              {fullApp
-                                ? [fullApp.property_address, fullApp.property_city, fullApp.property_state, fullApp.property_zip].filter(Boolean).join(", ")
-                                : selectedApp.propertyAddress}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-foreground">
+                                {fullApp
+                                  ? [fullApp.property_address, fullApp.property_city, fullApp.property_state, fullApp.property_zip].filter(Boolean).join(", ")
+                                  : selectedApp.propertyAddress}
+                              </p>
+                              {(fullApp?.property_address || selectedApp.propertyAddress) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-green-600/50 text-green-500 hover:bg-green-600 hover:text-white bg-transparent h-7 text-xs shrink-0"
+                                  onClick={() => {
+                                    const addr = fullApp
+                                      ? [fullApp.property_address, fullApp.property_city, fullApp.property_state, fullApp.property_zip].filter(Boolean).join(", ")
+                                      : selectedApp.propertyAddress
+                                    if (addr) fetchValuation(addr)
+                                  }}
+                                  disabled={valuationLoading}
+                                >
+                                  {valuationLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Home className="h-3 w-3 mr-1" />}
+                                  Get Estimate
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                          {/* Zillow Valuation Result */}
+                          {valuation && (
+                            <div className="mt-2 rounded-lg border border-border bg-muted/50 p-3">
+                              {valuation.success ? (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-2xl font-bold text-green-500">
+                                      ${valuation.estimatedValue?.toLocaleString()}
+                                    </p>
+                                    <span className="text-[10px] text-muted-foreground italic">via Zillow</span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                    {!!valuation.sqft && <span>{valuation.sqft.toLocaleString()} sqft</span>}
+                                    {!!valuation.bedrooms && <span>{valuation.bedrooms} bed</span>}
+                                    {!!valuation.bathrooms && <span>{valuation.bathrooms} bath</span>}
+                                    {!!valuation.yearBuilt && <span>Built {valuation.yearBuilt}</span>}
+                                  </div>
+                                  {(!!valuation.lastSoldPrice || valuation.lastSoldDate) && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Last sold: {valuation.lastSoldPrice ? `$${valuation.lastSoldPrice.toLocaleString()}` : ""}
+                                      {valuation.lastSoldDate ? ` on ${valuation.lastSoldDate}` : ""}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-red-400">{valuation.error || "No valuation data found"}</p>
+                              )}
+                            </div>
                           )}
                         </div>
                         {isEditing && (
