@@ -31,6 +31,32 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
+  // Redirect admin/lender users from /dashboard to /lender
+  if (url.pathname === "/dashboard" && user) {
+    const { createServerClient } = await import("@supabase/ssr")
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll() {},
+        },
+      }
+    )
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single()
+
+    if (profile && (profile.role === "lender" || profile.role === "admin")) {
+      return NextResponse.redirect(new URL("/lender", request.url))
+    }
+  }
+
   // /apply route: allow guest mode or authenticated users
   if (url.pathname === "/apply") {
     const isGuestMode = url.searchParams.get("guest") === "1"

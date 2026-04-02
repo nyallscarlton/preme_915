@@ -881,7 +881,7 @@ export default function LenderDashboard() {
                     <p className="text-xs text-muted-foreground text-center py-8">No applications</p>
                   )}
                   {col.apps.map((app) => (
-                    <Card key={app.id} className="bg-card border-border hover:border-[#997100]/50 transition-colors">
+                    <Card key={app.id} className="bg-card border-border hover:border-[#997100]/50 transition-colors cursor-pointer" onClick={() => router.push(`/lender/${app.id}`)}>
                       <CardContent className="p-3">
                         <div className="flex items-start justify-between mb-2">
                           <p className="font-medium text-sm text-foreground truncate max-w-[140px]">
@@ -965,10 +965,9 @@ export default function LenderDashboard() {
                           onCheckedChange={toggleSelectAll}
                         />
                       </th>
-                      <th className="text-left p-4 text-sm font-medium text-muted-foreground">Application</th>
                       <th className="text-left p-4 text-sm font-medium text-muted-foreground">Borrower</th>
                       <th className="text-left p-4 text-sm font-medium text-muted-foreground">Amount</th>
-                      <th className="text-left p-4 text-sm font-medium text-muted-foreground">Property</th>
+                      <th className="text-left p-4 text-sm font-medium text-muted-foreground">Type</th>
                       <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
                       <th className="text-left p-4 text-sm font-medium text-muted-foreground">Date</th>
                       <th className="text-right p-4 text-sm font-medium text-muted-foreground">Actions</th>
@@ -977,7 +976,7 @@ export default function LenderDashboard() {
                   <tbody>
                     {filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={7} className="p-8 text-center text-muted-foreground">
                           <AlertCircle className="h-8 w-8 mx-auto mb-2" />
                           No applications found
                         </td>
@@ -986,21 +985,22 @@ export default function LenderDashboard() {
                       filtered.map((app) => (
                         <tr
                           key={app.id}
-                          className={`border-b border-border hover:bg-muted/50 ${selectedIds.has(app.id) ? "bg-[#997100]/5" : ""}`}
+                          className={`border-b border-border hover:bg-muted/50 cursor-pointer ${selectedIds.has(app.id) ? "bg-[#997100]/5" : ""}`}
+                          onClick={() => router.push(`/lender/${app.id}`)}
                         >
-                          <td className="p-4">
+                          <td className="p-4" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={selectedIds.has(app.id)}
                               onCheckedChange={() => toggleSelect(app.id)}
                             />
                           </td>
                           <td className="p-4">
-                            <p className="font-medium text-foreground text-sm">{app.application_number}</p>
-                            <p className="text-xs text-muted-foreground">{app.loan_type || "—"}</p>
-                          </td>
-                          <td className="p-4">
-                            <p className="text-sm text-foreground">{app.applicant_name}</p>
-                            <p className="text-xs text-muted-foreground">{app.applicant_email}</p>
+                            <p className="font-medium text-foreground text-sm">{app.applicant_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {[app.property_address, app.property_city, app.property_state]
+                                .filter(Boolean)
+                                .join(", ") || "No address"}
+                            </p>
                           </td>
                           <td className="p-4">
                             <p className="text-sm font-medium text-foreground">
@@ -1008,13 +1008,9 @@ export default function LenderDashboard() {
                             </p>
                           </td>
                           <td className="p-4">
-                            <p className="text-sm text-foreground truncate max-w-[200px]">
-                              {[app.property_address, app.property_city, app.property_state]
-                                .filter(Boolean)
-                                .join(", ") || "—"}
-                            </p>
+                            <p className="text-sm text-foreground">{app.loan_type || "—"}</p>
                           </td>
-                          <td className="p-4">
+                          <td className="p-4" onClick={(e) => e.stopPropagation()}>
                             {/* Inline status dropdown */}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -1055,7 +1051,7 @@ export default function LenderDashboard() {
                               ? new Date(app.submitted_at).toLocaleDateString()
                               : "—"}
                           </td>
-                          <td className="p-4 text-right">
+                          <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="sm" asChild>
                               <Link href={`/lender/${app.id}`}>
                                 <Eye className="h-4 w-4 mr-2" />
