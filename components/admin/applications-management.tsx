@@ -663,7 +663,7 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : interactions.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">No interactions recorded yet.</p>
+              <p className="text-sm text-muted-foreground py-4 text-center">No interactions recorded yet. Send a message below to start the thread.</p>
             ) : (
               <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                 {interactions.map((ix) => {
@@ -818,11 +818,41 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                 })}
               </div>
             )}
+
+            {/* Compose — inline at bottom of thread */}
+            <div className="mt-4 pt-3 border-t border-border">
+              {smsStatus === "sent" && <p className="mb-2 text-xs text-green-600 font-medium">Message sent!</p>}
+              {smsStatus === "error" && <p className="mb-2 text-xs text-red-600">Failed to send — check Twilio config</p>}
+              <div className="flex items-end gap-2">
+                <Textarea
+                  value={smsText}
+                  onChange={(e) => setSmsText(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendSms() } }}
+                  placeholder="Type a message... (Enter to send)"
+                  rows={2}
+                  className="flex-1 bg-muted border-border text-foreground resize-none"
+                />
+                <a
+                  href={`tel:${selectedApp.applicantPhone}`}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-green-600 text-white hover:bg-green-700 transition"
+                  title="Call"
+                >
+                  <Phone className="h-4 w-4" />
+                </a>
+                <Button
+                  onClick={sendSms}
+                  disabled={sendingSms || !smsText.trim()}
+                  className="bg-[#997100] hover:bg-[#b8850a] text-black h-10"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* ═══ LEFT: Application Details + SMS + Conditions ═══ */}
+          {/* ═══ LEFT: Application Details + Conditions ═══ */}
           <div className="lg:col-span-2 space-y-6">
             {/* Application Info — Editable */}
             <Card className={`bg-card ${isEditing ? "border-[#997100]" : "border-border"}`}>
@@ -830,9 +860,16 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-foreground text-2xl">{getFieldValue("applicant_name") || selectedApp.applicantName}</CardTitle>
-                    <CardDescription className="text-muted-foreground">
-                      {selectedApp.id} &bull; {getFieldValue("applicant_email") || selectedApp.applicantEmail}
+                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                      <Home className="h-3.5 w-3.5 shrink-0" />
+                      {fullApp
+                        ? [fullApp.property_address, fullApp.property_city, fullApp.property_state, fullApp.property_zip].filter(Boolean).join(", ")
+                        : selectedApp.propertyAddress}
+                    </p>
+                    <CardDescription className="text-muted-foreground mt-1">
+                      {getFieldValue("applicant_email") || selectedApp.applicantEmail}
                       {(getFieldValue("applicant_phone") || selectedApp.applicantPhone) && <span> &bull; {getFieldValue("applicant_phone") || selectedApp.applicantPhone}</span>}
+                      <span className="text-xs ml-2 opacity-60">{selectedApp.id}</span>
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1286,44 +1323,6 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
               </CardContent>
             </Card>
 
-            {/* SMS Compose */}
-            <Card className="bg-card border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-foreground text-base flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-[#997100]" />
-                  Message Applicant
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {smsStatus === "sent" && <p className="mb-2 text-xs text-green-600 font-medium">Message sent!</p>}
-                {smsStatus === "error" && <p className="mb-2 text-xs text-red-600">Failed to send — check Twilio config</p>}
-                <div className="flex items-end gap-2">
-                  <Textarea
-                    value={smsText}
-                    onChange={(e) => setSmsText(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendSms() } }}
-                    placeholder="Type a message... (Enter to send)"
-                    rows={2}
-                    className="flex-1 bg-muted border-border text-foreground resize-none"
-                  />
-                  <a
-                    href={`tel:${selectedApp.applicantPhone}`}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-green-600 text-white hover:bg-green-700 transition"
-                    title="Call"
-                  >
-                    <Phone className="h-4 w-4" />
-                  </a>
-                  <Button
-                    onClick={sendSms}
-                    disabled={sendingSms || !smsText.trim()}
-                    className="bg-[#997100] hover:bg-[#b8850a] text-black h-10"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Conditions & Documents Tracker */}
             <Card className="bg-card border-border">
               <CardHeader>
@@ -1627,11 +1626,11 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                 <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0" />
               )}
               <div>
-                <h3 className="font-semibold text-foreground">{app.applicantName}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {app.id} &bull; {app.applicantEmail}
+                <h3 className="font-semibold text-foreground text-base">{app.applicantName}</h3>
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Home className="h-3 w-3 shrink-0" />
+                  {app.propertyAddress}
                 </p>
-                <p className="text-sm text-muted-foreground">{app.propertyAddress}</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">

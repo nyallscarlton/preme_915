@@ -418,9 +418,7 @@ export function AdminDashboard() {
                           {getStatusIcon(app.status)}
                           <div>
                             <p className="font-medium text-foreground">{app.applicantName}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {app.id} • {app.propertyAddress}
-                            </p>
+                            <p className="text-sm text-muted-foreground">{app.propertyAddress}</p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-4">
