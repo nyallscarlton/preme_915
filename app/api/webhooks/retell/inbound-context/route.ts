@@ -28,10 +28,13 @@ const DEFAULTS = {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const callerPhone = body.from_number || body.caller_number || ""
+
+    // Retell sends: { event: "call_inbound", call_inbound: { from_number, to_number, agent_id } }
+    const callData = body.call_inbound || body
+    const callerPhone = callData.from_number || callData.caller_number || body.from_number || ""
 
     if (!callerPhone) {
-      return NextResponse.json(DEFAULTS)
+      return NextResponse.json({ call_inbound: { dynamic_variables: DEFAULTS } })
     }
 
     const supabase = createAdminClient()
@@ -141,23 +144,28 @@ export async function POST(request: NextRequest) {
       openingMessage = `Hey, thanks for calling Preme Home Loans. This is Riley, how can I help you?`
     }
 
+    // Retell expects: { call_inbound: { dynamic_variables: { ... } } }
     return NextResponse.json({
-      first_name: firstName || "there",
-      last_name: lastName,
-      lead_context: leadContext,
-      loan_type: loanType || "real estate financing",
-      loan_amount: loanAmount,
-      property_address: propertyAddress,
-      application_status: applicationStatus,
-      lead_email: leadEmail,
-      lead_phone: leadPhone,
-      lead_message: leadMessage,
-      lead_source: leadSource,
-      conversation_history: conversationHistory,
-      opening_message: openingMessage,
+      call_inbound: {
+        dynamic_variables: {
+          first_name: firstName || "there",
+          last_name: lastName,
+          lead_context: leadContext,
+          loan_type: loanType || "real estate financing",
+          loan_amount: loanAmount,
+          property_address: propertyAddress,
+          application_status: applicationStatus,
+          lead_email: leadEmail,
+          lead_phone: leadPhone,
+          lead_message: leadMessage,
+          lead_source: leadSource,
+          conversation_history: conversationHistory,
+          opening_message: openingMessage,
+        },
+      },
     })
   } catch (error) {
     console.error("[retell-preme] Inbound context error:", error)
-    return NextResponse.json(DEFAULTS)
+    return NextResponse.json({ call_inbound: { dynamic_variables: DEFAULTS } })
   }
 }
