@@ -83,7 +83,11 @@ export async function POST(
         first_name: lead.first_name,
         last_name: lead.last_name,
         phone: lead.phone,
+        email: lead.email || undefined,
         loan_type: lead.loan_type || undefined,
+        loan_amount: lead.loan_amount ? String(lead.loan_amount) : undefined,
+        property_address: lead.property_address || undefined,
+        message: lead.message || undefined,
         source: lead.source || undefined,
       })
 

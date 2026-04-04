@@ -33,8 +33,11 @@ export async function triggerOutboundCall(lead: {
   first_name: string
   last_name: string
   phone: string
+  email?: string
   loan_type?: string
+  loan_amount?: string
   property_address?: string
+  message?: string
   source?: string
   conversation_history?: string
 }): Promise<{ call_id: string } | { error: string; code: string }> {
@@ -56,13 +59,31 @@ export async function triggerOutboundCall(lead: {
   const phone = lead.phone.replace(/\D/g, "")
   const e164 = phone.startsWith("1") ? `+${phone}` : `+1${phone}`
 
+  // Build a natural outbound opener that states why Riley is calling
+  const loanLabel = lead.loan_type || "real estate financing"
+  const sourceContext = resolveLeadContext(lead)
+  let openingMessage: string
+
+  if (sourceContext === "callback" || sourceContext === "follow_up") {
+    openingMessage = `Hey ${lead.first_name}, this is Riley from Preme Home Loans. I'm following up on our earlier conversation about ${loanLabel}. Got a quick minute?`
+  } else if (sourceContext === "google_ad" || sourceContext === "facebook_ad" || sourceContext === "landing_page") {
+    openingMessage = `Hey ${lead.first_name}, this is Riley from Preme Home Loans. I saw you submitted an inquiry about ${loanLabel} — wanted to follow up real quick. Got a minute?`
+  } else {
+    openingMessage = `Hey ${lead.first_name}, this is Riley from Preme Home Loans. We received your inquiry about ${loanLabel} and I wanted to follow up. Is now a good time?`
+  }
+
   const dynamicVars: Record<string, string> = {
     first_name: lead.first_name,
     last_name: lead.last_name,
+    lead_email: lead.email || "",
+    lead_phone: lead.phone,
     loan_type: lead.loan_type || "",
+    loan_amount: lead.loan_amount || "",
     property_address: lead.property_address || "",
-    lead_source: resolveLeadContext(lead),
+    lead_message: lead.message || "",
+    lead_context: sourceContext,
     conversation_history: lead.conversation_history || "No prior interactions.",
+    opening_message: openingMessage,
   }
 
   try {
