@@ -27,7 +27,7 @@
  */
 
 import { triggerOutboundCall } from "@/lib/retell"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 
 // Training phones -- never follow up
 const EXCLUDED_PHONES = new Set(["+14706225965", "+19453088322"])
@@ -78,7 +78,7 @@ export async function triggerApplicationFollowUp(lead: LeadForFollowUp): Promise
 
   console.log(`[lead-followup] Starting APPLICATION cadence for lead ${lead.id} (${lead.first_name} ${lead.last_name})`)
 
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const now = new Date()
 
   const steps = [
@@ -131,7 +131,7 @@ export async function triggerLeadFollowUp(lead: LeadForFollowUp): Promise<void> 
     source: lead.source || undefined,
   })
 
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
 
   if ("call_id" in callResult) {
     console.log(`[lead-followup] Immediate call placed: ${callResult.call_id}`)
@@ -199,7 +199,7 @@ export async function triggerEmailOnlyFollowUp(lead: LeadForFollowUp): Promise<v
 
   console.log(`[lead-followup] Starting EMAIL-ONLY cadence for lead ${lead.id} (${lead.first_name} ${lead.last_name})`)
 
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const now = new Date()
 
   const steps = [
@@ -235,7 +235,7 @@ export async function triggerEmailOnlyFollowUp(lead: LeadForFollowUp): Promise<v
  * when a lead who already received Path 2/3 follow-ups submits an application.
  */
 export async function cancelPendingFollowUps(leadId: string): Promise<number> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
 
   const { data, error } = await supabase
     .from("lead_followup_queue")
