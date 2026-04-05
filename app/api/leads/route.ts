@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createAdminClient, createZentrxClient } from "@/lib/supabase/admin"
 import { triggerLeadFollowUp, triggerEmailOnlyFollowUp } from "@/lib/lead-followup"
 
 export const dynamic = "force-dynamic"
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 })
     }
 
-    const adminClient = createAdminClient()
+    const adminClient = createZentrxClient()
 
     const leadData = {
       first_name: data.first_name.trim(),
@@ -128,7 +128,7 @@ export async function GET() {
     }
 
     // Use admin client to bypass RLS — auth check above is sufficient
-    const adminClient = createAdminClient()
+    const adminClient = createZentrxClient()
 
     const { data: leads, error } = await adminClient
       .from("leads")
@@ -184,7 +184,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: `Invalid status. Must be one of: ${validStatuses.join(", ")}` }, { status: 400 })
     }
 
-    const adminClient = createAdminClient()
+    const adminClient = createZentrxClient()
 
     const { data: updated, error } = await adminClient
       .from("leads")
