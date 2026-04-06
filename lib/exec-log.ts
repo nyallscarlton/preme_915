@@ -115,14 +115,19 @@ export class ExecLog {
   }
 }
 
+const SLACK_TOKEN = process.env.SLACK_BOT_TOKEN || "xoxb-10810278616865-10793966886901-IkgPJuagaGNceBA2WFIysKbC"
+const SLACK_CHANNEL = process.env.SLACK_ALERT_CHANNEL || "C0AQQUMKVPG" // #activity-log
+
 async function sendSlackAlert(message: string): Promise<void> {
-  const webhookUrl = process.env.SLACK_WEBHOOK_URL
-  if (!webhookUrl) return
+  if (!SLACK_TOKEN) return
   try {
-    await fetch(webhookUrl, {
+    await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: message }),
+      headers: {
+        Authorization: `Bearer ${SLACK_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ channel: SLACK_CHANNEL, text: message }),
     })
   } catch {
     // Silent
