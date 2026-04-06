@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
       }),
     }).catch(() => {})
 
-    // Trigger follow-up cadence: full cadence if phone exists, email-only otherwise
+    // Trigger follow-up cadence: must await on Vercel serverless or function dies before completion
     if (lead.phone) {
-      triggerLeadFollowUp({
+      await triggerLeadFollowUp({
         id: lead.id,
         first_name: lead.first_name,
         last_name: lead.last_name,
@@ -83,9 +83,9 @@ export async function POST(request: NextRequest) {
         loan_type: lead.loan_type,
         source: lead.source,
         status: lead.status,
-      }).catch((err) => console.error("[leads] Follow-up trigger failed:", err))
+      })
     } else if (lead.email) {
-      triggerEmailOnlyFollowUp({
+      await triggerEmailOnlyFollowUp({
         id: lead.id,
         first_name: lead.first_name,
         last_name: lead.last_name,
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
         loan_type: lead.loan_type,
         source: lead.source,
         status: lead.status,
-      }).catch((err) => console.error("[leads] Email-only follow-up trigger failed:", err))
+      })
     }
 
     return NextResponse.json({ success: true, id: lead.id })
