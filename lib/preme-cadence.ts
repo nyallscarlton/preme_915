@@ -99,6 +99,32 @@ export function normalizePhone(phone: string): string {
   return digits.startsWith("1") ? `+${digits}` : `+1${digits}`
 }
 
+/**
+ * Returns true if the current moment falls inside one of Preme's
+ * approved outbound call windows (Eastern time):
+ *   • 10:00 am – 10:59 am ET
+ *   • 4:00 pm – 8:59 pm ET
+ *
+ * Used by the cadence runner to gate follow-up calls (steps 2-5 in
+ * spec terms; step_number > 1 in the queue). Step 1 — the immediate
+ * speed-to-lead call — is NEVER gated by this function.
+ *
+ * Why these windows: contact rate data shows 0% at 9am, 50% at 5pm.
+ * Calling outside these windows wastes pool reputation.
+ */
+export function isInCallWindow(now: Date = new Date()): boolean {
+  // Get the current hour in America/New_York regardless of server timezone.
+  const etHourStr = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "2-digit",
+    hour12: false,
+  }).format(now)
+  const etHour = parseInt(etHourStr, 10)
+  // 10 = "10am-10:59am ET window"
+  // 16-20 = "4pm-8:59pm ET window" (closes at 21:00)
+  return etHour === 10 || (etHour >= 16 && etHour <= 20)
+}
+
 export function shouldSkipLead(lead: { phone?: string | null; status?: string | null }): { skip: boolean; reason?: string } {
   if (!lead.phone) return { skip: false }
   const e164 = normalizePhone(lead.phone)
@@ -355,6 +381,33 @@ export async function executeStep(row: QueueRow): Promise<void> {
     }
 
     if (row.step_type === "call") {
+      // ── CALL WINDOW GATE ──────────────────────────────────────────
+      // Step 1 (the immediate speed-to-lead call) is sacred — it ALWAYS
+      // fires regardless of time. All follow-up calls (step_number > 1)
+      // are gated to high-connect windows ET: 10am–11am and 4pm–9pm.
+      //
+      // If outside the window, leave the row PENDING (no markStepResult,
+      // no log.fail) so the next cron pickup re-evaluates. The 24-hour
+      // safety valve below releases stuck calls so leads don't go cold.
+      if (row.step_number > 1) {
+        const overdueMs = Date.now() - new Date(row.scheduled_at).getTime()
+        const isStaleEnough = overdueMs > 24 * 60 * 60 * 1000
+
+        if (!isStaleEnough && !isInCallWindow()) {
+          console.log(
+            `[preme-cadence] Deferred call step ${row.step_number} for lead ${row.lead_id} — outside call window (10am-11am or 4pm-9pm ET)`
+          )
+          await log.complete({
+            deferred: true,
+            reason: "outside_call_window",
+            step_number: row.step_number,
+            scheduled_at: row.scheduled_at,
+          })
+          resolved = true
+          return
+        }
+      }
+
       const result = await triggerSingleCall(leadForExec)
       if (result.ok) {
         await markStepResult(row.id, "completed", `call_id=${result.call_id} from=${result.from_number}`)
