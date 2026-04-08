@@ -247,7 +247,7 @@ export async function storeReview(params: {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !key) return false
 
-    const supabase = createClient(url, key)
+    const supabase = createClient(url, key, { db: { schema: "zentryx" } })
 
     const { error } = await supabase.from("zx_contact_interactions").insert({
       phone: params.callerPhone || "unknown",
@@ -398,7 +398,7 @@ export async function applyPromptPatch(
       const url = process.env.NEXT_PUBLIC_SUPABASE_URL
       const key = process.env.SUPABASE_SERVICE_ROLE_KEY
       if (url && key) {
-        const supabase = createClient(url, key)
+        const supabase = createClient(url, key, { db: { schema: "zentryx" } })
         const { data: rows } = await supabase
           .from("zx_contact_interactions")
           .select("id, metadata")

@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 import { sendSms } from "@/lib/twilio"
 import { triggerDoubleDialCall } from "@/lib/retell-sms"
 import { storeInteraction } from "@/lib/memory"
@@ -9,7 +9,7 @@ const BRAND_PHONE = "(470) 942-5787"
 
 // ─── Enroll a lead into a sequence ───
 export async function enrollLead(leadId: string, sequenceSlug: string): Promise<string | null> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
 
   // Find the sequence
   const { data: seq } = await supabase
@@ -71,7 +71,7 @@ export async function enrollLead(leadId: string, sequenceSlug: string): Promise<
 
 // ─── Pause a sequence (lead replied, qualified, etc.) ───
 export async function pauseSequence(leadId: string, reason: string): Promise<void> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   await supabase
     .from("zx_sequence_enrollments")
     .update({
@@ -85,7 +85,7 @@ export async function pauseSequence(leadId: string, reason: string): Promise<voi
 
 // ─── Pause sequences by phone number (for SMS replies) ───
 export async function pauseSequenceByPhone(phone: string, reason: string): Promise<void> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const normalized = phone.replace(/\D/g, "")
 
   // Find leads with this phone number
@@ -105,7 +105,7 @@ export async function pauseSequenceByPhone(phone: string, reason: string): Promi
 // ─── Auto-enroll lead based on status change ───
 // These are the triggers that move leads into the right follow-up flow
 export async function autoEnrollByStatus(leadId: string, newStatus: string): Promise<string | null> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
 
   // Check if lead has a draft application (for Segment C)
   const { data: app } = await supabase
@@ -161,7 +161,7 @@ export async function autoEnrollByStatus(leadId: string, newStatus: string): Pro
 
 // ─── Cancel all sequences for a lead ───
 export async function cancelSequences(leadId: string): Promise<void> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   await supabase
     .from("zx_sequence_enrollments")
     .update({ status: "cancelled" })
@@ -171,7 +171,7 @@ export async function cancelSequences(leadId: string): Promise<void> {
 
 // ─── Check if phone is opted out ───
 async function isOptedOut(phone: string): Promise<boolean> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const normalized = phone.replace(/\D/g, "")
   const e164 = normalized.startsWith("1") ? `+${normalized}` : `+1${normalized}`
 
@@ -283,7 +283,7 @@ function renderTemplate(body: string, lead: Record<string, unknown>): string {
 
 // ─── Process pending double-dial calls ───
 export async function processPendingDials(): Promise<{ dialed: number; dialErrors: number }> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   let dialed = 0
   let dialErrors = 0
 
@@ -345,7 +345,7 @@ export async function processPendingDials(): Promise<{ dialed: number; dialError
 
 // ─── Process all due sequence steps ───
 export async function processDueSteps(): Promise<{ processed: number; errors: number; dialed?: number; dialErrors?: number }> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   let processed = 0
   let errors = 0
 

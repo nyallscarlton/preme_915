@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 import OpenAI from "openai"
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -41,7 +41,7 @@ export async function getOrCreateProfile(phone: string, defaults?: {
   email?: string
   lead_id?: string
 }): Promise<ContactProfile> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const normalized = normalizePhone(phone)
 
   const { data: existing } = await supabase
@@ -70,7 +70,7 @@ export async function getOrCreateProfile(phone: string, defaults?: {
 
 /** Store an interaction in the contact timeline */
 export async function storeInteraction(phone: string, interaction: Interaction): Promise<void> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const normalized = normalizePhone(phone)
 
   // Ensure profile exists
@@ -97,7 +97,7 @@ export async function storeInteraction(phone: string, interaction: Interaction):
 }
 
 async function getInteractionCount(phone: string): Promise<number> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const { count } = await supabase
     .from("zx_contact_interactions")
     .select("*", { count: "exact", head: true })
@@ -107,7 +107,7 @@ async function getInteractionCount(phone: string): Promise<number> {
 
 /** Get recent interactions for a phone number */
 export async function getRecentInteractions(phone: string, limit = 20): Promise<any[]> {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const normalized = normalizePhone(phone)
 
   const { data } = await supabase
@@ -286,7 +286,7 @@ export async function updateProfileSummary(phone: string): Promise<void> {
 
     const summary = response.choices[0]?.message?.content?.trim()
     if (summary) {
-      const supabase = createAdminClient()
+      const supabase = createZentrxClient()
       await supabase
         .from("zx_contact_profiles")
         .update({ summary })

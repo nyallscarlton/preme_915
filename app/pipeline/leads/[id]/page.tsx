@@ -168,6 +168,14 @@ export default function LeadDetailPage() {
   const [portalUrl, setPortalUrl] = useState("")
   const [showLenderDetail, setShowLenderDetail] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
+  // Inline contact editor (name / email / phone)
+  const [editingContact, setEditingContact] = useState(false)
+  const [editFirstName, setEditFirstName] = useState("")
+  const [editLastName, setEditLastName] = useState("")
+  const [editEmail, setEditEmail] = useState("")
+  const [editPhone, setEditPhone] = useState("")
+  const [savingContact, setSavingContact] = useState(false)
+  const [contactError, setContactError] = useState("")
   const [activeTab, setActiveTab] = useState<"conversation" | "activity" | "notes" | "sequence">("conversation")
   const [callingBridge, setCallingBridge] = useState(false)
   const [valuation, setValuation] = useState<{ estimatedValue: number; sqft: number; bedrooms: number; bathrooms: number; yearBuilt: number; lastSoldPrice: number; lastSoldDate: string; source: string } | null>(null)
@@ -323,6 +331,62 @@ export default function LeadDetailPage() {
       body: JSON.stringify({ status }),
     })
     fetchLead()
+  }
+
+  function startEditContact() {
+    if (!data?.lead) return
+    setEditFirstName((data.lead.first_name as string) || "")
+    setEditLastName((data.lead.last_name as string) || "")
+    setEditEmail((data.lead.email as string) || "")
+    setEditPhone((data.lead.phone as string) || "")
+    setContactError("")
+    setEditingContact(true)
+  }
+
+  function cancelEditContact() {
+    setEditingContact(false)
+    setContactError("")
+  }
+
+  async function saveContact() {
+    setContactError("")
+    // Lightweight client-side validation
+    if (!editFirstName.trim() || !editLastName.trim()) {
+      setContactError("First and last name are required")
+      return
+    }
+    if (editEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail.trim())) {
+      setContactError("Invalid email format")
+      return
+    }
+    if (editPhone && editPhone.replace(/\D/g, "").length < 10) {
+      setContactError("Phone must be at least 10 digits")
+      return
+    }
+    setSavingContact(true)
+    try {
+      const res = await fetch(`/api/pipeline/leads/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: editFirstName.trim(),
+          last_name: editLastName.trim(),
+          email: editEmail.trim().toLowerCase(),
+          phone: editPhone.trim(),
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setContactError(json.error || `Save failed (${res.status})`)
+        return
+      }
+      setEditingContact(false)
+      await fetchLead()
+    } catch (err) {
+      setContactError(err instanceof Error ? err.message : "Save failed")
+    } finally {
+      setSavingContact(false)
+    }
   }
 
   async function addNote() {
@@ -1385,19 +1449,90 @@ export default function LeadDetailPage() {
         <div className="space-y-6">
           {/* Contact card */}
           <div className="rounded-xl border bg-white p-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Contact Info</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-gray-700">Contact Info</h3>
+              {!editingContact ? (
+                <button
+                  onClick={startEditContact}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-700 transition"
+                >
+                  Edit
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={cancelEditContact}
+                    disabled={savingContact}
+                    className="text-xs font-medium text-gray-500 hover:text-gray-700 transition disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveContact}
+                    disabled={savingContact}
+                    className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded px-2.5 py-1 transition disabled:opacity-50"
+                  >
+                    {savingContact ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              )}
+            </div>
+            {editingContact && contactError && (
+              <div className="mb-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                {contactError}
+              </div>
+            )}
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-gray-400" />
-                <span>{lead.first_name as string} {lead.last_name as string}</span>
+                <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                {editingContact ? (
+                  <div className="flex gap-2 flex-1">
+                    <input
+                      type="text"
+                      value={editFirstName}
+                      onChange={(e) => setEditFirstName(e.target.value)}
+                      placeholder="First"
+                      className="flex-1 min-w-0 rounded border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                    />
+                    <input
+                      type="text"
+                      value={editLastName}
+                      onChange={(e) => setEditLastName(e.target.value)}
+                      placeholder="Last"
+                      className="flex-1 min-w-0 rounded border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <span>{lead.first_name as string} {lead.last_name as string}</span>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-gray-400" />
-                <a href={`tel:${lead.phone}`} className="text-blue-600 hover:underline">{lead.phone as string}</a>
+                <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                {editingContact ? (
+                  <input
+                    type="tel"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="Phone"
+                    className="flex-1 rounded border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                  />
+                ) : (
+                  <a href={`tel:${lead.phone}`} className="text-blue-600 hover:underline">{lead.phone as string}</a>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-gray-400" />
-                <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline">{lead.email as string}</a>
+                <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                {editingContact ? (
+                  <input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="Email"
+                    className="flex-1 rounded border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                  />
+                ) : (
+                  <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline break-all">{lead.email as string}</a>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-gray-400" />
