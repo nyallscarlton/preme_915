@@ -3,11 +3,87 @@ import { updateSession } from "@/lib/supabase/middleware"
 
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
+  const host = request.headers.get("host")?.replace(/:.*$/, "") || ""
 
-  // Skip middleware for static files and API routes
+  // ── app.premerealestate.com host routing ──────────────────────────
+  // The "app" subdomain is the Preme Lead Pipeline UI (ported from
+  // Zentryx admin). The bare/www domain still serves the marketing
+  // site + the existing /admin loan portal.
+  //
+  // On this host:
+  //  - "/" → "/pipeline"
+  //  - "/admin" or "/admin/*" → "/pipeline" or "/pipeline/*" (rewrite, not redirect)
+  //  - HTTP Basic auth required for /pipeline + /admin
+  //  - Everything else passes through to whatever route exists
+  //
+  // We do this BEFORE the static-file/_next bail-out so it always runs.
+  if (host === "app.premerealestate.com") {
+    const isPipelineUi =
+      url.pathname === "/" ||
+      url.pathname === "/admin" ||
+      url.pathname.startsWith("/admin/") ||
+      url.pathname === "/pipeline" ||
+      url.pathname.startsWith("/pipeline/")
+
+    if (isPipelineUi) {
+      // HTTP Basic auth — same pattern as zentryx admin
+      const sessionCookie = request.cookies.get("zx_admin_session")
+      const authedViaCookie = sessionCookie?.value === "authenticated"
+
+      let authedViaHeader = false
+      const authHeader = request.headers.get("authorization") || ""
+      if (authHeader.startsWith("Basic ")) {
+        const decoded = Buffer.from(authHeader.slice(6), "base64").toString("utf-8")
+        const [user, pass] = decoded.split(":")
+        if (
+          user === (process.env.ADMIN_USERNAME || "admin") &&
+          pass === (process.env.ADMIN_PASSWORD || "")
+        ) {
+          authedViaHeader = true
+        }
+      }
+
+      if (!authedViaCookie && !authedViaHeader) {
+        return new NextResponse("Unauthorized", {
+          status: 401,
+          headers: { "WWW-Authenticate": 'Basic realm="Preme Pipeline"' },
+        })
+      }
+    }
+
+    if (url.pathname === "/") {
+      url.pathname = "/pipeline"
+      const res = NextResponse.rewrite(url)
+      res.cookies.set("zx_admin_session", "authenticated", { httpOnly: true, sameSite: "lax", path: "/" })
+      return res
+    }
+    if (url.pathname === "/admin") {
+      url.pathname = "/pipeline"
+      const res = NextResponse.rewrite(url)
+      res.cookies.set("zx_admin_session", "authenticated", { httpOnly: true, sameSite: "lax", path: "/" })
+      return res
+    }
+    if (url.pathname.startsWith("/admin/")) {
+      url.pathname = "/pipeline" + url.pathname.slice("/admin".length)
+      const res = NextResponse.rewrite(url)
+      res.cookies.set("zx_admin_session", "authenticated", { httpOnly: true, sameSite: "lax", path: "/" })
+      return res
+    }
+
+    // /pipeline/* — set the cookie and pass through
+    if (url.pathname.startsWith("/pipeline")) {
+      const res = NextResponse.next()
+      res.cookies.set("zx_admin_session", "authenticated", { httpOnly: true, sameSite: "lax", path: "/" })
+      return res
+    }
+  }
+
+  // Skip middleware for static files, API routes, and the lead pipeline UI
+  // (the pipeline uses HTTP Basic auth via lib/zx-admin-auth.ts at the route level)
   if (
     url.pathname.startsWith("/_next") ||
     url.pathname.startsWith("/api") ||
+    url.pathname.startsWith("/pipeline") ||
     url.pathname.includes(".")
   ) {
     return NextResponse.next()

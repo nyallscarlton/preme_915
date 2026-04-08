@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient, createZentrxClient } from "@/lib/supabase/admin"
 import { triggerLeadFollowUp, triggerEmailOnlyFollowUp } from "@/lib/lead-followup"
+// preme-cadence: new 13-step independent system
+import { enqueueCadence, triggerSingleCall } from "@/lib/preme-cadence"
+import { ExecLog } from "@/lib/exec-log"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -24,7 +27,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 })
     }
 
-    const adminClient = createZentrxClient()
+    // NEW: write to preme.leads (Preme-owned table). Previously this wrote
+    // to zentryx.leads via createZentrxClient — that dependency is now broken.
+    // createAdminClient() is already scoped to db.schema='preme'.
+    const adminClient = createAdminClient()
 
     const leadData = {
       first_name: data.first_name.trim(),
@@ -48,7 +54,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error("[leads] Insert error:", error)
+      console.error("[leads] preme.leads insert error:", error)
       return NextResponse.json({ error: "Failed to submit lead" }, { status: 500 })
     }
 

@@ -1,13 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { pickPremeOutboundNumber } from "@/lib/preme-cadence"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
 const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID!
 const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN!
-const PREME_NUMBER = process.env.RETELL_PREME_PHONE_NUMBER || "+14709425787"
+// PREME_NUMBER (+14709425787) is the INBOUND-only number — confirmed Spam-Likely by carriers
+// 2026-04-07. NEVER use as outbound from-number. Use pickPremeOutboundNumber() per call.
 const OWNER_PHONE = process.env.OWNER_PHONE || "+19453088322"
 
 /**
@@ -100,12 +102,15 @@ export async function POST(
         .update({ retell_call_id: result.call_id, status: lead.status === "new" ? "contacted" : lead.status, updated_at: new Date().toISOString() })
         .eq("id", params.id)
 
+      // Pick a healthy outbound number from the rotation pool — never the burned +14709425787
+      const fromNumber = pickPremeOutboundNumber()
+
       await admin.from("lead_messages").insert({
         lead_id: params.id,
         direction: "outbound",
         type: "call",
         body: `🤖 Riley calling ${lead.first_name} ${lead.last_name}`,
-        from_number: PREME_NUMBER,
+        from_number: fromNumber,
         to_number: leadE164,
         metadata: { call_id: result.call_id, status: "initiated", mode: "ai" },
       })
@@ -114,13 +119,19 @@ export async function POST(
     }
 
     // --- Direct mode: call YOUR phone, bridge to lead ---
-    const twiml = `<Response><Dial callerId="${PREME_NUMBER}" record="record-from-answer-dual" recordingStatusCallback="https://www.premerealestate.com/api/webhooks/twilio-recording?lead_id=${params.id}"><Number>${leadE164}</Number></Dial></Response>`
+    // Lead sees the rotation-pool number as caller ID, NOT +14709425787 (Spam-Likely).
+    const callerIdForBridge = pickPremeOutboundNumber()
+    const twiml = `<Response><Dial callerId="${callerIdForBridge}" record="record-from-answer-dual" recordingStatusCallback="https://www.premerealestate.com/api/webhooks/twilio-recording?lead_id=${params.id}"><Number>${leadE164}</Number></Dial></Response>`
 
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Calls.json`
     const twilioAuth = Buffer.from(`${TWILIO_SID}:${TWILIO_TOKEN}`).toString("base64")
 
+    // The "From" on the outer Twilio call is the bridge call to YOU (the owner)
+    // — that's still allowed to use the inbound number since YOU recognize it.
+    // The lead-facing caller ID is the rotation pool number set in the TwiML above.
+    const ownerBridgeFrom = callerIdForBridge
     const callParams = new URLSearchParams({
-      From: PREME_NUMBER,
+      From: ownerBridgeFrom,
       To: OWNER_PHONE,
       Twiml: twiml,
       Record: "true",
@@ -162,7 +173,7 @@ export async function POST(
       direction: "outbound",
       type: "call",
       body: `📞 Calling ${lead.first_name} ${lead.last_name}...`,
-      from_number: PREME_NUMBER,
+      from_number: callerIdForBridge,
       to_number: leadE164,
       metadata: {
         twilio_sid: twilioData.sid,

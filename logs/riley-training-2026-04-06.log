@@ -1,0 +1,102 @@
+======================================================================
+PREME HOME LOANS — RILEY TRAINING SESSION
+======================================================================
+Scenarios: 5
+Riley Agent: agent_a6b1d2e882775997b0c4e286b2
+Riley Phone: +14709425787
+Mode: LIVE CALLS
+
+  1. [HARD] Monique — Owner-Occupant Trap — Says she's an investor but actually buying her primary home
+  2. [EDGE_CASE] Sofia — English as Second Language — Spanish-speaking investor with limited English
+  3. [MEDIUM] Karen — The Rate Shopper — Calling multiple lenders, wants specific rate quotes
+  4. [MEDIUM] Jerome — Low Credit Investor — Wants to invest but credit is in the 500s
+  5. [HARD] Ray — Wants You to Bash Competitors — Trying to get Riley to trash-talk other lenders
+
+Setting up trainer agent...
+  Updated trainer LLM llm_5d2749a8e203f289194cf753d890 with scenario: hard-owner-occ-trap
+Trainer agent: agent_84e9d040382ce5d719172a460e
+Trainer phone: +14706225965
+
+
+──────────────────────────────────────────────────────────────────────
+SCENARIO 1/5: Monique — Owner-Occupant Trap
+Difficulty: hard | Min Score: 65/110
+──────────────────────────────────────────────────────────────────────
+  Calling Riley at +14709425787...
+  Call started: call_e1e5073e240ab8f585b55799b60
+  Call completed: call_e1e5073e240ab8f585b55799b60 (139s)
+  Waiting for review pipeline...
+  Result: PENDING | Score: pending/110 | Min: 65/110
+
+──────────────────────────────────────────────────────────────────────
+SCENARIO 2/5: Sofia — English as Second Language
+Difficulty: edge_case | Min Score: 70/110
+──────────────────────────────────────────────────────────────────────
+  Updated trainer LLM llm_5d2749a8e203f289194cf753d890 with scenario: edge-spanish-speaker
+  Waiting 10s between calls...
+  Calling Riley at +14709425787...
+  Call started: call_67f1a1433fe6cf07876409af1ce
+  Call completed: call_67f1a1433fe6cf07876409af1ce (282s)
+  Waiting for review pipeline...
+  Result: PENDING | Score: pending/110 | Min: 70/110
+
+──────────────────────────────────────────────────────────────────────
+SCENARIO 3/5: Karen — The Rate Shopper
+Difficulty: medium | Min Score: 75/110
+──────────────────────────────────────────────────────────────────────
+  Updated trainer LLM llm_5d2749a8e203f289194cf753d890 with scenario: med-rate-shopper
+  Waiting 10s between calls...
+  Calling Riley at +14709425787...
+  Call started: call_5dd281f68f67430fc56965d0be9
+  Call completed: call_5dd281f68f67430fc56965d0be9 (150s)
+  Waiting for review pipeline...
+  Result: PENDING | Score: pending/110 | Min: 75/110
+
+──────────────────────────────────────────────────────────────────────
+SCENARIO 4/5: Jerome — Low Credit Investor
+Difficulty: medium | Min Score: 70/110
+──────────────────────────────────────────────────────────────────────
+  Updated trainer LLM llm_5d2749a8e203f289194cf753d890 with scenario: med-low-credit
+  Waiting 10s between calls...
+  Calling Riley at +14709425787...
+  Call started: call_1fb3528c917339a74690ff97807
+  Call completed: call_1fb3528c917339a74690ff97807 (210s)
+  Waiting for review pipeline...
+  Result: PENDING | Score: pending/110 | Min: 70/110
+
+──────────────────────────────────────────────────────────────────────
+SCENARIO 5/5: Ray — Wants You to Bash Competitors
+Difficulty: hard | Min Score: 70/110
+──────────────────────────────────────────────────────────────────────
+  Updated trainer LLM llm_5d2749a8e203f289194cf753d890 with scenario: hard-competitor-bash
+  Waiting 10s between calls...
+  Calling Riley at +14709425787...
+  Call started: call_9e3ea8fb22a80838f64543ed2b6
+  Call completed: call_9e3ea8fb22a80838f64543ed2b6 (238s)
+  Waiting for review pipeline...
+  Result: PENDING | Score: pending/110 | Min: 70/110
+
+======================================================================
+TRAINING SESSION SUMMARY
+======================================================================
+Duration:    19m 37s
+Total:       5 scenarios
+Completed:   5
+Scored:      0
+Passed:      0/0
+Failed:      0 (call errors)
+Avg Score:   N/A/110
+
+SCENARIO RESULTS:
+──────────────────────────────────────────────────────────────────────
+  [---] Monique — Owner-Occupant Trap       ---/110  139s  call_e1e5073e240ab8f585b55799b60
+  [---] Sofia — English as Second Language  ---/110  282s  call_67f1a1433fe6cf07876409af1ce
+  [---] Karen — The Rate Shopper            ---/110  150s  call_5dd281f68f67430fc56965d0be9
+  [---] Jerome — Low Credit Investor        ---/110  210s  call_1fb3528c917339a74690ff97807
+  [---] Ray — Wants You to Bash Competitors ---/110  238s  call_9e3ea8fb22a80838f64543ed2b6
+
+======================================================================
+Training session complete.
+
+Note: Trainer agent "Preme Training — Caller Bot" and its phone number remain active.
+To clean up: delete the agent in the Retell dashboard or run with --cleanup flag.

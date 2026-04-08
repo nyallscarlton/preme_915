@@ -9,7 +9,9 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { triggerEmailOnlyFollowUp, type LeadForFollowUp } from "@/lib/lead-followup"
+import { triggerEmailOnlyFollowUp, triggerLeadFollowUp, type LeadForFollowUp } from "@/lib/lead-followup"
+// New 13-step Preme cadence — auto-cancel hook
+import { cancelRemainingCadence } from "@/lib/preme-cadence"
 
 // Allow up to 120s — recording downloads from Retell can be slow
 export const maxDuration = 120
@@ -103,9 +105,19 @@ export async function POST(request: NextRequest) {
           console.error("[retell-preme] Failed to update call message entry:", err)
         }
 
-        // Check if this was a follow-up call and cancel remaining cadence if answered
+        // Auto-cancel: 30+ second human conversation = cancel remaining cadence.
+        // Cancels BOTH the new preme.lead_cadence_queue (13-step) AND legacy
+        // zentryx.lead_followup_queue (in-flight rows from before the migration).
         if (leadId && !noAnswer && call.duration_ms > 30000) {
-          // >30s = meaningful conversation — cancel remaining follow-ups
+          // 1. New Preme cadence cancel
+          try {
+            const result = await cancelRemainingCadence(leadId, "connected")
+            console.log(`[retell-preme] Auto-cancel (preme.lead_cadence_queue): cancelled ${result.cancelled} pending steps for lead ${leadId}`)
+          } catch (err) {
+            console.error("[retell-preme] preme cadence cancel failed:", err)
+          }
+
+          // 2. Legacy zentryx queue cancel (best-effort — may have nothing for new leads)
           try {
             const adminSb = createAdminClient()
             await adminSb
@@ -117,10 +129,48 @@ export async function POST(request: NextRequest) {
               })
               .eq("lead_id", leadId)
               .eq("status", "pending")
-
-            console.log(`[retell-preme] Cancelled remaining follow-ups for lead ${leadId} (call answered)`)
           } catch (err) {
-            console.error("[retell-preme] Failed to cancel follow-ups:", err)
+            console.error("[retell-preme] legacy queue cancel failed:", err)
+          }
+        }
+
+        // Queue follow-ups for no-answer / voicemail outbound calls
+        // These leads didn't get reached — they need SMS + callback attempts
+        if (leadId && noAnswer && call.direction === "outbound" && !TRAINING_PHONES.has(callerPhone)) {
+          try {
+            const adminSb = createAdminClient()
+            // Check if there are already pending follow-ups for this lead
+            const { data: existing } = await adminSb
+              .from("lead_followup_queue")
+              .select("id")
+              .eq("lead_id", leadId)
+              .eq("status", "pending")
+              .limit(1)
+
+            if (!existing || existing.length === 0) {
+              // Get lead info for follow-up
+              const { data: lead } = await adminSb
+                .from("leads")
+                .select("id, first_name, last_name, phone, email, loan_type, source, status")
+                .eq("id", leadId)
+                .single()
+
+              if (lead && lead.status !== "converted" && lead.status !== "dead") {
+                await triggerLeadFollowUp({
+                  id: lead.id,
+                  first_name: lead.first_name,
+                  last_name: lead.last_name,
+                  phone: lead.phone,
+                  email: lead.email,
+                  loan_type: lead.loan_type,
+                  source: lead.source,
+                  status: lead.status,
+                })
+                console.log(`[retell-preme] Queued no-answer follow-ups for lead ${leadId}`)
+              }
+            }
+          } catch (err) {
+            console.error("[retell-preme] Failed to queue no-answer follow-ups:", err)
           }
         }
         break

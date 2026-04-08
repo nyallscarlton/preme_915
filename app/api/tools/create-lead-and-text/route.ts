@@ -22,10 +22,17 @@ export async function POST(request: NextRequest) {
     const args = body.args || body
     const call = body.call || {}
 
+    // Clean template variables — Riley sometimes passes {{var}} literals
+    const clean = (val: string | undefined): string | undefined => {
+      if (!val) return undefined
+      if (val.startsWith("{{") && val.endsWith("}}")) return undefined
+      return val
+    }
+
     const {
-      first_name,
-      last_name,
-      email,
+      first_name: rawFirstName,
+      last_name: rawLastName,
+      email: rawEmail,
       loan_type,
       property_address,
       estimated_amount,
@@ -35,6 +42,10 @@ export async function POST(request: NextRequest) {
       experience_level,
       timeline,
     } = args
+
+    const first_name = clean(rawFirstName)
+    const last_name = clean(rawLastName)
+    const email = clean(rawEmail)?.includes("@") ? clean(rawEmail) : undefined
 
     // Get phone from: args, or Retell call metadata (inbound=from_number, outbound=to_number)
     const phone = args.phone && args.phone.length > 5
@@ -82,6 +93,44 @@ export async function POST(request: NextRequest) {
         })
       }
       const channels = [sent.email && "email", sent.sms && "text"].filter(Boolean).join(" and ")
+
+      // Log to portal thread
+      const e164Existing = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
+      const { data: existingLead } = await supabase
+        .from("zx_leads").select("id").like("phone", `%${digits}`)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle()
+
+      if (existingLead?.id) {
+        if (sent.email) {
+          await supabase.from("zx_lead_events").insert({
+            lead_id: existingLead.id,
+            event_type: "app_sent_via_email",
+            event_data: { app_number: existing.application_number, email, source: "riley_call" },
+          })
+        }
+        if (sent.sms) {
+          await supabase.from("zx_lead_events").insert({
+            lead_id: existingLead.id,
+            event_type: "app_sent_via_sms",
+            event_data: { app_number: existing.application_number, source: "riley_call" },
+          })
+        }
+      }
+      if (sent.email) {
+        await supabase.from("zx_contact_interactions").insert({
+          phone: e164Existing, channel: "email", direction: "outbound",
+          content: `Riley sent application ${existing.application_number} via email to ${email || "lead"}`,
+          metadata: { type: "application_link", app_number: existing.application_number, source: "riley_call" },
+        })
+      }
+      if (sent.sms) {
+        await supabase.from("zx_contact_interactions").insert({
+          phone: e164Existing, channel: "sms", direction: "outbound",
+          content: `Riley sent application ${existing.application_number} via text`,
+          metadata: { type: "application_link", app_number: existing.application_number, source: "riley_call" },
+        })
+      }
+
       return NextResponse.json({
         result: `This caller already has application ${existing.application_number} (status: ${existing.status}). I've sent the link via ${channels}.`,
       })
@@ -125,6 +174,58 @@ export async function POST(request: NextRequest) {
     }
 
     const channels = [sent.email && "email", sent.sms && "text"].filter(Boolean).join(" and ")
+
+    // Log events so the portal thread shows what Riley sent
+    const e164 = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
+
+    // Find the lead ID for this phone number
+    const { data: matchedLead } = await supabase
+      .from("zx_leads")
+      .select("id")
+      .like("phone", `%${digits}`)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const leadId = matchedLead?.id || null
+
+    if (leadId) {
+      if (sent.email) {
+        await supabase.from("zx_lead_events").insert({
+          lead_id: leadId,
+          event_type: "app_sent_via_email",
+          event_data: { app_number: appNumber, email: email, source: "riley_call" },
+        })
+      }
+      if (sent.sms) {
+        await supabase.from("zx_lead_events").insert({
+          lead_id: leadId,
+          event_type: "app_sent_via_sms",
+          event_data: { app_number: appNumber, source: "riley_call" },
+        })
+      }
+    }
+
+    // Store in contact interactions so it shows in the conversation thread
+    if (sent.email) {
+      await supabase.from("zx_contact_interactions").insert({
+        phone: e164,
+        channel: "email",
+        direction: "outbound",
+        content: `Riley sent application ${appNumber} via email to ${email || "lead"}`,
+        metadata: { type: "application_link", app_number: appNumber, source: "riley_call" },
+      })
+    }
+    if (sent.sms) {
+      await supabase.from("zx_contact_interactions").insert({
+        phone: e164,
+        channel: "sms",
+        direction: "outbound",
+        content: `Riley sent application ${appNumber} via text`,
+        metadata: { type: "application_link", app_number: appNumber, source: "riley_call" },
+      })
+    }
+
     return NextResponse.json({
       result: `Lead created (${appNumber}) and application link sent via ${channels}. Tell the caller to check their ${channels} for the link.`,
     })

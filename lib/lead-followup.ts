@@ -29,9 +29,20 @@
 import { triggerOutboundCall } from "@/lib/retell"
 import { createZentrxClient } from "@/lib/supabase/admin"
 import { ExecLog } from "@/lib/exec-log"
+// New 13-step Preme-owned cadence (independent of Zentryx)
+import {
+  enqueueCadence,
+  triggerSingleCall,
+  markStepResult,
+  cancelRemainingCadence,
+  shouldSkipLead,
+} from "@/lib/preme-cadence"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
-// Training phones -- never follow up
-const EXCLUDED_PHONES = new Set(["+14706225965", "+19453088322"])
+// Training phones -- never follow up.
+// Removed +19453088322 (owner phone) on 2026-04-07 so Nyalls can form-test
+// the cadence with his own number. Still excluded in admin/routing code.
+const EXCLUDED_PHONES = new Set(["+14706225965"])
 
 // Statuses that should NOT receive follow-ups
 const SKIP_STATUSES = new Set(["converted", "dead"])
@@ -114,38 +125,92 @@ export async function triggerApplicationFollowUp(lead: LeadForFollowUp): Promise
 // ---------------------------------------------------------------------------
 
 /**
- * Trigger the lead follow-up cadence: immediate call + scheduled steps.
- * Designed to be called fire-and-forget after lead insertion.
+ * Trigger the Preme 13-step follow-up cadence:
+ *   1. Enqueue all 13 cadence rows in preme.lead_cadence_queue
+ *   2. Fire step 1 (Riley single-dial) INLINE for speed-to-lead — no cron delay
+ *   3. Mark step 1 as completed/failed in the queue
+ *   4. Steps 2-13 execute via /api/cron/cadence-runner (every 2 min)
+ *
+ * Wrapped in ExecLog with isResolved() finally net per Priority 2 pattern.
  */
 export async function triggerLeadFollowUp(lead: LeadForFollowUp): Promise<void> {
-  if (shouldSkip(lead)) return
+  const skip = shouldSkipLead(lead)
+  if (skip.skip) {
+    console.log(`[lead-followup] Skipping lead ${lead.id} — ${skip.reason}`)
+    return
+  }
 
-  const log = new ExecLog("lead-followup", "webhook", "preme", "riley", {
+  const log = new ExecLog("preme-cadence-bootstrap", "webhook", "preme", "riley", {
     lead_id: lead.id,
     name: `${lead.first_name} ${lead.last_name}`,
     phone: lead.phone,
     source: lead.source,
   })
-  // Give init time
+  // Give ExecLog.init() time to capture the row id (avoid the slow-init race)
   await new Promise((r) => setTimeout(r, 100))
 
   try {
-    console.log(`[lead-followup] Starting LEAD cadence for lead ${lead.id} (${lead.first_name} ${lead.last_name})`)
+    console.log(`[lead-followup] Starting PREME 13-STEP cadence for lead ${lead.id} (${lead.first_name} ${lead.last_name})`)
 
-    // Step 1: Immediate outbound call
-    const callResult = await triggerOutboundCall({
+    // 1. Enqueue all 13 steps (uses preme.lead_cadence_queue)
+    const enq = await enqueueCadence({
       id: lead.id,
       first_name: lead.first_name,
       last_name: lead.last_name,
       phone: lead.phone,
-      loan_type: lead.loan_type || undefined,
-      source: lead.source || undefined,
+      email: lead.email,
+    })
+    if (!enq.ok) {
+      await log.fail(`enqueueCadence failed: ${enq.error}`)
+      return
+    }
+
+    // 2. Find the step 1 row we just inserted (so we can update its status)
+    const supabase = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { db: { schema: "preme" } }
+    )
+    const { data: step1Row } = await supabase
+      .from("lead_cadence_queue")
+      .select("id")
+      .eq("lead_id", lead.id)
+      .eq("step_number", 1)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    // 3. Fire step 1 (Riley single-dial) INLINE — no cron delay, speed-to-lead
+    const callResult = await triggerSingleCall({
+      id: lead.id,
+      first_name: lead.first_name,
+      last_name: lead.last_name,
+      phone: lead.phone,
+      email: lead.email,
+      loan_type: lead.loan_type,
+      source: lead.source,
     })
 
-    const supabase = createZentrxClient()
+    // 4. Mark step 1 result
+    if (step1Row?.id) {
+      if (callResult.ok) {
+        await markStepResult(
+          step1Row.id,
+          "completed",
+          `call_id=${callResult.call_id} from=${callResult.from_number}`
+        )
+      } else {
+        await markStepResult(
+          step1Row.id,
+          "failed",
+          "retell_call_failed",
+          callResult.error
+        )
+      }
+    }
 
-    if ("call_id" in callResult) {
-      console.log(`[lead-followup] Immediate call placed: ${callResult.call_id}`)
+    // 5. Update preme.leads with the call id (best-effort)
+    if (callResult.ok && callResult.call_id) {
       await supabase
         .from("leads")
         .update({
@@ -153,50 +218,35 @@ export async function triggerLeadFollowUp(lead: LeadForFollowUp): Promise<void> 
           status: "contacted",
         })
         .eq("id", lead.id)
+    }
+
+    if (callResult.ok) {
+      console.log(`[lead-followup] Step 1 fired: call_id=${callResult.call_id} from=${callResult.from_number}`)
     } else {
-      console.error(`[lead-followup] Immediate call failed: ${callResult.error}`)
+      console.error(`[lead-followup] Step 1 failed: ${callResult.error}`)
     }
 
-    // Schedule remaining follow-up steps in the queue
-    const now = new Date()
-
-    const steps = [
-      { step: 2, action_type: "sms", delayMinutes: 1 },
-      { step: 3, action_type: "call", delayMinutes: 5 },
-      { step: 4, action_type: "sms", delayMinutes: 7 },
-      { step: 5, action_type: "call", delayMinutes: 60 },
-      { step: 6, action_type: "email", delayMinutes: 120 },
-      { step: 7, action_type: "day1_email", delayMinutes: 1440 },  // 24hr
-      { step: 8, action_type: "day3_email", delayMinutes: 4320 },  // 72hr
-    ]
-
-    const rows = steps.map((s) => ({
-      lead_id: lead.id,
-      step: s.step,
-      action_type: s.action_type,
-      scheduled_at: new Date(now.getTime() + s.delayMinutes * 60 * 1000).toISOString(),
-      status: "pending",
-    }))
-
-    const { error } = await supabase.from("lead_followup_queue").insert(rows)
-
-    if (error) {
-      await log.fail(`Follow-up queue insert failed: ${error.message}`)
-      return
-    }
-
-    const connected = "call_id" in callResult
     await log.complete({
-      call_placed: connected,
-      call_id: connected ? callResult.call_id : null,
-      steps_scheduled: rows.length,
+      cadence: "preme-13-step",
+      enqueued: enq.rows_created,
+      step1_call_placed: callResult.ok,
+      step1_call_id: callResult.call_id || null,
+      step1_from_number: callResult.from_number || null,
+      step1_error: callResult.error || null,
     })
 
-    if (connected) {
-      await log.successAlert(`✅ Riley called ${lead.first_name} ${lead.last_name} — Dialing`)
+    if (callResult.ok) {
+      await log.successAlert(`✅ Riley called ${lead.first_name} ${lead.last_name} (single dial)`)
     }
   } catch (err) {
     await log.fail(err instanceof Error ? err.message : String(err))
+    throw err
+  } finally {
+    // Defense-in-depth: if any code path returned without resolving the log,
+    // mark it failed. Same pattern as the retell webhook fix from Priority 2.
+    if (!log.isResolved()) {
+      await log.fail("triggerLeadFollowUp returned without calling complete/fail (logging gap)")
+    }
   }
 }
 
@@ -255,17 +305,26 @@ export async function triggerEmailOnlyFollowUp(lead: LeadForFollowUp): Promise<v
 
 /**
  * Cancel any pending follow-up queue entries for a lead.
- * Called before queuing application follow-ups to avoid double-cadence
- * when a lead who already received Path 2/3 follow-ups submits an application.
+ * Cancels rows in BOTH systems:
+ *   - Legacy zentryx.lead_followup_queue (in-flight rows from before the migration)
+ *   - New preme.lead_cadence_queue (the 13-step Preme cadence)
+ *
+ * Called when:
+ *   - An application is submitted (supersedes outreach)
+ *   - Lead opts out
+ *   - Manual admin cancel
  */
-export async function cancelPendingFollowUps(leadId: string): Promise<number> {
-  const supabase = createZentrxClient()
+export async function cancelPendingFollowUps(leadId: string, reason: string = "superseded_by_application"): Promise<number> {
+  // 1. Cancel new preme.lead_cadence_queue rows
+  const premeCancel = await cancelRemainingCadence(leadId, reason)
 
+  // 2. Cancel legacy zentryx.lead_followup_queue rows (best-effort — table may have nothing for new leads)
+  const supabase = createZentrxClient()
   const { data, error } = await supabase
     .from("lead_followup_queue")
     .update({
       status: "cancelled",
-      result: { reason: "superseded_by_application" },
+      result: { reason },
       completed_at: new Date().toISOString(),
     })
     .eq("lead_id", leadId)
@@ -273,13 +332,13 @@ export async function cancelPendingFollowUps(leadId: string): Promise<number> {
     .select("id")
 
   if (error) {
-    console.error(`[lead-followup] Failed to cancel pending follow-ups for lead ${leadId}:`, error.message)
-    return 0
+    console.error(`[lead-followup] Failed to cancel legacy queue for lead ${leadId}:`, error.message)
   }
 
-  const count = data?.length || 0
-  if (count > 0) {
-    console.log(`[lead-followup] Cancelled ${count} pending follow-ups for lead ${leadId} (superseded by application)`)
+  const legacyCount = data?.length || 0
+  const total = premeCancel.cancelled + legacyCount
+  if (total > 0) {
+    console.log(`[lead-followup] Cancelled ${total} pending steps for lead ${leadId} (preme=${premeCancel.cancelled}, legacy=${legacyCount}, reason=${reason})`)
   }
-  return count
+  return total
 }

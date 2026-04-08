@@ -25,6 +25,12 @@ export class ExecLog {
   private logId: string | null = null
   private startTime: number
   private scriptName: string
+  private resolved = false  // set true once complete() or fail() runs
+
+  /** Use in finally blocks to detect "forgot to log completion" bugs. */
+  isResolved(): boolean {
+    return this.resolved
+  }
 
   constructor(
     scriptName: string,
@@ -71,9 +77,11 @@ export class ExecLog {
   }
 
   async complete(outputData?: Record<string, unknown>): Promise<void> {
+    this.resolved = true
     if (!this.logId) {
-      // Wait briefly for init to finish
-      await new Promise((r) => setTimeout(r, 200))
+      for (let i = 0; i < 5 && !this.logId; i++) {
+        await new Promise((r) => setTimeout(r, 200))
+      }
     }
     if (!this.logId) return
     try {
@@ -91,10 +99,16 @@ export class ExecLog {
   }
 
   async fail(errorMessage: string): Promise<void> {
+    this.resolved = true
     if (!this.logId) {
-      await new Promise((r) => setTimeout(r, 200))
+      for (let i = 0; i < 5 && !this.logId; i++) {
+        await new Promise((r) => setTimeout(r, 200))
+      }
     }
-    if (!this.logId) return
+    if (!this.logId) {
+      await sendSlackAlert(`❌ FAILED — ${this.scriptName} — ${errorMessage} (no log_id captured)`)
+      return
+    }
     try {
       await supabase
         .from("execution_log")

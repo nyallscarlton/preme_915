@@ -247,3 +247,46 @@ export const CONDITION_TEMPLATES = {
     "Property Insurance Binder",
   ],
 }
+
+
+// ── Functions ported from zentryx for /pipeline UI ──
+
+export async function findApplicationForLead(leadId: string): Promise<LoanApplication | null> {
+  const supabase = createAdminClient()
+
+  // Try to match by email or phone
+  const { data: lead } = await supabase
+    .from("zx_leads")
+    .select("email, phone, first_name, last_name")
+    .eq("id", leadId)
+    .single()
+
+  if (!lead) return null
+
+  // Match by email first, then phone
+  let app = null
+  if (lead.email) {
+    const { data } = await supabase
+      .from("loan_applications")
+      .select("*")
+      .eq("applicant_email", lead.email)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
+    app = data
+  }
+
+  if (!app && lead.phone) {
+    const phone = lead.phone.replace(/\D/g, "").slice(-10)
+    const { data } = await supabase
+      .from("loan_applications")
+      .select("*")
+      .like("applicant_phone", `%${phone}`)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
+    app = data
+  }
+
+  return app as LoanApplication | null
+}

@@ -37,7 +37,9 @@ export const maxDuration = 60
 const EXCLUDED_PHONES = new Set(["+14706225965", "+19453088322"])
 
 // Statuses that mean "stop following up"
-const TERMINAL_STATUSES = new Set(["converted", "dead", "qualified"])
+// NOTE: "qualified" is intentionally NOT terminal — qualified leads still need
+// follow-up texts and emails. Only truly dead/converted leads should stop.
+const TERMINAL_STATUSES = new Set(["converted", "dead"])
 
 export async function GET(request: Request) {
   // Auth: accept Vercel cron header or Bearer token

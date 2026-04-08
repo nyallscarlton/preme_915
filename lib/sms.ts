@@ -2,7 +2,9 @@
  * Preme Home Loans -- SMS via Twilio REST API
  *
  * Uses raw fetch (no SDK) to keep dependencies light.
- * From number defaults to the Preme line: +14709425787
+ * From number is TWILIO_FROM_NUMBER env (defaults to +14709167713 — a
+ * Twilio-side SMS-only number, NOT the Preme inbound +14709425787 which
+ * was confirmed Spam-Likely by carriers on 2026-04-07).
  */
 
 import { getLoanDescription } from "@/lib/loan-purpose"
