@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 import type { ApolloContact } from "@/lib/apollo"
 
 // POST /api/pipeline/apollo/import
 // Import selected Apollo contacts as prospected buyers
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createAdminClient()
+    const supabase = createZentrxClient()
     const { contacts, metro } = (await request.json()) as {
       contacts: ApolloContact[]
       metro: string

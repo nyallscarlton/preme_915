@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 
 export async function PATCH(request: NextRequest) {
   const body = await request.json()
   const { type, id } = body
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
 
   if (type === "sequence") {
     const { error } = await supabase

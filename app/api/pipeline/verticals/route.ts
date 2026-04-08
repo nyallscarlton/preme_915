@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 
 export async function GET() {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const { data, error } = await supabase
     .from("zx_verticals")
     .select("*")
@@ -14,7 +14,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
 
   const { data, error } = await supabase
     .from("zx_verticals")

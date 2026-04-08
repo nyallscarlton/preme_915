@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 import Retell from "retell-sdk"
 
 // GET /api/pipeline/leads/[id] — Full lead detail with timeline
@@ -7,7 +7,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
 
   // Get lead with relationships
   const { data: lead, error } = await supabase
@@ -204,7 +204,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const body = await request.json()
 
   const allowedFields = ["status", "temperature", "score", "first_name", "last_name", "email", "phone"]
@@ -259,7 +259,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const body = await request.json()
 
   if (body.action === "add_note") {

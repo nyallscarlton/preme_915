@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import Retell from "retell-sdk"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 
 export const dynamic = "force-dynamic"
 
@@ -35,7 +35,7 @@ export async function GET() {
       return NextResponse.json({ error: "RETELL_API_KEY not configured" }, { status: 500 })
     }
 
-    const supabase = createAdminClient()
+    const supabase = createZentrxClient()
     const retell = new Retell({ apiKey })
 
     // Only fetch Preme Home Loans numbers from number_pool

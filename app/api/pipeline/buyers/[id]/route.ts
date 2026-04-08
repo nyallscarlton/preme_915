@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 // Stripe billing not yet active — stubbed
 const pauseBuyer = async (id: string, reason: string) => ({ paused: true, id, reason })
 const resumeBuyer = async (id: string) => ({ paused: false, id })
@@ -9,7 +9,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
 
   // Get buyer with vertical info
   const { data: buyer, error } = await supabase
@@ -51,7 +51,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createAdminClient()
+    const supabase = createZentrxClient()
     const body = await request.json()
 
     // Handle pause/resume via stripe lib

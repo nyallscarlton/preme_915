@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 import { storeInteraction } from "@/lib/memory"
 
 /**
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   // Twilio recording URLs need .mp3 appended
   const audioUrl = recordingUrl ? `${recordingUrl}.mp3` : null
 
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
 
   // Store in lead events
   if (leadId) {

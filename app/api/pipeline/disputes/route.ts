@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 import { sendTelegram } from "@/lib/telegram"
 
 // GET /api/pipeline/disputes — List all disputes (filterable by status)
 export async function GET(request: NextRequest) {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const { searchParams } = request.nextUrl
 
   let query = supabase
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 // POST /api/pipeline/disputes — Submit a dispute for a call
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createAdminClient()
+    const supabase = createZentrxClient()
     const body = await request.json()
 
     const { call_id, reason } = body

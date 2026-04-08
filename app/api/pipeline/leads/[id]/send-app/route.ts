@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { storeInteraction } from "@/lib/memory"
 import crypto from "crypto"
@@ -25,7 +25,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const preme = createPremeClient()
   const body = await request.json()
   const { sendViaSms, sendViaEmail } = body
@@ -120,7 +120,7 @@ export async function POST(
     try {
       const retell = new Retell({ apiKey: process.env.RETELL_API_KEY! })
       const chat = await retell.chat.createSMSChat({
-        from_number: process.env.RETELL_PHONE_NUMBER || "+14709425787",
+        from_number: process.env.RETELL_SMS_NUMBER || process.env.RETELL_PHONE_NUMBER || "+14709425787",
         to_number: e164,
         retell_llm_dynamic_variables: {
           initial_message: smsMessage,

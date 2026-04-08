@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 
 export const dynamic = "force-dynamic"
 
@@ -21,7 +21,7 @@ export interface NumberHealthEntry {
  */
 export async function GET() {
   try {
-    const supabase = createAdminClient()
+    const supabase = createZentrxClient()
 
     // Get current Monday for week_start filter
     const now = new Date()

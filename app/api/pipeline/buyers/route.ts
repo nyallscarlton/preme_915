@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 
 // GET /api/pipeline/buyers — List all buyers with balances, call counts, active status
 export async function GET(request: NextRequest) {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const { searchParams } = request.nextUrl
 
   let query = supabase
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 // POST /api/pipeline/buyers — Create new buyer
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createAdminClient()
+    const supabase = createZentrxClient()
     const body = await request.json()
 
     const { name, phone, email, service_area, vertical_slug, webhook_url, webhook_secret, pricing_model, price_per_lead } = body

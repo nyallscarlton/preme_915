@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 
 /**
  * POST /api/pipeline/call-bridge/status
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   const callSid = formData.get("CallSid") as string
 
   if (leadId) {
-    const supabase = createAdminClient()
+    const supabase = createZentrxClient()
     await supabase.from("zx_lead_events").insert({
       lead_id: leadId,
       event_type: "manual_call_ended",

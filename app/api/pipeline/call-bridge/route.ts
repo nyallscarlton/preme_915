@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import twilio from "twilio"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 
 const ADMIN_PHONE = process.env.ADMIN_PHONE || "+19453088322"
 const TWILIO_PHONE = process.env.TWILIO_PHONE_NUMBER || "+14709167713"
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     // Log the bridge call + auto-cancel all sequences (you're talking to them now)
     if (leadId) {
-      const supabase = createAdminClient()
+      const supabase = createZentrxClient()
       await supabase.from("zx_lead_events").insert({
         lead_id: leadId,
         event_type: "manual_call_bridge",

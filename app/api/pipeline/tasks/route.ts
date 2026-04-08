@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 
 // GET /api/pipeline/tasks — Get pending/upcoming tasks
 export async function GET(request: NextRequest) {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const { searchParams } = request.nextUrl
   const status = searchParams.get("status") || "pending"
   const limit = parseInt(searchParams.get("limit") || "50")
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
 // PATCH /api/pipeline/tasks — Update task status
 export async function PATCH(request: NextRequest) {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const body = await request.json()
 
   if (!body.id) {

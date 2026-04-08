@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createZentrxClient } from "@/lib/supabase/admin"
 
 /**
  * GET /api/pipeline/apollo/export-csv?metro=dallas
@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
  * Includes merge fields: first_name, last_name, email, company, city, market
  */
 export async function GET(request: NextRequest) {
-  const supabase = createAdminClient()
+  const supabase = createZentrxClient()
   const { searchParams } = request.nextUrl
   const metro = searchParams.get("metro")
 
