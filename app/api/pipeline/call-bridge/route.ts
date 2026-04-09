@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Log the bridge call + auto-cancel all sequences (you're talking to them now)
     if (leadId) {
       const supabase = createZentrxClient()
-      await supabase.from("zx_lead_events").insert({
+      await supabase.from("lead_events").insert({
         lead_id: leadId,
         event_type: "manual_call_bridge",
         event_data: {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       // DO NOT cancel sequences when clicking Call — only cancel when explicitly
       // clicking "Spoke with Lead" or "Not Qualified" in the portal
       // Just log the call bridge event
-      await supabase.from("zx_lead_events").insert({
+      await supabase.from("lead_events").insert({
         lead_id: leadId,
         event_type: "manual_call_initiated",
         event_data: { source: "call_bridge" },

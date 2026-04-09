@@ -30,7 +30,7 @@ interface Step {
   send_after_hour: number
   send_before_hour: number
   template_id: string | null
-  zx_message_templates: Template | null
+  message_templates: Template | null
 }
 
 interface Props {
@@ -119,8 +119,8 @@ export function SequencesClient({ sequences, steps, templates, enrollmentCounts 
       if (res.ok) {
         setEditingTemplate(null)
         setLocalSteps(prev => prev.map(s => {
-          if (s.zx_message_templates?.id === templateId) {
-            return { ...s, zx_message_templates: { ...s.zx_message_templates, body } }
+          if (s.message_templates?.id === templateId) {
+            return { ...s, message_templates: { ...s.message_templates, body } }
           }
           return s
         }))
@@ -211,7 +211,7 @@ export function SequencesClient({ sequences, steps, templates, enrollmentCounts 
                     </thead>
                     <tbody className="divide-y">
                       {seqSteps.map(step => {
-                        const tpl = step.zx_message_templates
+                        const tpl = step.message_templates
                         const isEditingTpl = editingTemplate === tpl?.id
                         return (
                           <tr key={step.id} className={`hover:bg-gray-50 transition ${!step.active ? "opacity-50" : ""}`}>

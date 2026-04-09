@@ -4,7 +4,7 @@
  * GET /api/call-reviews — List all reviews
  * GET /api/call-reviews?call_id=xxx — Get specific review
  *
- * Reads from zx_contact_interactions where channel='call_review'.
+ * Reads from contact_interactions where channel='call_review'.
  * Used by Mission Control Voice Lab to display coaching scorecards.
  */
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   try {
     if (callId) {
       const { data, error } = await supabase
-        .from("zx_contact_interactions")
+        .from("contact_interactions")
         .select("*")
         .eq("channel", "voice")
         .filter("metadata->>type", "eq", "call_review")
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     // List all reviews
     const { data, error, count } = await supabase
-      .from("zx_contact_interactions")
+      .from("contact_interactions")
       .select("*", { count: "exact" })
       .eq("channel", "voice")
         .filter("metadata->>type", "eq", "call_review")

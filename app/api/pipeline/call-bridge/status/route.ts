@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
   if (leadId) {
     const supabase = createZentrxClient()
-    await supabase.from("zx_lead_events").insert({
+    await supabase.from("lead_events").insert({
       lead_id: leadId,
       event_type: "manual_call_ended",
       event_data: {

@@ -10,7 +10,7 @@ function getSupabase() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { db: { schema: "zentryx" } }
+    { db: { schema: "preme" } }
   )
 }
 
@@ -28,7 +28,7 @@ export default async function LeadsPage() {
 
   const [leadsRes, verticalsRes, poolRes, healthRes] = await Promise.all([
     supabase
-      .from("zx_leads")
+      .from("leads")
       .select("*, zx_verticals(slug, name), zx_buyers(name)")
       .order("created_at", { ascending: false })
       .limit(100),
@@ -67,7 +67,7 @@ export default async function LeadsPage() {
   }
 
   // For each lead, check if there was a recent outbound call from a burned number
-  // by querying zx_contact_interactions for the lead phones
+  // by querying contact_interactions for the lead phones
   const leadPhones = leads
     .filter((l: any) => l.phone)
     .map((l: any) => l.phone.replace(/\D/g, "").slice(-10))
@@ -77,7 +77,7 @@ export default async function LeadsPage() {
   if (leadPhones.length > 0 && (burnedNumbers.size > 0 || warningNumbers.size > 0)) {
     // Fetch recent outbound voice interactions
     const { data: recentCalls } = await supabase
-      .from("zx_contact_interactions")
+      .from("contact_interactions")
       .select("phone, channel, direction, metadata, created_at")
       .eq("channel", "voice")
       .eq("direction", "outbound")

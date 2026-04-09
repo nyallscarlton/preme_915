@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 /**
  * GET /api/applications/[id]/interactions
  * Fetches all contact interactions for an applicant by phone number.
- * Queries zx_contact_interactions using the last 10 digits of the phone.
+ * Queries contact_interactions using the last 10 digits of the phone.
  */
 export async function GET(
   _request: NextRequest,
@@ -36,7 +36,7 @@ export async function GET(
 
     // Fetch interactions matching the phone
     const { data: interactions, error: intError } = await supabase
-      .from("zx_contact_interactions")
+      .from("contact_interactions")
       .select("*")
       .ilike("phone", `%${digits}%`)
       .order("created_at", { ascending: true })

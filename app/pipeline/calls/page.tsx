@@ -100,7 +100,7 @@ export default async function CallsPage() {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { db: { schema: "zentryx" } }
+  { db: { schema: "preme" } }
   )
 
   const retellCalls = await fetchRetellCalls()
@@ -117,7 +117,7 @@ export default async function CallsPage() {
 
   if (phoneNumbers.size > 0) {
     const { data: leads } = await supabase
-      .from("zx_leads")
+      .from("leads")
       .select("id, first_name, last_name, phone, temperature, score")
       .in("phone", Array.from(phoneNumbers))
       .limit(200)
@@ -136,7 +136,7 @@ export default async function CallsPage() {
     if (Object.keys(leadsByPhone).length === 0) {
       const rawPhones = Array.from(phoneNumbers).map((p) => p.replace(/^\+1/, ""))
       const { data: leads2 } = await supabase
-        .from("zx_leads")
+        .from("leads")
         .select("id, first_name, last_name, phone, temperature, score")
         .or(rawPhones.map((p) => `phone.ilike.%${p.slice(-10)}`).join(","))
         .limit(200)

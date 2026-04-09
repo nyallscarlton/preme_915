@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic"
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { db: { schema: "zentryx" } }
+  { db: { schema: "preme" } }
 )
 
 async function getAnalytics() {
@@ -15,7 +15,7 @@ async function getAnalytics() {
 
   const [leads, pages, verticals] = await Promise.all([
     supabase
-      .from("zx_leads")
+      .from("leads")
       .select("id, status, temperature, source, landing_page_id, created_at")
       .gte("created_at", thirtyDaysAgo)
       .order("created_at"),

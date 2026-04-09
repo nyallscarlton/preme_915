@@ -88,7 +88,7 @@ function zentryxClientForHandoff() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { db: { schema: "zentryx" } }
+    { db: { schema: "preme" } }
   )
 }
 
@@ -375,7 +375,7 @@ export async function executeStep(row: QueueRow): Promise<void> {
       const { createZentrxClient } = await import("@/lib/supabase/admin")
       const zxSb = createZentrxClient()
       const { count: connectedCalls } = await zxSb
-        .from("zx_lead_events")
+        .from("lead_events")
         .select("id", { count: "exact", head: true })
         .eq("lead_id", row.lead_id)
         .eq("event_type", "call_ended")
@@ -383,7 +383,7 @@ export async function executeStep(row: QueueRow): Promise<void> {
       if (connectedCalls && connectedCalls > 0) {
         console.log(`[safety-net] Caught orphaned cadence step for lead ${row.lead_id} (${row.lead_name}) — already contacted. Cancelling.`)
         await cancelRemainingCadence(row.lead_id, "safety_net_connected")
-        await zxSb.from("zx_leads").update({ status: "contacted", updated_at: new Date().toISOString() }).eq("id", row.lead_id).in("status", ["new", "calling", "contacting"])
+        await zxSb.from("leads").update({ status: "contacted", updated_at: new Date().toISOString() }).eq("id", row.lead_id).in("status", ["new", "calling", "contacting"])
         await markStepResult(row.id, "cancelled", "safety_net_already_contacted")
         await log.complete({ skipped: true, reason: "safety_net_already_contacted" })
         resolved = true
@@ -610,7 +610,7 @@ export async function routeToNurtureAfterDay7(leadId: string): Promise<{ ok: boo
   }
 
   const { data: zxLead } = await zentryx
-    .from("zx_leads")
+    .from("leads")
     .select("id")
     .like("phone", `%${phoneDigits}`)
     .order("created_at", { ascending: false })
@@ -624,7 +624,7 @@ export async function routeToNurtureAfterDay7(leadId: string): Promise<{ ok: boo
 
   // Look up the sequence id from slug
   const { data: seq } = await zentryx
-    .from("zx_sequences")
+    .from("sequences")
     .select("id")
     .eq("slug", nurtureSlug)
     .maybeSingle()

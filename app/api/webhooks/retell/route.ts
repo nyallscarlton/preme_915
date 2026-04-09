@@ -133,16 +133,16 @@ export async function POST(request: NextRequest) {
             console.error("[retell-preme] legacy queue cancel failed:", err)
           }
 
-          // 3. Cancel zx_sequence_enrollments + update lead status to "contacted"
+          // 3. Cancel sequence_enrollments + update lead status to "contacted"
           try {
             const zxSb = createZentrxClient()
             await zxSb
-              .from("zx_sequence_enrollments")
+              .from("sequence_enrollments")
               .update({ status: "completed", completed_at: new Date().toISOString(), pause_reason: "call_connected" })
               .eq("lead_id", leadId)
               .eq("status", "active")
             await zxSb
-              .from("zx_leads")
+              .from("leads")
               .update({ status: "contacted", updated_at: new Date().toISOString() })
               .eq("id", leadId)
               .in("status", ["new", "calling", "contacting"])
@@ -417,7 +417,7 @@ export async function POST(request: NextRequest) {
             if (url && key) {
               const supabase = createClient(url, key)
               // Store in shared contact interactions table if it exists
-              await supabase.from("zx_contact_interactions").insert({
+              await supabase.from("contact_interactions").insert({
                 phone: callerPhone,
                 channel: "voice",
                 direction: call.direction || "inbound",
@@ -587,7 +587,7 @@ function sendLeadAlert(data: {
 /**
  * Download a Retell recording and persist it to Supabase Storage.
  * Stores at path: call-recordings/{YYYY-MM}/{callId}.wav
- * Updates the zx_contact_interactions metadata with the permanent storage URL.
+ * Updates the contact_interactions metadata with the permanent storage URL.
  */
 async function persistRecording(callId: string, recordingUrl: string) {
   const { createClient } = await import("@supabase/supabase-js")
@@ -631,10 +631,10 @@ async function persistRecording(callId: string, recordingUrl: string) {
     .getPublicUrl(storagePath)
   const permanentUrl = urlData?.publicUrl || null
 
-  // 4. Update zx_contact_interactions metadata with the storage URL
+  // 4. Update contact_interactions metadata with the storage URL
   try {
     const { data: rows } = await supabase
-      .from("zx_contact_interactions")
+      .from("contact_interactions")
       .select("id, metadata")
       .filter("metadata->>call_id", "eq", callId)
       .eq("channel", "voice")
@@ -644,7 +644,7 @@ async function persistRecording(callId: string, recordingUrl: string) {
     if (rows && rows.length > 0) {
       const meta = (rows[0].metadata as Record<string, unknown>) || {}
       await supabase
-        .from("zx_contact_interactions")
+        .from("contact_interactions")
         .update({
           metadata: {
             ...meta,

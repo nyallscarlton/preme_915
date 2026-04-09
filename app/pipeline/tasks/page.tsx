@@ -13,7 +13,7 @@ interface Task {
   due_at: string
   status: string
   completed_at: string | null
-  zx_leads?: {
+  leads?: {
     id: string
     first_name: string
     last_name: string
@@ -157,7 +157,7 @@ function TaskCard({
   onComplete?: (id: string) => void
   onSkip?: (id: string) => void
 }) {
-  const lead = task.zx_leads
+  const lead = task.leads
   const dueDate = new Date(task.due_at)
   const isToday = dueDate.toDateString() === new Date().toDateString()
 

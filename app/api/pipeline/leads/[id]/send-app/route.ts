@@ -32,7 +32,7 @@ export async function POST(
 
   // Get lead data
   const { data: lead, error } = await supabase
-    .from("zx_leads")
+    .from("leads")
     .select("*")
     .eq("id", params.id)
     .single()
@@ -146,7 +146,7 @@ export async function POST(
     }
 
     // Log event with error reason
-    await supabase.from("zx_lead_events").insert({
+    await supabase.from("lead_events").insert({
       lead_id: params.id,
       event_type: smsSent ? "app_sent_via_sms" : "app_sms_failed",
       event_data: { app_number: appNumber, app_url: appUrl, sent: smsSent, error: smsError || null },
@@ -224,7 +224,7 @@ export async function POST(
     }
 
     // Log event with error reason
-    await supabase.from("zx_lead_events").insert({
+    await supabase.from("lead_events").insert({
       lead_id: params.id,
       event_type: emailSent ? "app_sent_via_email" : "app_email_failed",
       event_data: { app_number: appNumber, app_url: appUrl, email: lead.email, sent: emailSent, error: emailError || null },
@@ -232,7 +232,7 @@ export async function POST(
   }
 
   // Log the generation event
-  await supabase.from("zx_lead_events").insert({
+  await supabase.from("lead_events").insert({
     lead_id: params.id,
     event_type: "application_link_generated",
     event_data: {
@@ -246,7 +246,7 @@ export async function POST(
 
   // Update lead status
   await supabase
-    .from("zx_leads")
+    .from("leads")
     .update({ status: "application" })
     .eq("id", params.id)
 

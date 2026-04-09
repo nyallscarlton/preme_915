@@ -13,7 +13,7 @@ export async function enrollLead(leadId: string, sequenceSlug: string): Promise<
 
   // Find the sequence
   const { data: seq } = await supabase
-    .from("zx_sequences")
+    .from("sequences")
     .select("id")
     .eq("slug", sequenceSlug)
     .eq("active", true)
@@ -26,7 +26,7 @@ export async function enrollLead(leadId: string, sequenceSlug: string): Promise<
 
   // Check if already enrolled
   const { data: existing } = await supabase
-    .from("zx_sequence_enrollments")
+    .from("sequence_enrollments")
     .select("id, status")
     .eq("lead_id", leadId)
     .eq("sequence_id", seq.id)
@@ -36,7 +36,7 @@ export async function enrollLead(leadId: string, sequenceSlug: string): Promise<
     if (existing.status === "active") return existing.id
     // Re-activate if paused/cancelled
     await supabase
-      .from("zx_sequence_enrollments")
+      .from("sequence_enrollments")
       .update({ status: "active", paused_at: null, current_step: 0 })
       .eq("id", existing.id)
     return existing.id
@@ -44,7 +44,7 @@ export async function enrollLead(leadId: string, sequenceSlug: string): Promise<
 
   // Create enrollment
   const { data: enrollment, error } = await supabase
-    .from("zx_sequence_enrollments")
+    .from("sequence_enrollments")
     .insert({
       lead_id: leadId,
       sequence_id: seq.id,
@@ -61,7 +61,7 @@ export async function enrollLead(leadId: string, sequenceSlug: string): Promise<
 
   // Update lead status to contacting
   await supabase
-    .from("zx_leads")
+    .from("leads")
     .update({ status: "contacting" })
     .eq("id", leadId)
     .in("status", ["new"])
@@ -73,7 +73,7 @@ export async function enrollLead(leadId: string, sequenceSlug: string): Promise<
 export async function pauseSequence(leadId: string, reason: string): Promise<void> {
   const supabase = createZentrxClient()
   await supabase
-    .from("zx_sequence_enrollments")
+    .from("sequence_enrollments")
     .update({
       status: "paused",
       paused_at: new Date().toISOString(),
@@ -90,7 +90,7 @@ export async function pauseSequenceByPhone(phone: string, reason: string): Promi
 
   // Find leads with this phone number
   const { data: leads } = await supabase
-    .from("zx_leads")
+    .from("leads")
     .select("id")
     .or(`phone.like.%${normalized.slice(-10)}`)
     .limit(5)
@@ -126,12 +126,12 @@ export async function autoEnrollByStatus(leadId: string, newStatus: string): Pro
   if (newStatus === "contacted" || newStatus === "calling") {
     // Check if 7-day sequence is done
     const { data: enrollment } = await supabase
-      .from("zx_sequence_enrollments")
-      .select("status, zx_sequences(slug)")
+      .from("sequence_enrollments")
+      .select("status, sequences(slug)")
       .eq("lead_id", leadId)
       .single()
 
-    const seqSlug = (enrollment?.zx_sequences as any)?.slug
+    const seqSlug = (enrollment?.sequences as any)?.slug
     const seqStatus = enrollment?.status
 
     if (seqSlug === "7day-dscr-followup" && (seqStatus === "completed" || seqStatus === "cancelled")) {
@@ -163,7 +163,7 @@ export async function autoEnrollByStatus(leadId: string, newStatus: string): Pro
 export async function cancelSequences(leadId: string): Promise<void> {
   const supabase = createZentrxClient()
   await supabase
-    .from("zx_sequence_enrollments")
+    .from("sequence_enrollments")
     .update({ status: "cancelled" })
     .eq("lead_id", leadId)
     .in("status", ["active", "paused"])
@@ -176,7 +176,7 @@ async function isOptedOut(phone: string): Promise<boolean> {
   const e164 = normalized.startsWith("1") ? `+${normalized}` : `+1${normalized}`
 
   const { data } = await supabase
-    .from("zx_opt_outs")
+    .from("opt_outs")
     .select("id")
     .or(`phone.eq.${e164},phone.eq.${normalized}`)
     .limit(1)
@@ -303,7 +303,7 @@ export async function processPendingDials(): Promise<{ dialed: number; dialError
         const todayStart = new Date()
         todayStart.setUTCHours(0, 0, 0, 0)
         const { count: todayCallCount } = await supabase
-          .from("zx_lead_events")
+          .from("lead_events")
           .select("id", { count: "exact", head: true })
           .eq("lead_id", dial.lead_id)
           .in("event_type", ["sequence_call_triggered", "double_dial_triggered", "retell_call_initiated"])
@@ -324,7 +324,7 @@ export async function processPendingDials(): Promise<{ dialed: number; dialError
       await supabase.from("zx_pending_dials").update({ fired: true }).eq("id", dial.id)
 
       if (dial.lead_id) {
-        await supabase.from("zx_lead_events").insert({
+        await supabase.from("lead_events").insert({
           lead_id: dial.lead_id,
           event_type: "double_dial_triggered",
           event_data: { second_call_id: callId, original_call_id: dial.metadata?.original_call_id },
@@ -351,11 +351,11 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
 
   // Get all active enrollments with their sequence steps
   const { data: enrollments, error: fetchErr } = await supabase
-    .from("zx_sequence_enrollments")
+    .from("sequence_enrollments")
     .select(`
       id, lead_id, sequence_id, current_step, enrolled_at,
-      zx_leads!inner (id, first_name, last_name, phone, email, custom_fields, status),
-      zx_sequences!inner (id, slug, name)
+      leads!inner (id, first_name, last_name, phone, email, custom_fields, status),
+      sequences!inner (id, slug, name)
     `)
     .eq("status", "active")
 
@@ -368,7 +368,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
 
   for (const enrollment of enrollments) {
     try {
-      const lead = (enrollment as unknown as { zx_leads: Record<string, unknown> }).zx_leads
+      const lead = (enrollment as unknown as { leads: Record<string, unknown> }).leads
       const phone = lead.phone as string
 
       // Check opt-out
@@ -379,7 +379,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
 
       // Only pause for leads that are truly done
       const leadStatus = lead.status as string
-      const seqSlug = (enrollment as any).zx_sequences?.slug || ""
+      const seqSlug = (enrollment as any).sequences?.slug || ""
 
       // "application" status should NOT pause Segment C (that's the whole point of Segment C)
       const pauseStatuses = ["contacted", "qualified", "not_qualified", "processing", "closed_won", "closed_lost", "dead", "handed_off", "converted"]
@@ -394,7 +394,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
       // SAFETY NET: Check if Riley already had a real conversation with this lead
       // This catches cases where the webhook failed to cancel the sequence
       const { count: connectedCalls } = await supabase
-        .from("zx_lead_events")
+        .from("lead_events")
         .select("id", { count: "exact", head: true })
         .eq("lead_id", lead.id as string)
         .eq("event_type", "call_ended")
@@ -402,7 +402,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
       if (connectedCalls && connectedCalls > 0) {
         console.log(`[safety-net] Caught orphaned follow-up for lead ${lead.id} (${lead.first_name} ${lead.last_name}) — already contacted. Cancelling.`)
         await cancelSequences(lead.id as string)
-        await supabase.from("zx_leads").update({ status: "contacted", updated_at: new Date().toISOString() }).eq("id", lead.id as string).in("status", ["new", "calling", "contacting"])
+        await supabase.from("leads").update({ status: "contacted", updated_at: new Date().toISOString() }).eq("id", lead.id as string).in("status", ["new", "calling", "contacting"])
         continue
       }
 
@@ -418,10 +418,10 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
           .maybeSingle()
 
         if (app?.status === "submitted") {
-          await supabase.from("zx_sequence_enrollments")
+          await supabase.from("sequence_enrollments")
             .update({ status: "completed", completed_at: new Date().toISOString(), pause_reason: "app_submitted" })
             .eq("id", enrollment.id)
-          await supabase.from("zx_lead_events").insert({
+          await supabase.from("lead_events").insert({
             lead_id: lead.id,
             event_type: "sequence_completed",
             event_data: { sequence: seqSlug, reason: "application_submitted" },
@@ -434,7 +434,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
       const todayStart = new Date()
       todayStart.setUTCHours(0, 0, 0, 0)
       const { count: todayCallCount } = await supabase
-        .from("zx_lead_events")
+        .from("lead_events")
         .select("id", { count: "exact", head: true })
         .eq("lead_id", lead.id as string)
         .in("event_type", ["sequence_call_triggered", "sequence_call_failed", "double_dial_triggered", "retell_call_initiated"])
@@ -447,8 +447,8 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
 
       // Get next step
       const { data: nextStep } = await supabase
-        .from("zx_sequence_steps")
-        .select("*, zx_message_templates(*)")
+        .from("sequence_steps")
+        .select("*, message_templates(*)")
         .eq("sequence_id", enrollment.sequence_id)
         .eq("step_number", enrollment.current_step + 1)
         .eq("active", true)
@@ -457,12 +457,12 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
       if (!nextStep) {
         // No more steps — mark complete
         await supabase
-          .from("zx_sequence_enrollments")
+          .from("sequence_enrollments")
           .update({ status: "completed", completed_at: new Date().toISOString() })
           .eq("id", enrollment.id)
 
         // Auto-enroll into nurture segment when 7-day DSCR sequence completes
-        const seqSlug = (enrollment as any).zx_sequences?.slug
+        const seqSlug = (enrollment as any).sequences?.slug
         if (seqSlug === "7day-dscr-followup") {
           const leadId = lead.id as string
           const hasApp = (lead.custom_fields as Record<string, unknown>)?.app_guest_token
@@ -485,7 +485,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
           await enrollLead(leadId, nurtureSlug)
           await enrollLead(leadId, "weekly-newsletter")
 
-          await supabase.from("zx_lead_events").insert({
+          await supabase.from("lead_events").insert({
             lead_id: leadId,
             event_type: "nurture_enrolled",
             event_data: { segment: nurtureSlug, reason: "7day_sequence_completed" },
@@ -497,7 +497,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
 
       // Check if this step has failed repeatedly today — pause and flag for investigation
       const { count: stepFailCount } = await supabase
-        .from("zx_lead_events")
+        .from("lead_events")
         .select("id", { count: "exact", head: true })
         .eq("lead_id", lead.id as string)
         .in("event_type", ["sequence_call_failed", "sequence_sms_failed", "sequence_email_failed"])
@@ -507,7 +507,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
         // Pause the sequence — something is broken, needs investigation
         console.error(`[sequences] Step ${nextStep.step_number} failed ${stepFailCount}x for lead ${lead.id} — PAUSING for investigation`)
         await pauseSequence(lead.id as string, `step_${nextStep.step_number}_failed_${stepFailCount}x`)
-        await supabase.from("zx_lead_events").insert({
+        await supabase.from("lead_events").insert({
           lead_id: lead.id,
           event_type: "sequence_paused_for_investigation",
           event_data: {
@@ -537,7 +537,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
       if (nextStep.channel === "auto_sms") {
         // SMS via Retell Chat API (A2P approved)
         {
-        const template = nextStep.zx_message_templates
+        const template = nextStep.message_templates
         if (!template) {
           console.error(`[sequences] No template for step ${nextStep.step_number}`)
           errors++
@@ -577,7 +577,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
           })
 
           // Log lead event
-          await supabase.from("zx_lead_events").insert({
+          await supabase.from("lead_events").insert({
             lead_id: lead.id,
             event_type: "sequence_sms_sent",
             event_data: {
@@ -593,7 +593,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
           console.error(`[sequences] SMS send error for ${lead.id}:`, smsErr)
           errors++
 
-          await supabase.from("zx_lead_events").insert({
+          await supabase.from("lead_events").insert({
             lead_id: lead.id,
             event_type: "sequence_sms_failed",
             event_data: { step_number: nextStep.step_number, error: String(smsErr) },
@@ -636,7 +636,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
             metadata: { retell_call_id: callId, sequence_step: nextStep.step_number },
           })
 
-          await supabase.from("zx_lead_events").insert({
+          await supabase.from("lead_events").insert({
             lead_id: lead.id,
             event_type: "sequence_call_triggered",
             event_data: {
@@ -653,7 +653,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
           console.error(`[sequences] Call trigger error for ${lead.id}:`, callErr)
           errors++
 
-          await supabase.from("zx_lead_events").insert({
+          await supabase.from("lead_events").insert({
             lead_id: lead.id,
             event_type: "sequence_call_failed",
             event_data: { step_number: nextStep.step_number, error: String(callErr) },
@@ -661,7 +661,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
         }
       } else if (nextStep.channel === "auto_email") {
         // Send nurture email via Resend
-        const template = nextStep.zx_message_templates
+        const template = nextStep.message_templates
         if (!template) {
           console.error(`[sequences] No template for email step ${nextStep.step_number}`)
           errors++
@@ -707,7 +707,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
             const result = await res.json()
 
             if (res.ok && result.id) {
-              await supabase.from("zx_lead_events").insert({
+              await supabase.from("lead_events").insert({
                 lead_id: lead.id,
                 event_type: "sequence_email_sent",
                 event_data: {
@@ -722,7 +722,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
             } else {
               console.error(`[sequences] Email send error for ${lead.id}:`, result)
               errors++
-              await supabase.from("zx_lead_events").insert({
+              await supabase.from("lead_events").insert({
                 lead_id: lead.id,
                 event_type: "sequence_email_failed",
                 event_data: { step_number: nextStep.step_number, error: JSON.stringify(result) },
@@ -739,7 +739,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
       // Failed steps will be retried on the next cron run
       if (stepSucceeded) {
         await supabase
-          .from("zx_sequence_enrollments")
+          .from("sequence_enrollments")
           .update({ current_step: nextStep.step_number })
           .eq("id", enrollment.id)
       }

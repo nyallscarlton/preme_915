@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("zx_tasks")
-    .select("*, zx_leads(id, first_name, last_name, phone, email, temperature, score)")
+    .select("*, leads(id, first_name, last_name, phone, email, temperature, score)")
     .order("due_at", { ascending: true })
     .limit(limit)
 

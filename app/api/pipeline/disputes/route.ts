@@ -8,8 +8,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
 
   let query = supabase
-    .from("zx_calls")
-    .select("*, zx_buyers(name), zx_leads(first_name, last_name, phone)")
+    .from("calls")
+    .select("*, zx_buyers(name), leads(first_name, last_name, phone)")
     .not("dispute_reason", "is", null)
     .order("disputed_at", { ascending: false })
 
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Get the call record
     const { data: call, error: callErr } = await supabase
-      .from("zx_calls")
+      .from("calls")
       .select("*, zx_buyers(name)")
       .eq("id", call_id)
       .single()
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // Update call record with dispute info
     const { data: updated, error: updateErr } = await supabase
-      .from("zx_calls")
+      .from("calls")
       .update({
         status: "disputed",
         dispute_reason: reason.trim(),
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     // Log event if there's a lead
     if (call.lead_id) {
-      await supabase.from("zx_lead_events").insert({
+      await supabase.from("lead_events").insert({
         lead_id: call.lead_id,
         event_type: "call_disputed",
         event_data: {

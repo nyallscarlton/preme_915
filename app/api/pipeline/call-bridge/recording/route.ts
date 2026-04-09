@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
   // Store in lead events
   if (leadId) {
-    await supabase.from("zx_lead_events").insert({
+    await supabase.from("lead_events").insert({
       lead_id: leadId,
       event_type: "manual_call_recording",
       event_data: {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Update lead status to contacted
     await supabase
-      .from("zx_leads")
+      .from("leads")
       .update({ status: "contacted" })
       .eq("id", leadId)
       .in("status", ["new", "contacting", "calling"])

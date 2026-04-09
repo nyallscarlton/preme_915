@@ -25,7 +25,7 @@ export async function GET(
   // Get recent calls and transactions in parallel
   const [callsRes, transactionsRes] = await Promise.all([
     supabase
-      .from("zx_calls")
+      .from("calls")
       .select("*")
       .eq("buyer_id", params.id)
       .order("created_at", { ascending: false })

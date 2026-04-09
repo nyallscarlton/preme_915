@@ -8,7 +8,7 @@ export async function PATCH(request: NextRequest) {
 
   if (type === "sequence") {
     const { error } = await supabase
-      .from("zx_sequences")
+      .from("sequences")
       .update({ active: body.active })
       .eq("id", id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -17,7 +17,7 @@ export async function PATCH(request: NextRequest) {
 
   if (type === "step") {
     const { error } = await supabase
-      .from("zx_sequence_steps")
+      .from("sequence_steps")
       .update({ active: body.active })
       .eq("id", id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -26,7 +26,7 @@ export async function PATCH(request: NextRequest) {
 
   if (type === "step_delay") {
     const { error } = await supabase
-      .from("zx_sequence_steps")
+      .from("sequence_steps")
       .update({ delay_minutes: body.delay_minutes })
       .eq("id", id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -35,7 +35,7 @@ export async function PATCH(request: NextRequest) {
 
   if (type === "template") {
     const { error } = await supabase
-      .from("zx_message_templates")
+      .from("message_templates")
       .update({ body: body.body })
       .eq("id", id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })

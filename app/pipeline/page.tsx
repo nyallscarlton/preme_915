@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic"
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { db: { schema: "zentryx" } }
+  { db: { schema: "preme" } }
 )
 
 async function getStats() {
@@ -19,11 +19,11 @@ async function getStats() {
   const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
   const [total, today, qualified, handedOff, recent] = await Promise.all([
-    supabase.from("zx_leads").select("id", { count: "exact", head: true }),
-    supabase.from("zx_leads").select("id", { count: "exact", head: true }).gte("created_at", todayStart),
-    supabase.from("zx_leads").select("id", { count: "exact", head: true }).eq("status", "qualified"),
-    supabase.from("zx_leads").select("id", { count: "exact", head: true }).eq("status", "handed_off"),
-    supabase.from("zx_leads").select("*, zx_verticals(name)").order("created_at", { ascending: false }).limit(10),
+    supabase.from("leads").select("id", { count: "exact", head: true }),
+    supabase.from("leads").select("id", { count: "exact", head: true }).gte("created_at", todayStart),
+    supabase.from("leads").select("id", { count: "exact", head: true }).eq("status", "qualified"),
+    supabase.from("leads").select("id", { count: "exact", head: true }).eq("status", "handed_off"),
+    supabase.from("leads").select("*, zx_verticals(name)").order("created_at", { ascending: false }).limit(10),
   ])
 
   return {

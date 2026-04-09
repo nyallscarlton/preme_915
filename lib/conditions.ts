@@ -256,7 +256,7 @@ export async function findApplicationForLead(leadId: string): Promise<LoanApplic
 
   // Try to match by email or phone
   const { data: lead } = await supabase
-    .from("zx_leads")
+    .from("leads")
     .select("email, phone, first_name, last_name")
     .eq("id", leadId)
     .single()

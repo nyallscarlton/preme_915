@@ -44,7 +44,7 @@ export async function shouldCompress(): Promise<boolean> {
   try {
     const supabase = createAdminClient()
     const { count, error } = await supabase
-      .from("zx_contact_interactions")
+      .from("contact_interactions")
       .select("id", { count: "exact", head: true })
       .eq("channel", "voice")
       .filter("metadata->>type", "eq", "call_review")
@@ -75,7 +75,7 @@ export async function compressLearnings(): Promise<CompressionResult> {
   const supabase = createAdminClient()
 
   const { data: reviews, error: fetchErr } = await supabase
-    .from("zx_contact_interactions")
+    .from("contact_interactions")
     .select("id, metadata, created_at")
     .eq("channel", "voice")
     .filter("metadata->>type", "eq", "call_review")
@@ -337,7 +337,7 @@ async function markReviewsCompressed(ids: string[]): Promise<number> {
 
     // Fetch current metadata for each row, then update with compressed flag
     const { data: rows, error: fetchErr } = await supabase
-      .from("zx_contact_interactions")
+      .from("contact_interactions")
       .select("id, metadata")
       .in("id", batch)
 
@@ -349,7 +349,7 @@ async function markReviewsCompressed(ids: string[]): Promise<number> {
     for (const row of rows) {
       const meta = (row.metadata as Record<string, unknown>) || {}
       const { error: updateErr } = await supabase
-        .from("zx_contact_interactions")
+        .from("contact_interactions")
         .update({ metadata: { ...meta, compressed: true } })
         .eq("id", row.id)
 

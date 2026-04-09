@@ -11,7 +11,7 @@ export async function GET(
 
   // Get lead with relationships
   const { data: lead, error } = await supabase
-    .from("zx_leads")
+    .from("leads")
     .select("*, zx_verticals(slug, name), zx_buyers(name)")
     .eq("id", params.id)
     .single()
@@ -26,7 +26,7 @@ export async function GET(
 
   const [eventsRes, notesRes, tasksRes, enrollmentsRes, interactionsRes, retellCalls, applicationRes] = await Promise.all([
     supabase
-      .from("zx_lead_events")
+      .from("lead_events")
       .select("*")
       .eq("lead_id", params.id)
       .order("created_at", { ascending: false })
@@ -42,13 +42,13 @@ export async function GET(
       .eq("lead_id", params.id)
       .order("due_at", { ascending: true }),
     supabase
-      .from("zx_sequence_enrollments")
-      .select("*, zx_sequences(slug, name, zx_sequence_steps(step_number, channel, delay_minutes, active, zx_message_templates(slug, name, body)))")
+      .from("sequence_enrollments")
+      .select("*, sequences(slug, name, sequence_steps(step_number, channel, delay_minutes, active, message_templates(slug, name, body)))")
       .eq("lead_id", params.id),
     // Get SMS/call interactions by phone
     phoneDigits
       ? supabase
-          .from("zx_contact_interactions")
+          .from("contact_interactions")
           .select("*")
           .like("phone", `%${phoneDigits}`)
           .order("created_at", { ascending: false })
@@ -221,7 +221,7 @@ export async function PATCH(
   }
 
   const { data, error } = await supabase
-    .from("zx_leads")
+    .from("leads")
     .update(updates)
     .eq("id", params.id)
     .select()
@@ -233,7 +233,7 @@ export async function PATCH(
 
   // Log status change + auto-enroll in appropriate sequence
   if (body.status) {
-    await supabase.from("zx_lead_events").insert({
+    await supabase.from("lead_events").insert({
       lead_id: params.id,
       event_type: "status_changed",
       event_data: { new_status: body.status, source: "admin" },
@@ -243,7 +243,7 @@ export async function PATCH(
     const { autoEnrollByStatus } = await import("@/lib/sequences")
     const enrolled = await autoEnrollByStatus(params.id, body.status)
     if (enrolled) {
-      await supabase.from("zx_lead_events").insert({
+      await supabase.from("lead_events").insert({
         lead_id: params.id,
         event_type: "auto_enrolled",
         event_data: { sequence: enrolled, trigger: `status_changed_to_${body.status}` },
@@ -306,7 +306,7 @@ export async function POST(
     }
     // Get lead phone
     const { data: lead } = await supabase
-      .from("zx_leads")
+      .from("leads")
       .select("phone")
       .eq("id", params.id)
       .single()
@@ -329,7 +329,7 @@ export async function POST(
     })
 
     // Log event on lead
-    await supabase.from("zx_lead_events").insert({
+    await supabase.from("lead_events").insert({
       lead_id: params.id,
       event_type: "admin_sms_sent",
       event_data: { message: body.message.trim() },
@@ -346,19 +346,19 @@ export async function POST(
     await cancelSequences(params.id)
 
     // Update lead status + log reason
-    await supabase.from("zx_leads").update({
+    await supabase.from("leads").update({
       status: "not_qualified",
       temperature: "cold",
     }).eq("id", params.id)
 
     // Store the disqualification reason in custom_fields
-    const { data: currentLead } = await supabase.from("zx_leads").select("custom_fields").eq("id", params.id).single()
+    const { data: currentLead } = await supabase.from("leads").select("custom_fields").eq("id", params.id).single()
     const cf = (currentLead?.custom_fields as Record<string, unknown>) || {}
-    await supabase.from("zx_leads").update({
+    await supabase.from("leads").update({
       custom_fields: { ...cf, dq_reason: reason, dq_date: new Date().toISOString(), dq_notes: body.notes || "" },
     }).eq("id", params.id)
 
-    await supabase.from("zx_lead_events").insert({
+    await supabase.from("lead_events").insert({
       lead_id: params.id,
       event_type: "disqualified",
       event_data: { reason, notes: body.notes || "", source: "admin" },
@@ -396,7 +396,7 @@ export async function POST(
     const { cancelSequences } = await import("@/lib/sequences")
     await cancelSequences(params.id)
     // Log it
-    await supabase.from("zx_lead_events").insert({
+    await supabase.from("lead_events").insert({
       lead_id: params.id,
       event_type: "sequences_cancelled",
       event_data: { reason: body.reason || "manual", source: "admin" },

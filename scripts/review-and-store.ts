@@ -268,7 +268,7 @@ async function main() {
 
   // Get already-reviewed call IDs
   const { data: reviewed } = await supabase
-    .from("zx_contact_interactions")
+    .from("contact_interactions")
     .select("metadata")
     .filter("metadata->>type", "eq", "call_review")
     .order("created_at", { ascending: false })
@@ -326,7 +326,7 @@ async function main() {
     console.log(`[review] Top fix: ${review.top_fixes?.[0] || "none"}`)
 
     // Store in Supabase
-    const { error } = await supabase.from("zx_contact_interactions").insert({
+    const { error } = await supabase.from("contact_interactions").insert({
       phone: callerPhone,
       channel: "voice",
       direction: (call as any).direction || "outbound",
@@ -361,7 +361,7 @@ async function main() {
       if (applied) {
         // Mark as applied
         await supabase
-          .from("zx_contact_interactions")
+          .from("contact_interactions")
           .update({ metadata: { type: "call_review", call_id: callId, prompt_patch_applied: true } })
           .filter("metadata->>call_id", "eq", callId)
           .filter("metadata->>type", "eq", "call_review")

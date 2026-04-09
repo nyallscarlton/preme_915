@@ -6,16 +6,16 @@ export const dynamic = "force-dynamic"
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { db: { schema: "zentryx" } }
+  { db: { schema: "preme" } }
 )
 
 export default async function SequencesPage() {
   const [seqRes, stepsRes, templatesRes, enrollmentsRes] = await Promise.all([
-    supabase.from("zx_sequences").select("*").order("name"),
-    supabase.from("zx_sequence_steps").select("*, zx_message_templates(id, slug, name, body)").order("step_number"),
-    supabase.from("zx_message_templates").select("*").order("name"),
+    supabase.from("sequences").select("*").order("name"),
+    supabase.from("sequence_steps").select("*, message_templates(id, slug, name, body)").order("step_number"),
+    supabase.from("message_templates").select("*").order("name"),
     supabase
-      .from("zx_sequence_enrollments")
+      .from("sequence_enrollments")
       .select("sequence_id, status")
       .in("status", ["active", "paused"]),
   ])

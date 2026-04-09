@@ -77,7 +77,7 @@ export async function storeInteraction(phone: string, interaction: Interaction):
   await getOrCreateProfile(phone)
 
   // Insert interaction
-  await supabase.from("zx_contact_interactions").insert({
+  await supabase.from("contact_interactions").insert({
     phone: normalized,
     channel: interaction.channel,
     direction: interaction.direction,
@@ -99,7 +99,7 @@ export async function storeInteraction(phone: string, interaction: Interaction):
 async function getInteractionCount(phone: string): Promise<number> {
   const supabase = createZentrxClient()
   const { count } = await supabase
-    .from("zx_contact_interactions")
+    .from("contact_interactions")
     .select("*", { count: "exact", head: true })
     .eq("phone", phone)
   return (count ?? 0) + 1
@@ -111,7 +111,7 @@ export async function getRecentInteractions(phone: string, limit = 20): Promise<
   const normalized = normalizePhone(phone)
 
   const { data } = await supabase
-    .from("zx_contact_interactions")
+    .from("contact_interactions")
     .select("*")
     .eq("phone", normalized)
     .order("created_at", { ascending: false })

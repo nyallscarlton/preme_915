@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     // Get lead info
     const { data: lead } = await supabase
-      .from("zx_leads")
+      .from("leads")
       .select("first_name, last_name, email, status, custom_fields")
       .like("phone", `%${digits}`)
       .order("created_at", { ascending: false })
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     // Get stored interactions
     const { data: interactions } = await supabase
-      .from("zx_contact_interactions")
+      .from("contact_interactions")
       .select("channel, direction, content, summary, created_at")
       .eq("phone", normalized)
       .order("created_at", { ascending: false })

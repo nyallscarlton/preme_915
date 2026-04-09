@@ -1147,7 +1147,7 @@ export default function LeadDetailPage() {
                   </div>
                   {enrollments.map((e) => (
                     <div key={e.id as string} className="mt-2 text-sm text-gray-600">
-                      <span className="font-medium">{(e.zx_sequences as Record<string, string>)?.name || "Sequence"}</span>
+                      <span className="font-medium">{(e.sequences as Record<string, string>)?.name || "Sequence"}</span>
                       {" — "}
                       <span className={e.status === "active" ? "text-green-600" : e.status === "paused" ? "text-orange-500" : "text-gray-400"}>
                         {e.status as string}
@@ -1182,11 +1182,11 @@ export default function LeadDetailPage() {
                 <div className="space-y-4">
                 {/* Past sequences — clickable to expand */}
                 {enrollments.filter((e) => e.status === "cancelled" || e.status === "completed").map((pastEnrollment) => {
-                  const pastSeq = pastEnrollment.zx_sequences as Record<string, unknown> | null
+                  const pastSeq = pastEnrollment.sequences as Record<string, unknown> | null
                   const pastName = (pastSeq?.name as string) || "Previous Sequence"
                   const pastId = pastEnrollment.id as string
                   const isExpanded = expandedPastSeq === pastId
-                  const pastSteps = ((pastSeq?.zx_sequence_steps as unknown[]) || [])
+                  const pastSteps = ((pastSeq?.sequence_steps as unknown[]) || [])
                     .filter((s: any) => s.active)
                     .sort((a: any, b: any) => a.step_number - b.step_number) as any[]
                   const pastCurrentStep = pastEnrollment.current_step as number
@@ -1214,7 +1214,7 @@ export default function LeadDetailPage() {
                             const isDone = stepNum <= pastCurrentStep
                             const channel = step.channel as string
                             const delayMin = step.delay_minutes as number
-                            const template = step.zx_message_templates as Record<string, string> | null
+                            const template = step.message_templates as Record<string, string> | null
                             const scheduledAt = new Date(pastEnrolledAt.getTime() + delayMin * 60 * 1000)
                             let delayLabel = ""
                             if (delayMin < 60) delayLabel = `${delayMin}m`
@@ -1254,10 +1254,10 @@ export default function LeadDetailPage() {
                 {enrollments
                   .filter((e) => e.status === "active" || e.status === "paused")
                   .map((enrollment) => {
-                  const seq = enrollment.zx_sequences as Record<string, unknown> | null
+                  const seq = enrollment.sequences as Record<string, unknown> | null
                   const seqName = (seq?.name as string) || "Unknown Sequence"
                   const seqSlug = (seq?.slug as string) || ""
-                  const steps = ((seq?.zx_sequence_steps as unknown[]) || [])
+                  const steps = ((seq?.sequence_steps as unknown[]) || [])
                     .filter((s: any) => s.active)
                     .sort((a: any, b: any) => a.step_number - b.step_number) as any[]
                   const currentStep = enrollment.current_step as number
@@ -1312,7 +1312,7 @@ export default function LeadDetailPage() {
                           const isCurrent = stepNum === currentStep + 1
                           const channel = step.channel as string
                           const delayMin = step.delay_minutes as number
-                          const template = step.zx_message_templates as Record<string, string> | null
+                          const template = step.message_templates as Record<string, string> | null
 
                           // Calculate scheduled time
                           const scheduledAt = new Date(enrolledAt.getTime() + delayMin * 60 * 1000)

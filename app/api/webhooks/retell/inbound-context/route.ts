@@ -104,11 +104,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build conversation history from zx_contact_interactions
+    // Build conversation history from contact_interactions
     let conversationHistory = "No prior interactions."
     try {
       const { data: interactions } = await supabase
-        .from("zx_contact_interactions")
+        .from("contact_interactions")
         .select("channel, direction, summary, created_at")
         .ilike("phone", `%${digits}%`)
         .eq("entity", "preme")
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch {
-      // zx_contact_interactions may not exist yet — non-fatal
+      // contact_interactions may not exist yet — non-fatal
     }
 
     // Build a natural inbound opener

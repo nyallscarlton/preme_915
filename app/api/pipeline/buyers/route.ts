@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   // Get call counts for each buyer
   const buyerIds = (buyers || []).map((b) => b.id)
   const { data: callCounts } = await supabase
-    .from("zx_calls")
+    .from("calls")
     .select("buyer_id")
     .in("buyer_id", buyerIds)
 
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { data: billableCounts } = await supabase
-    .from("zx_calls")
+    .from("calls")
     .select("buyer_id")
     .in("buyer_id", buyerIds)
     .eq("billable", true)

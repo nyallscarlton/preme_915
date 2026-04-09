@@ -33,11 +33,11 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .maybeSingle()
 
-    // Always log to zentryx.zx_contact_interactions (single source of truth for inbound SMS).
+    // Always log to preme.contact_interactions (single source of truth for inbound SMS).
     // The legacy preme.lead_messages table was never created — writes were silently failing.
     // Switched 2026-04-08 after 7+ days of dead inbound SMS pipeline.
     const zxClient = createZentrxClient()
-    await zxClient.from("zx_contact_interactions").insert({
+    await zxClient.from("contact_interactions").insert({
       phone: e164,
       channel: "sms",
       direction: "inbound",
@@ -54,15 +54,15 @@ export async function POST(request: NextRequest) {
 
     if (!lead) {
       console.warn(
-        `[twilio-sms] Inbound from ${from} — no matching Preme lead for digits ${digits} (logged to zx_contact_interactions anyway)`
+        `[twilio-sms] Inbound from ${from} — no matching Preme lead for digits ${digits} (logged to contact_interactions anyway)`
       )
     } else {
       // Also create a lead event so the portal thread shows the inbound message
-      await zxClient.from("zx_lead_events").insert({
+      await zxClient.from("lead_events").insert({
         lead_id: lead.id,
         event_type: "sms_inbound",
         event_data: { content: body, from: from, twilio_sid: sid || null },
-      }).then(() => {}, (e: unknown) => console.warn("[twilio-sms] zx_lead_events insert failed:", e))
+      }).then(() => {}, (e: unknown) => console.warn("[twilio-sms] lead_events insert failed:", e))
     }
 
     // Return empty TwiML (no auto-reply)

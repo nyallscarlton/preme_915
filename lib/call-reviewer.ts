@@ -220,7 +220,7 @@ function parseReviewJSON(text: string): ReviewResult | null {
 }
 
 /**
- * Store the review in Supabase via zx_contact_interactions table.
+ * Store the review in Supabase via contact_interactions table.
  * Uses channel='call_review' with full scorecard in metadata JSONB.
  */
 export async function storeReview(params: {
@@ -247,9 +247,9 @@ export async function storeReview(params: {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !key) return false
 
-    const supabase = createClient(url, key, { db: { schema: "zentryx" } })
+    const supabase = createClient(url, key, { db: { schema: "preme" } })
 
-    const { error } = await supabase.from("zx_contact_interactions").insert({
+    const { error } = await supabase.from("contact_interactions").insert({
       phone: params.callerPhone || "unknown",
       channel: "voice",
       direction: params.direction,
@@ -392,15 +392,15 @@ export async function applyPromptPatch(
     const pruned = existingLearnings.length - trimmedLearnings.length
     console.log(`[call-reviewer] Prompt patched for call ${callId} (${trimmedLearnings.length}/5 learnings${pruned > 0 ? `, pruned ${pruned} old` : ""}): ${review.prompt_patch.substring(0, 80)}...`)
 
-    // Mark patch as applied in zx_contact_interactions
+    // Mark patch as applied in contact_interactions
     try {
       const { createClient } = await import("@supabase/supabase-js")
       const url = process.env.NEXT_PUBLIC_SUPABASE_URL
       const key = process.env.SUPABASE_SERVICE_ROLE_KEY
       if (url && key) {
-        const supabase = createClient(url, key, { db: { schema: "zentryx" } })
+        const supabase = createClient(url, key, { db: { schema: "preme" } })
         const { data: rows } = await supabase
-          .from("zx_contact_interactions")
+          .from("contact_interactions")
           .select("id, metadata")
           .eq("channel", "voice")
           .filter("metadata->>type", "eq", "call_review")
@@ -411,7 +411,7 @@ export async function applyPromptPatch(
         if (rows && rows.length > 0) {
           const meta = (rows[0].metadata as Record<string, unknown>) || {}
           await supabase
-            .from("zx_contact_interactions")
+            .from("contact_interactions")
             .update({
               metadata: { ...meta, prompt_patch_applied: true },
             })

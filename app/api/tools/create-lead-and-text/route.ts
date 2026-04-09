@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getBaseUrl } from "@/lib/config"
+import { sendPremeSms } from "@/lib/preme-sms"
 
 // Internal team numbers used for role-play training — never create leads for these
 const TRAINING_PHONES = new Set([
@@ -97,19 +98,19 @@ export async function POST(request: NextRequest) {
       // Log to portal thread
       const e164Existing = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
       const { data: existingLead } = await supabase
-        .from("zx_leads").select("id").like("phone", `%${digits}`)
+        .from("leads").select("id").like("phone", `%${digits}`)
         .order("created_at", { ascending: false }).limit(1).maybeSingle()
 
       if (existingLead?.id) {
         if (sent.email) {
-          await supabase.from("zx_lead_events").insert({
+          await supabase.from("lead_events").insert({
             lead_id: existingLead.id,
             event_type: "app_sent_via_email",
             event_data: { app_number: existing.application_number, email, source: "riley_call" },
           })
         }
         if (sent.sms) {
-          await supabase.from("zx_lead_events").insert({
+          await supabase.from("lead_events").insert({
             lead_id: existingLead.id,
             event_type: "app_sent_via_sms",
             event_data: { app_number: existing.application_number, source: "riley_call" },
@@ -117,14 +118,14 @@ export async function POST(request: NextRequest) {
         }
       }
       if (sent.email) {
-        await supabase.from("zx_contact_interactions").insert({
+        await supabase.from("contact_interactions").insert({
           phone: e164Existing, channel: "email", direction: "outbound",
           content: `Riley sent application ${existing.application_number} via email to ${email || "lead"}`,
           metadata: { type: "application_link", app_number: existing.application_number, source: "riley_call" },
         })
       }
       if (sent.sms) {
-        await supabase.from("zx_contact_interactions").insert({
+        await supabase.from("contact_interactions").insert({
           phone: e164Existing, channel: "sms", direction: "outbound",
           content: `Riley sent application ${existing.application_number} via text`,
           metadata: { type: "application_link", app_number: existing.application_number, source: "riley_call" },
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
 
     // Find the lead ID for this phone number
     const { data: matchedLead } = await supabase
-      .from("zx_leads")
+      .from("leads")
       .select("id")
       .like("phone", `%${digits}`)
       .order("created_at", { ascending: false })
@@ -191,14 +192,14 @@ export async function POST(request: NextRequest) {
 
     if (leadId) {
       if (sent.email) {
-        await supabase.from("zx_lead_events").insert({
+        await supabase.from("lead_events").insert({
           lead_id: leadId,
           event_type: "app_sent_via_email",
           event_data: { app_number: appNumber, email: email, source: "riley_call" },
         })
       }
       if (sent.sms) {
-        await supabase.from("zx_lead_events").insert({
+        await supabase.from("lead_events").insert({
           lead_id: leadId,
           event_type: "app_sent_via_sms",
           event_data: { app_number: appNumber, source: "riley_call" },
@@ -208,7 +209,7 @@ export async function POST(request: NextRequest) {
 
     // Store in contact interactions so it shows in the conversation thread
     if (sent.email) {
-      await supabase.from("zx_contact_interactions").insert({
+      await supabase.from("contact_interactions").insert({
         phone: e164,
         channel: "email",
         direction: "outbound",
@@ -217,7 +218,7 @@ export async function POST(request: NextRequest) {
       })
     }
     if (sent.sms) {
-      await supabase.from("zx_contact_interactions").insert({
+      await supabase.from("contact_interactions").insert({
         phone: e164,
         channel: "sms",
         direction: "outbound",
@@ -398,48 +399,14 @@ async function sendEmail(
 }
 
 async function sendSms(toPhone: string, applyUrl: string, firstName?: string): Promise<boolean> {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
-  const messagingServiceSid = "MG0247ce788faa6836a9d98cff698406c7" // Sole Proprietor A2P — APPROVED
-
-  if (!accountSid || !authToken) {
-    console.error("[retell-preme] Twilio not configured — skipping SMS")
-    return false
-  }
-
   const name = firstName || "there"
   const body = `Hey ${name}, it's Riley from Preme Home Loans. Your application link is ready — tap here to review and submit: ${applyUrl}\n\nQuestions? Call us at (470) 942-5787.`
-
-  try {
-    const params = new URLSearchParams({
-      To: toPhone,
-      MessagingServiceSid: messagingServiceSid,
-      Body: body,
-    })
-
-    const res = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
-        },
-        body: params.toString(),
-      }
-    )
-
-    if (!res.ok) {
-      const err = await res.text()
-      console.error("[retell-preme] SMS failed:", err)
-      return false
-    }
-
-    const data = await res.json()
-    console.log(`[retell-preme] SMS sent to ${toPhone}: ${data.sid}`)
-    return true
-  } catch (err) {
-    console.error("[retell-preme] SMS error:", err)
-    return false
-  }
+  const result = await sendPremeSms({
+    toPhone,
+    message: body,
+    firstName: name,
+    source: "create_lead_and_text",
+    metadata: { apply_url: applyUrl },
+  })
+  return result.ok
 }

@@ -48,7 +48,7 @@ export async function GET(
     let interactions: any[] = []
     try {
       const { data: interactionData } = await adminClient
-        .from("zx_contact_interactions")
+        .from("contact_interactions")
         .select("*")
         .or(`email.eq.${lead.email},phone.eq.${lead.phone}`)
         .order("created_at", { ascending: false })

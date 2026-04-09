@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // Find the lead
     const { data: lead } = await supabase
-      .from("zx_leads")
+      .from("leads")
       .select("id, status, custom_fields")
       .like("phone", `%${digits}`)
       .order("created_at", { ascending: false })
@@ -52,10 +52,10 @@ export async function POST(request: NextRequest) {
     const updates: Record<string, unknown> = { status }
     if (temperature) updates.temperature = temperature
 
-    await supabase.from("zx_leads").update(updates).eq("id", lead.id)
+    await supabase.from("leads").update(updates).eq("id", lead.id)
 
     // Log the status change with reason
-    await supabase.from("zx_lead_events").insert({
+    await supabase.from("lead_events").insert({
       lead_id: lead.id,
       event_type: "status_changed",
       event_data: {
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     // If not_qualified or dead, cancel active sequences
     if (status === "not_qualified" || status === "dead") {
       await supabase
-        .from("zx_sequence_enrollments")
+        .from("sequence_enrollments")
         .update({ status: "cancelled", pause_reason: `riley_${status}` })
         .eq("lead_id", lead.id)
         .eq("status", "active")

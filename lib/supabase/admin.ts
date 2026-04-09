@@ -10,11 +10,14 @@ export function createAdminClient() {
   )
 }
 
-// Admin client for zentryx schema (leads, zx_leads, contact data)
-export function createZentrxClient() {
+// Admin client for preme pipeline schema (leads, calls, sequences, etc.)
+export function createPipelineClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { db: { schema: "zentryx" } }
+    { db: { schema: "preme" } }
   )
 }
+
+// Backward-compatible alias — remove after verifying all imports updated
+export const createZentrxClient = createPipelineClient

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic"
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { db: { schema: "zentryx" } }
+  { db: { schema: "preme" } }
 )
 
 const PREME_AGENTS = [
@@ -68,7 +68,7 @@ export default async function VoiceLabPage() {
         let callerName: string | null = null
         if (phoneDigits.length === 10) {
           const { data: lead } = await supabase
-            .from("zx_leads")
+            .from("leads")
             .select("id, first_name, last_name")
             .like("phone", `%${phoneDigits}`)
             .order("created_at", { ascending: false })
