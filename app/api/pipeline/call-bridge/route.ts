@@ -4,6 +4,7 @@ import { createZentrxClient } from "@/lib/supabase/admin"
 
 const ADMIN_PHONE = process.env.ADMIN_PHONE || "+19453088322"
 const TWILIO_PHONE = process.env.TWILIO_PHONE_NUMBER || "+14709167713"
+const OUTBOUND_CALLER_ID = process.env.PREME_OUTBOUND_CALLER_ID || "+14707405808"
 
 /**
  * POST /api/pipeline/call-bridge
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     const call = await client.calls.create({
       to: ADMIN_PHONE,
       from: TWILIO_PHONE,
-      url: `${baseUrl}/api/pipeline/call-bridge/twiml?leadPhone=${encodeURIComponent(e164Lead)}&leadName=${encodeURIComponent(leadName || "a lead")}&leadId=${encodeURIComponent(leadId || "")}`,
+      url: `${baseUrl}/api/pipeline/call-bridge/twiml?leadPhone=${encodeURIComponent(e164Lead)}&leadName=${encodeURIComponent(leadName || "a lead")}&leadId=${encodeURIComponent(leadId || "")}&callerId=${encodeURIComponent(OUTBOUND_CALLER_ID)}`,
       statusCallback: `${baseUrl}/api/pipeline/call-bridge/status?leadId=${encodeURIComponent(leadId || "")}&leadPhone=${encodeURIComponent(e164Lead)}`,
       statusCallbackEvent: ["completed"],
       statusCallbackMethod: "POST",

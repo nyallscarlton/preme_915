@@ -18,6 +18,7 @@ function handleTwiml(request: NextRequest) {
   const leadPhone = searchParams.get("leadPhone") || ""
   const leadName = searchParams.get("leadName") || "a lead"
   const leadId = searchParams.get("leadId") || ""
+  const callerId = searchParams.get("callerId") || process.env.PREME_OUTBOUND_CALLER_ID || "+14707405808"
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.zyntrxmarketing.com"
 
@@ -29,7 +30,7 @@ function handleTwiml(request: NextRequest) {
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="alice">Connecting you now.</Say>
-  <Dial record="record-from-answer-dual" recordingStatusCallback="${baseUrl}/api/pipeline/call-bridge/recording?leadId=${encodeURIComponent(leadId)}&amp;leadPhone=${encodeURIComponent(leadPhone)}&amp;leadName=${encodeURIComponent(leadName)}" recordingStatusCallbackEvent="completed" callerId="${process.env.TWILIO_PHONE_NUMBER || "+14709167713"}">
+  <Dial record="record-from-answer-dual" recordingStatusCallback="${baseUrl}/api/pipeline/call-bridge/recording?leadId=${encodeURIComponent(leadId)}&amp;leadPhone=${encodeURIComponent(leadPhone)}&amp;leadName=${encodeURIComponent(leadName)}" recordingStatusCallbackEvent="completed" callerId="${callerId}">
     <Number>${leadPhone}</Number>
   </Dial>
   <Say voice="alice">The call has ended.</Say>
@@ -42,7 +43,7 @@ function handleTwiml(request: NextRequest) {
   // Initial prompt: gather digit input
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Gather numDigits="1" action="${baseUrl}/api/pipeline/call-bridge/twiml?leadPhone=${encodeURIComponent(leadPhone)}&amp;leadName=${encodeURIComponent(leadName)}&amp;leadId=${encodeURIComponent(leadId)}" method="GET">
+  <Gather numDigits="1" action="${baseUrl}/api/pipeline/call-bridge/twiml?leadPhone=${encodeURIComponent(leadPhone)}&amp;leadName=${encodeURIComponent(leadName)}&amp;leadId=${encodeURIComponent(leadId)}&amp;callerId=${encodeURIComponent(callerId)}" method="GET">
     <Say voice="alice">Incoming call bridge to ${leadName}. Press 1 to connect.</Say>
   </Gather>
   <Say voice="alice">No input received. Goodbye.</Say>
