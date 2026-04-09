@@ -23,7 +23,8 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { triggerOutboundCall } from "@/lib/retell"
-import { sendSms, buildWelcomeSms, buildMissedCallSms, buildSecondMissedCallSms } from "@/lib/sms"
+import { sendPremeSms } from "@/lib/preme-sms"
+import { buildWelcomeSms, buildMissedCallSms, buildSecondMissedCallSms } from "@/lib/sms"
 import {
   sendPostCadenceEmail,
   sendDay1FollowUpEmail,
@@ -145,8 +146,14 @@ export async function GET(request: Request) {
 
           case "welcome_sms": {
             const message = buildWelcomeSms(lead.first_name, lead.loan_type)
-            const smsResult = await sendSms(lead.phone, message)
-            result = { success: smsResult.success, sid: smsResult.sid, error: smsResult.error }
+            const smsResult = await sendPremeSms({
+              toPhone: lead.phone,
+              message,
+              firstName: lead.first_name,
+              leadId: lead.id,
+              source: "lead_followup_welcome",
+            })
+            result = { success: smsResult.ok, chatId: smsResult.chatId, error: smsResult.error }
             break
           }
 
@@ -158,8 +165,14 @@ export async function GET(request: Request) {
                 ? buildMissedCallSms(lead.first_name, lead.loan_type)
                 : buildSecondMissedCallSms(lead.first_name, lead.loan_type)
 
-            const smsResult = await sendSms(lead.phone, message)
-            result = { success: smsResult.success, sid: smsResult.sid, error: smsResult.error }
+            const smsResult = await sendPremeSms({
+              toPhone: lead.phone,
+              message,
+              firstName: lead.first_name,
+              leadId: lead.id,
+              source: "lead_followup_sms",
+            })
+            result = { success: smsResult.ok, chatId: smsResult.chatId, error: smsResult.error }
             break
           }
 

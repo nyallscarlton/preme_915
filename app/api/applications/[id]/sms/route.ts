@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { sendPremeSms } from "@/lib/preme-sms"
 
 export const dynamic = "force-dynamic"
 
@@ -27,32 +28,16 @@ export async function POST(
     return NextResponse.json({ error: "No phone number on file" }, { status: 400 })
   }
 
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
-  const fromNumber = process.env.TWILIO_PHONE_NUMBER
-
-  if (!accountSid || !authToken || !fromNumber) {
-    return NextResponse.json({ error: "Twilio not configured" }, { status: 500 })
-  }
-
-  // Send via Twilio
-  const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
-  const res = await fetch(twilioUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: "Basic " + Buffer.from(`${accountSid}:${authToken}`).toString("base64"),
-    },
-    body: new URLSearchParams({
-      From: fromNumber,
-      To: app.applicant_phone,
-      Body: message,
-    }),
+  const result = await sendPremeSms({
+    toPhone: app.applicant_phone,
+    message: message.trim(),
+    firstName: app.applicant_name?.split(" ")[0] || undefined,
+    source: "application_sms",
+    metadata: { application_number: app.application_number },
   })
 
-  if (!res.ok) {
-    const err = await res.text()
-    return NextResponse.json({ error: `SMS failed: ${err}` }, { status: 500 })
+  if (!result.ok) {
+    return NextResponse.json({ error: `SMS failed: ${result.error}` }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })

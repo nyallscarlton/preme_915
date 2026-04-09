@@ -9,7 +9,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getBaseUrl } from "@/lib/config"
-import { sendSms } from "@/lib/sms"
+import { sendPremeSms } from "@/lib/preme-sms"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -139,9 +139,14 @@ export async function POST(
         `Review and submit when ready: ${applyUrl}${noteClause} ` +
         `-- Reply STOP to opt out`
 
-      const result = await sendSms(phone, smsBody)
-      deliverySuccess = result.success
-      if (!result.success) deliveryError = result.error || "SMS send failed"
+      const result = await sendPremeSms({
+        toPhone: phone,
+        message: smsBody,
+        firstName: first_name || undefined,
+        source: "send_application",
+      })
+      deliverySuccess = result.ok
+      if (!result.ok) deliveryError = result.error || "SMS send failed"
     } else {
       // Email via Resend
       const sent = await sendApplicationEmail(email, applyUrl, appNumber, first_name, borrower_note)

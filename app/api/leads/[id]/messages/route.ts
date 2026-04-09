@@ -1,13 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { sendPremeSms } from "@/lib/preme-sms"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
-
-const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID!
-const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN!
-const PREME_NUMBER = process.env.TWILIO_FROM_NUMBER || "+14709167713"
 
 // GET — Fetch conversation history for a lead
 export async function GET(
@@ -113,35 +110,19 @@ export async function POST(
     const digits = lead.phone.replace(/\D/g, "")
     const toNumber = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
 
-    // Send via Twilio REST API
-    const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`
-    const twilioAuth = Buffer.from(`${TWILIO_SID}:${TWILIO_TOKEN}`).toString(
-      "base64"
-    )
-
-    const twilioBody = new URLSearchParams({
-      From: PREME_NUMBER,
-      To: toNumber,
-      Body: messageBody.trim(),
+    // Send via Retell (canonical Preme SMS path)
+    const smsResult = await sendPremeSms({
+      toPhone: toNumber,
+      message: messageBody.trim(),
+      firstName: lead.first_name || undefined,
+      leadId: params.id,
+      source: "admin_conversation",
     })
 
-    const twilioRes = await fetch(twilioUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${twilioAuth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: twilioBody.toString(),
-    })
-
-    const twilioData = await twilioRes.json()
-
-    if (!twilioRes.ok) {
-      console.error("[messages] Twilio error:", twilioData)
+    if (!smsResult.ok) {
+      console.error("[messages] SMS error:", smsResult.error)
       return NextResponse.json(
-        {
-          error: twilioData.message || "Failed to send SMS via Twilio",
-        },
+        { error: smsResult.error || "Failed to send SMS" },
         { status: 502 }
       )
     }
@@ -153,9 +134,9 @@ export async function POST(
         lead_id: params.id,
         direction: "outbound",
         body: messageBody.trim(),
-        from_number: PREME_NUMBER,
+        from_number: smsResult.from,
         to_number: toNumber,
-        twilio_sid: twilioData.sid || null,
+        twilio_sid: smsResult.chatId || null,
         status: "sent",
       })
       .select()
@@ -163,17 +144,16 @@ export async function POST(
 
     if (insertErr) {
       console.error("[messages] Insert error:", insertErr)
-      // SMS was sent but DB insert failed — still return success
       return NextResponse.json({
         success: true,
         message: {
-          id: twilioData.sid,
+          id: smsResult.chatId,
           lead_id: params.id,
           direction: "outbound",
           body: messageBody.trim(),
-          from_number: PREME_NUMBER,
+          from_number: smsResult.from,
           to_number: toNumber,
-          twilio_sid: twilioData.sid,
+          twilio_sid: smsResult.chatId,
           status: "sent",
           created_at: new Date().toISOString(),
         },
