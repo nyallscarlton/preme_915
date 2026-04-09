@@ -1,16 +1,23 @@
+import { unstable_noStore as noStore } from "next/cache"
 import { createClient } from "@supabase/supabase-js"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LeadsTable } from "@/components/pipeline/leads-table"
 
 export const dynamic = "force-dynamic"
+export const revalidate = 0
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { db: { schema: "zentryx" } }
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { db: { schema: "zentryx" } }
+  )
+}
 
 export default async function LeadsPage() {
+  noStore()
+  const supabase = getSupabase()
+
   // Get current Monday for number_health week_start
   const now = new Date()
   const dayOfWeek = now.getDay()
