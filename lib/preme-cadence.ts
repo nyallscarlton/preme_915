@@ -369,6 +369,30 @@ export async function executeStep(row: QueueRow): Promise<void> {
       return
     }
 
+    // SAFETY NET: Check if Riley already had a real conversation with this lead
+    // Catches cases where the webhook failed to cancel cadence steps
+    try {
+      const { createZentrxClient } = await import("@/lib/supabase/admin")
+      const zxSb = createZentrxClient()
+      const { count: connectedCalls } = await zxSb
+        .from("zx_lead_events")
+        .select("id", { count: "exact", head: true })
+        .eq("lead_id", row.lead_id)
+        .eq("event_type", "call_ended")
+        .gt("event_data->>duration", "30000")
+      if (connectedCalls && connectedCalls > 0) {
+        console.log(`[safety-net] Caught orphaned cadence step for lead ${row.lead_id} (${row.lead_name}) — already contacted. Cancelling.`)
+        await cancelRemainingCadence(row.lead_id, "safety_net_connected")
+        await zxSb.from("zx_leads").update({ status: "contacted", updated_at: new Date().toISOString() }).eq("id", row.lead_id).in("status", ["new", "calling", "contacting"])
+        await markStepResult(row.id, "cancelled", "safety_net_already_contacted")
+        await log.complete({ skipped: true, reason: "safety_net_already_contacted" })
+        resolved = true
+        return
+      }
+    } catch (err) {
+      console.error("[safety-net] Check failed (proceeding with step):", err)
+    }
+
     // Build a "lead" object for template rendering / call dialing
     const [first, ...rest] = (row.lead_name || "").split(" ")
     const leadForExec = {
@@ -482,37 +506,26 @@ async function sendSms(row: QueueRow, lead: { first_name: string; last_name: str
 
   const message = renderTemplate(tmpl.body, lead)
   const e164 = normalizePhone(row.lead_phone)
-  const fromNumber = pickPremeOutboundNumber()
 
-  // Use the Retell SDK's chat.createSMSChat — same pattern as zentryx/lib/retell-sms.ts.
-  // The SDK auto-resolves the agent from the from_number's Retell config, so we
-  // do NOT pass agent_id explicitly. (Trying the raw /create-chat REST endpoint
-  // requires agent_id and a chat-enabled agent — Riley's voice agent isn't.)
-  const apiKey = process.env.RETELL_API_KEY
-  if (!apiKey) return { ok: false, error: "RETELL_API_KEY not configured" }
+  // Route through the canonical Preme SMS sender (lib/preme-sms.ts). Do not
+  // use pickPremeOutboundNumber here — that's voice-only.
+  const { sendPremeSms } = await import("./preme-sms")
+  const result = await sendPremeSms({
+    toPhone: e164,
+    message,
+    firstName: lead.first_name,
+    leadId: row.lead_id,
+    source: "preme-cadence",
+    metadata: {
+      step_number: String(row.step_number),
+      template: row.template_slug,
+    },
+  })
 
-  try {
-    const client = new Retell({ apiKey })
-    const chat = await client.chat.createSMSChat({
-      from_number: fromNumber,
-      to_number: e164,
-      retell_llm_dynamic_variables: {
-        initial_message: message,
-        first_name: lead.first_name,
-        last_name: lead.last_name,
-        loan_type: lead.loan_type || "investment property loan",
-      },
-      metadata: {
-        lead_id: row.lead_id,
-        step_number: String(row.step_number),
-        template: row.template_slug,
-        source: "preme-cadence",
-      },
-    })
-    return { ok: true, detail: `chat_id=${chat.chat_id || "sent"} template=${row.template_slug}` }
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  if (result.ok) {
+    return { ok: true, detail: `chat_id=${result.chatId || "sent"} template=${row.template_slug}` }
   }
+  return { ok: false, error: result.error || "preme-sms failed" }
 }
 
 // ───────────────────────── EMAIL SENDER ─────────────────────────

@@ -382,12 +382,27 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
       const seqSlug = (enrollment as any).zx_sequences?.slug || ""
 
       // "application" status should NOT pause Segment C (that's the whole point of Segment C)
-      const pauseStatuses = ["qualified", "not_qualified", "processing", "closed_won", "closed_lost", "dead", "handed_off", "converted"]
+      const pauseStatuses = ["contacted", "qualified", "not_qualified", "processing", "closed_won", "closed_lost", "dead", "handed_off", "converted"]
       if (seqSlug !== "nurture-started-app") {
         pauseStatuses.push("application") // Only pause non-Segment-C sequences for "application" status
       }
       if (pauseStatuses.includes(leadStatus)) {
         await pauseSequence(lead.id as string, `lead_status_${leadStatus}`)
+        continue
+      }
+
+      // SAFETY NET: Check if Riley already had a real conversation with this lead
+      // This catches cases where the webhook failed to cancel the sequence
+      const { count: connectedCalls } = await supabase
+        .from("zx_lead_events")
+        .select("id", { count: "exact", head: true })
+        .eq("lead_id", lead.id as string)
+        .eq("event_type", "call_ended")
+        .gt("event_data->>duration", "30000")
+      if (connectedCalls && connectedCalls > 0) {
+        console.log(`[safety-net] Caught orphaned follow-up for lead ${lead.id} (${lead.first_name} ${lead.last_name}) — already contacted. Cancelling.`)
+        await cancelSequences(lead.id as string)
+        await supabase.from("zx_leads").update({ status: "contacted", updated_at: new Date().toISOString() }).eq("id", lead.id as string).in("status", ["new", "calling", "contacting"])
         continue
       }
 
