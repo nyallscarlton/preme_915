@@ -83,7 +83,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const { data: profile } = await adminClient
       .from("profiles")
       .select("role")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single()
 
     if (!profile || !["lender", "admin"].includes(profile.role)) {
@@ -159,7 +159,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const { data: profile } = await adminClient
       .from("profiles")
       .select("role")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single()
 
     if (!profile || profile.role !== "admin") {

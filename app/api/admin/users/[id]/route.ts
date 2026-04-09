@@ -26,7 +26,7 @@ export async function PATCH(
     const { data: callerProfile } = await supabase
       .from("profiles")
       .select("role")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single()
 
     if (!callerProfile || callerProfile.role !== "admin") {
@@ -57,7 +57,7 @@ export async function PATCH(
     const { data: updated, error } = await adminClient
       .from("profiles")
       .update({ role })
-      .eq("id", params.id)
+      .eq("user_id", params.id)
       .select("id, email, first_name, last_name, phone, role, created_at")
       .single()
 

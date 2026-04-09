@@ -40,7 +40,7 @@ export async function POST(
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single()
 
     if (!profile || !["lender", "admin"].includes(profile.role)) {
