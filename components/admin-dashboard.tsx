@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,8 @@ import {
   Loader2,
   RefreshCw,
   BarChart3,
+  Bell,
+  X,
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
@@ -84,6 +86,9 @@ export function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pendingAppId, setPendingAppId] = useState<string | null>(null)
+  const [newApps, setNewApps] = useState<Application[]>([])
+  const knownAppIds = useRef<Set<string>>(new Set())
+  const isFirstLoad = useRef(true)
 
   const fetchApplications = useCallback(async () => {
     setIsLoading(true)
@@ -126,7 +131,17 @@ export function AdminDashboard() {
         }
       })
 
-      console.log("[v0] Transformed applications:", transformedApps)
+      // Detect new apps (skip on first load)
+      if (isFirstLoad.current) {
+        transformedApps.forEach((a: Application) => knownAppIds.current.add(a.dbId))
+        isFirstLoad.current = false
+      } else {
+        const fresh = transformedApps.filter((a: Application) => !knownAppIds.current.has(a.dbId))
+        if (fresh.length > 0) {
+          setNewApps(fresh)
+          fresh.forEach((a: Application) => knownAppIds.current.add(a.dbId))
+        }
+      }
       setApplications(transformedApps)
     } catch (err) {
       console.error("[v0] Error fetching applications:", err)
@@ -138,6 +153,9 @@ export function AdminDashboard() {
 
   useEffect(() => {
     fetchApplications()
+    // Poll every 30s for new applications
+    const interval = setInterval(() => fetchApplications(), 30000)
+    return () => clearInterval(interval)
   }, [fetchApplications])
 
   const stats = {
@@ -252,6 +270,35 @@ export function AdminDashboard() {
           </Button>
         </div>
 
+        {/* New application notification banner */}
+        {newApps.length > 0 && (
+          <div className="mb-6 bg-[#997100]/10 border border-[#997100]/30 px-4 py-3 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <Bell className="h-5 w-5 text-[#997100]" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {newApps.length === 1 ? "New application submitted" : `${newApps.length} new applications submitted`}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {newApps.map(a => a.applicantName).join(", ")} — ${newApps.reduce((s, a) => s + a.loanAmount, 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className="bg-[#997100] hover:bg-[#b8850a] text-black"
+                onClick={() => { setActiveTab("applications"); setNewApps([]) }}
+              >
+                Review Now
+              </Button>
+              <button onClick={() => setNewApps([])} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
             <p className="text-sm font-medium">Error: {error}</p>
@@ -272,10 +319,15 @@ export function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger
               value="applications"
-              className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground"
+              className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground relative"
             >
               <FileText className="w-4 h-4 mr-2" />
               Applications
+              {stats.pendingReview > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-red-500 text-white">
+                  {stats.pendingReview}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger
               value="conditions"
