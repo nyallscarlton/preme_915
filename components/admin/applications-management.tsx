@@ -176,6 +176,26 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
   const [valuation, setValuation] = useState<ValuationData | null>(null)
   const [valuationLoading, setValuationLoading] = useState(false)
 
+  // Call bridge state
+  const [callingBridge, setCallingBridge] = useState(false)
+
+  async function callBridge(phone: string, name: string) {
+    if (!phone) return
+    setCallingBridge(true)
+    try {
+      const res = await fetch("/api/pipeline/call-bridge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadPhone: phone, leadName: name }),
+      })
+      if (!res.ok) throw new Error("Call bridge failed")
+    } catch (err) {
+      console.error("[call-bridge]", err)
+    } finally {
+      setTimeout(() => setCallingBridge(false), 5000)
+    }
+  }
+
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false)
   const [editedFields, setEditedFields] = useState<Record<string, any>>({})
@@ -588,12 +608,13 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
             &larr; Back to Applications
           </Button>
           <div className="flex items-center gap-2">
-            <a
-              href={`tel:${selectedApp.applicantPhone}`}
-              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition"
+            <button
+              onClick={() => callBridge(selectedApp.applicantPhone, selectedApp.applicantName)}
+              disabled={callingBridge || !selectedApp.applicantPhone}
+              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50"
             >
-              <Phone className="h-4 w-4" /> Call
-            </a>
+              <Phone className="h-4 w-4" /> {callingBridge ? "Calling you..." : "Call"}
+            </button>
             <Button
               variant="outline"
               className="border-gray-500 text-gray-500 hover:bg-gray-500 hover:text-white bg-transparent"
@@ -832,13 +853,14 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                   rows={2}
                   className="flex-1 bg-muted border-border text-foreground resize-none"
                 />
-                <a
-                  href={`tel:${selectedApp.applicantPhone}`}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-green-600 text-white hover:bg-green-700 transition"
-                  title="Call"
+                <button
+                  onClick={() => callBridge(selectedApp.applicantPhone, selectedApp.applicantName)}
+                  disabled={callingBridge || !selectedApp.applicantPhone}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+                  title={callingBridge ? "Calling you..." : "Call via bridge"}
                 >
                   <Phone className="h-4 w-4" />
-                </a>
+                </button>
                 <Button
                   onClick={sendSms}
                   disabled={sendingSms || !smsText.trim()}
@@ -1656,13 +1678,14 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                     Follow Up
                   </Button>
                 )}
-                <a
-                  href={`tel:${app.applicantPhone}`}
-                  className="inline-flex items-center justify-center rounded-md border border-green-600 text-green-600 hover:bg-green-600 hover:text-white bg-transparent h-8 w-8 transition"
-                  title="Call"
+                <button
+                  onClick={() => callBridge(app.applicantPhone, app.applicantName)}
+                  disabled={callingBridge || !app.applicantPhone}
+                  className="inline-flex items-center justify-center rounded-md border border-green-600 text-green-600 hover:bg-green-600 hover:text-white bg-transparent h-8 w-8 transition disabled:opacity-50"
+                  title={callingBridge ? "Calling you..." : "Call via bridge"}
                 >
                   <Phone className="h-4 w-4" />
-                </a>
+                </button>
                 <Button
                   variant="outline"
                   size="sm"
