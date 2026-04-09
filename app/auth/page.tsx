@@ -112,11 +112,15 @@ export default function AuthPage() {
 
       setStatus("Redirecting...")
 
-      // Route lender/admin users to lender dashboard if no specific next URL was set
+      // Route based on role if no specific next URL was set
       const defaultNext = searchParams.get("next")
       let redirectUrl = nextUrl
-      if (!defaultNext && (userRole === "lender" || userRole === "admin")) {
-        redirectUrl = "/lender"
+      if (!defaultNext) {
+        if (userRole === "admin") {
+          redirectUrl = "/admin"
+        } else if (userRole === "lender") {
+          redirectUrl = "/lender"
+        }
       }
 
       // Hard navigation — guarantees middleware sees fresh auth cookies

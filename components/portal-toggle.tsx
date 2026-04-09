@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
-import { ArrowLeftRight, Landmark } from "lucide-react"
+import { ArrowLeftRight, Landmark, Shield } from "lucide-react"
 import Link from "next/link"
 
 export function PortalToggle() {
@@ -15,19 +15,31 @@ export function PortalToggle() {
     return null
   }
 
-  const isOnLenderPortal = pathname.startsWith("/lender") || pathname.startsWith("/admin") || pathname.startsWith("/portals")
+  const isOnBorrowerView = pathname.startsWith("/dashboard") || pathname.startsWith("/portal")
+  const isOnAdminPortal = pathname.startsWith("/admin")
+  const isOnLenderPortal = pathname.startsWith("/lender")
   const isOnPortals = pathname.startsWith("/portals")
 
-  const handleToggle = () => {
-    if (isOnLenderPortal) {
-      router.push("/dashboard")
-    } else {
-      router.push("/lender")
-    }
-  }
+  // Where the "home" portal is for this user
+  const homePortal = user.role === "admin" ? "/admin" : "/lender"
 
   return (
     <div className="flex items-center gap-2">
+      {/* Admin-only: link to admin portal when not already there */}
+      {user.role === "admin" && !isOnAdminPortal && (
+        <Button
+          variant="outline"
+          size="sm"
+          asChild
+          className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-white bg-transparent gap-2"
+        >
+          <Link href="/admin">
+            <Shield className="h-3.5 w-3.5" />
+            Admin Portal
+          </Link>
+        </Button>
+      )}
+      {/* Lender portals link */}
       {!isOnPortals && (
         <Button
           variant="outline"
@@ -41,14 +53,15 @@ export function PortalToggle() {
           </Link>
         </Button>
       )}
+      {/* Toggle between borrower view and lender/admin portal */}
       <Button
         variant="outline"
         size="sm"
-        onClick={handleToggle}
+        onClick={() => router.push(isOnBorrowerView ? homePortal : "/dashboard")}
         className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-white bg-transparent gap-2"
       >
         <ArrowLeftRight className="h-3.5 w-3.5" />
-        {isOnLenderPortal ? "Borrower View" : "Lender Portal"}
+        {isOnBorrowerView ? "Back to Portal" : "Borrower View"}
       </Button>
     </div>
   )

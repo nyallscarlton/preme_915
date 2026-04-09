@@ -107,28 +107,33 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Redirect admin/lender users from /dashboard to /lender
-  if (url.pathname === "/dashboard" && user) {
+  // Helper: create a marathon-schema Supabase client for profile lookups
+  // (profiles table lives in the "marathon" schema, not "preme")
+  const getProfile = async () => {
+    if (!user) return null
     const { createServerClient } = await import("@supabase/ssr")
-    const supabase = createServerClient(
+    const sb = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        db: { schema: "preme" },
         cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
+          getAll() { return request.cookies.getAll() },
           setAll() {},
         },
       }
     )
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single()
+    const { data } = await sb.from("profiles").select("role").eq("user_id", user.id).single()
+    return data
+  }
 
-    if (profile && (profile.role === "lender" || profile.role === "admin")) {
+  // Redirect admin/lender users from /dashboard to their correct portal
+  if (url.pathname === "/dashboard" && user) {
+    const profile = await getProfile()
+    if (profile?.role === "admin") {
+      return NextResponse.redirect(new URL("/admin", request.url))
+    }
+    if (profile?.role === "lender") {
       return NextResponse.redirect(new URL("/lender", request.url))
     }
   }
@@ -145,26 +150,7 @@ export async function middleware(request: NextRequest) {
 
   // Role-based access for lender routes
   if (isLenderRoute && user) {
-    const { createServerClient } = await import("@supabase/ssr")
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
-          setAll() {},
-        },
-      }
-    )
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single()
-
+    const profile = await getProfile()
     if (!profile || !["lender", "admin"].includes(profile.role)) {
       return NextResponse.redirect(new URL("/dashboard", request.url))
     }
@@ -172,26 +158,7 @@ export async function middleware(request: NextRequest) {
 
   // Role-based access for admin routes
   if (isAdminRoute && user) {
-    const { createServerClient } = await import("@supabase/ssr")
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
-          setAll() {},
-        },
-      }
-    )
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single()
-
+    const profile = await getProfile()
     if (!profile || profile.role !== "admin") {
       return NextResponse.redirect(new URL("/dashboard", request.url))
     }

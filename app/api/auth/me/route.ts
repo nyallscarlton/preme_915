@@ -16,7 +16,7 @@ export async function GET() {
       return NextResponse.json({ user: null })
     }
 
-    // Fetch profile for role + name
+    // Fetch profile for role + name (preme.profiles is a view over marathon.profiles)
     const { data: profile } = await supabase
       .from("profiles")
       .select("role, first_name, last_name, phone")
