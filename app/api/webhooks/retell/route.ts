@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createAdminClient, createZentrxClient } from "@/lib/supabase/admin"
 import { triggerEmailOnlyFollowUp, triggerLeadFollowUp, type LeadForFollowUp } from "@/lib/lead-followup"
 // New 13-step Preme cadence — auto-cancel hook
 import { cancelRemainingCadence } from "@/lib/preme-cadence"
@@ -131,6 +131,24 @@ export async function POST(request: NextRequest) {
               .eq("status", "pending")
           } catch (err) {
             console.error("[retell-preme] legacy queue cancel failed:", err)
+          }
+
+          // 3. Cancel zx_sequence_enrollments + update lead status to "contacted"
+          try {
+            const zxSb = createZentrxClient()
+            await zxSb
+              .from("zx_sequence_enrollments")
+              .update({ status: "completed", completed_at: new Date().toISOString(), pause_reason: "call_connected" })
+              .eq("lead_id", leadId)
+              .eq("status", "active")
+            await zxSb
+              .from("zx_leads")
+              .update({ status: "contacted", updated_at: new Date().toISOString() })
+              .eq("id", leadId)
+              .in("status", ["new", "calling", "contacting"])
+            console.log(`[retell-preme] Cancelled sequence + set lead ${leadId} to contacted`)
+          } catch (err) {
+            console.error("[retell-preme] sequence/status update failed:", err)
           }
         }
 
