@@ -204,7 +204,7 @@ async function logEvent(supabase: ReturnType<typeof createAdminClient>, leadId: 
 async function sendRetellSms(to: string, message: string) {
   const client = new Retell({ apiKey: process.env.RETELL_API_KEY! })
   await client.chat.createSMSChat({
-    from_number: process.env.RETELL_PHONE_NUMBER || "+14709425787",
+    from_number: "+14709425787", // Preme's Retell number — hardcoded per policy
     to_number: to,
     retell_llm_dynamic_variables: { initial_message: message },
     metadata: { source: "app_followup_cron" },
