@@ -160,14 +160,16 @@ export async function GET(request: NextRequest) {
       try {
         const message = rule.message(firstName, appUrl)
         await sendRetellSms(e164, message)
-        await storeInteraction(e164, {
+        // Log the event IMMEDIATELY after send — this prevents re-sends on next cron
+        await logEvent(supabase, app.lead_id, rule.eventType, e164)
+        sent++
+        // Non-critical: store interaction for memory (fire-and-forget)
+        storeInteraction(e164, {
           channel: "sms",
           direction: "outbound",
           content: message,
           metadata: { type: "app_followup", rule: rule.condition },
-        })
-        await logEvent(supabase, app.lead_id, rule.eventType, e164)
-        sent++
+        }).catch(() => {})
       } catch (err: any) {
         errorDetails.push(`${app.applicant_name} (${e164}) [${rule.condition}]: ${err?.message || String(err)}`)
         errors++
