@@ -409,23 +409,35 @@ export async function executeStep(row: QueueRow): Promise<void> {
       return
     }
 
-    // SAFETY NET: Check if this lead has a call with a terminal outcome
-    // Uses call_outcome classification instead of raw duration check.
-    // Terminal outcomes: connected_qualified, connected_not_interested, bad_number
+    // SAFETY NET: Check if this lead has a call with a terminal outcome.
+    // Primary: check call_outcome on lead_messages (new calls).
+    // Fallback: check duration > 30s on lead_events call_ended (old calls without call_outcome).
     try {
       const { createZentrxClient } = await import("@/lib/supabase/admin")
       const zxSb = createZentrxClient()
+
+      // Primary: call_outcome classification
       const { count: terminalCalls } = await zxSb
         .from("lead_messages")
         .select("id", { count: "exact", head: true })
         .eq("lead_id", row.lead_id)
         .eq("type", "call")
         .in("call_outcome", ["connected_qualified", "connected_not_interested", "bad_number"])
-      if (terminalCalls && terminalCalls > 0) {
-        console.log(`[safety-net] Caught orphaned cadence step for lead ${row.lead_id} (${row.lead_name}) — terminal call outcome. Cancelling.`)
-        await cancelRemainingCadence(row.lead_id, "safety_net_terminal_outcome")
-        await markStepResult(row.id, "cancelled", "safety_net_terminal_outcome")
-        await log.complete({ skipped: true, reason: "safety_net_terminal_outcome" })
+
+      // Fallback: old-style duration check (for calls before call_outcome was deployed)
+      const { count: oldConnectedCalls } = await zxSb
+        .from("lead_events")
+        .select("id", { count: "exact", head: true })
+        .eq("lead_id", row.lead_id)
+        .eq("event_type", "call_ended")
+        .gt("event_data->>duration", "30000")
+
+      if ((terminalCalls && terminalCalls > 0) || (oldConnectedCalls && oldConnectedCalls > 0)) {
+        const reason = terminalCalls && terminalCalls > 0 ? "safety_net_terminal_outcome" : "safety_net_connected_legacy"
+        console.log(`[safety-net] Caught orphaned cadence step for lead ${row.lead_id} (${row.lead_name}) — ${reason}. Cancelling.`)
+        await cancelRemainingCadence(row.lead_id, reason)
+        await markStepResult(row.id, "cancelled", reason)
+        await log.complete({ skipped: true, reason })
         resolved = true
         return
       }
