@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { notifyMCStatusChange } from "@/lib/mc-webhook"
 import { notifyMCNewApplication } from "@/lib/mc-webhook"
-import { sendStatusNotification } from "@/lib/notifications"
+import { sendStatusNotification, notifyPremeAppSubmission } from "@/lib/notifications"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -236,6 +236,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Fire-and-forget MC notification
     notifyMCNewApplication(application).catch(() => {})
+
+    // Fire-and-forget #preme Slack notification + DSCR matcher
+    notifyPremeAppSubmission(application).catch(() => {})
 
     return NextResponse.json({
       success: true,

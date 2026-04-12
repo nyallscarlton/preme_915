@@ -239,16 +239,7 @@ export async function PATCH(
       event_data: { new_status: body.status, source: "admin" },
     })
 
-    // Trigger auto-enrollment based on new status
-    const { autoEnrollByStatus } = await import("@/lib/sequences")
-    const enrolled = await autoEnrollByStatus(params.id, body.status)
-    if (enrolled) {
-      await supabase.from("lead_events").insert({
-        lead_id: params.id,
-        event_type: "auto_enrolled",
-        event_data: { sequence: enrolled, trigger: `status_changed_to_${body.status}` },
-      })
-    }
+    // Sequence system decommissioned 2026-04-12 — enrollment disabled
   }
 
   return NextResponse.json({ lead: data })
@@ -339,7 +330,7 @@ export async function POST(
   }
 
   if (body.action === "disqualify") {
-    const { pauseSequence, cancelSequences, enrollLead } = await import("@/lib/sequences")
+    const { cancelSequences } = await import("@/lib/sequences")
     const reason = body.reason || "not_qualified"
 
     // Cancel all aggressive sequences
@@ -371,23 +362,7 @@ export async function POST(
       author: "admin",
     })
 
-    // Enroll in reason-specific DQ nurture sequence
-    const DQ_SEQUENCE_MAP: Record<string, string> = {
-      bad_credit: "dq-bad-credit-90day",
-      not_ready: "dq-not-ready-30day",
-      no_budget: "dq-no-budget-180day",
-      wrong_market: "dq-wrong-market",
-      no_interest: "dq-not-interested-30day",
-      other: "dq-other-60day",
-    }
-    const sequenceSlug = DQ_SEQUENCE_MAP[reason]
-    if (sequenceSlug) {
-      try {
-        await enrollLead(params.id, sequenceSlug)
-      } catch (enrollErr) {
-        console.error("[disqualify] Nurture enrollment failed:", enrollErr)
-      }
-    }
+    // Sequence system decommissioned 2026-04-12 — DQ nurture enrollment disabled
 
     return NextResponse.json({ success: true })
   }
@@ -411,9 +386,8 @@ export async function POST(
   }
 
   if (body.action === "resume_sequence") {
-    const { enrollLead } = await import("@/lib/sequences")
-    await enrollLead(params.id, body.sequence_slug || "7day-dscr-followup")
-    return NextResponse.json({ success: true })
+    // Sequence system decommissioned 2026-04-12
+    return NextResponse.json({ error: "Sequence system decommissioned" }, { status: 410 })
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 })

@@ -7,7 +7,7 @@ export interface LoanApplication {
   applicant_name: string
   applicant_phone: string
   application_number: string
-  status: "draft" | "submitted" | "under_review" | "approved" | "rejected" | "on_hold" | "archived"
+  status: "sent" | "opened" | "submitted" | "under_review" | "approved" | "rejected" | "on_hold" | "archived"
   contact_address?: string
   contact_city?: string
   contact_state?: string

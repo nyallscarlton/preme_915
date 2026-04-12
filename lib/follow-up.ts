@@ -212,7 +212,7 @@ export async function checkAndSendFollowUps(): Promise<{ sent: number; errors: n
     const { data: apps, error } = await supabase
       .from("loan_applications")
       .select("id, applicant_email, applicant_name, application_number, guest_token, created_at")
-      .eq("status", "draft")
+      .eq("status", "sent")
       .is("submitted_at", null)
       .gte("created_at", createdAfter)
       .lte("created_at", createdBefore)

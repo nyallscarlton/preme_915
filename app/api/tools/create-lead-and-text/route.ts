@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       applicant_phone: phone,
       applicant_email: email || `${digits}@placeholder.preme`,
       application_number: appNumber,
-      status: "draft",
+      status: "sent",
       loan_type: loan_type || null,
       loan_purpose: loan_type || null,
       property_address: property_address || null,

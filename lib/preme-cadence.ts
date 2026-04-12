@@ -265,6 +265,46 @@ export async function enqueueCadence(lead: {
 }
 
 /**
+ * Enqueue cadence steps starting from a specific step number.
+ * Used for inbound callers who already spoke with Riley — they skip
+ * the initial call steps and start from the first follow-up.
+ */
+export async function enqueueCadenceFromStep(lead: {
+  id: string
+  first_name: string
+  last_name: string
+  phone: string
+  email?: string
+}, startStep: number): Promise<{ ok: boolean; rows_created: number; error?: string }> {
+  const supabase = premeClient()
+  const now = new Date()
+  const leadName = `${lead.first_name} ${lead.last_name}`.trim()
+
+  const stepsToEnqueue = CADENCE_STEPS.filter((s) => s.step >= startStep)
+  // Rebase timing: first enqueued step fires at T+0 relative to now
+  const baseDelayMin = stepsToEnqueue[0]?.delayMin || 0
+
+  const rows = stepsToEnqueue.map((s) => ({
+    lead_id: lead.id,
+    lead_name: leadName,
+    lead_phone: lead.phone,
+    lead_email: lead.email || null,
+    step_number: s.step,
+    step_type: s.type,
+    step_description: s.description,
+    template_slug: s.template,
+    scheduled_at: new Date(now.getTime() + (s.delayMin - baseDelayMin) * 60 * 1000).toISOString(),
+    status: "pending" as const,
+  }))
+
+  const { error } = await supabase.from("lead_cadence_queue").insert(rows)
+  if (error) {
+    return { ok: false, rows_created: 0, error: error.message }
+  }
+  return { ok: true, rows_created: rows.length }
+}
+
+/**
  * Mark a single step row as completed or failed.
  */
 export async function markStepResult(
@@ -369,23 +409,23 @@ export async function executeStep(row: QueueRow): Promise<void> {
       return
     }
 
-    // SAFETY NET: Check if Riley already had a real conversation with this lead
-    // Catches cases where the webhook failed to cancel cadence steps
+    // SAFETY NET: Check if this lead has a call with a terminal outcome
+    // Uses call_outcome classification instead of raw duration check.
+    // Terminal outcomes: connected_qualified, connected_not_interested, bad_number
     try {
       const { createZentrxClient } = await import("@/lib/supabase/admin")
       const zxSb = createZentrxClient()
-      const { count: connectedCalls } = await zxSb
-        .from("lead_events")
+      const { count: terminalCalls } = await zxSb
+        .from("lead_messages")
         .select("id", { count: "exact", head: true })
         .eq("lead_id", row.lead_id)
-        .eq("event_type", "call_ended")
-        .gt("event_data->>duration", "30000")
-      if (connectedCalls && connectedCalls > 0) {
-        console.log(`[safety-net] Caught orphaned cadence step for lead ${row.lead_id} (${row.lead_name}) — already contacted. Cancelling.`)
-        await cancelRemainingCadence(row.lead_id, "safety_net_connected")
-        await zxSb.from("leads").update({ status: "contacted", updated_at: new Date().toISOString() }).eq("id", row.lead_id).in("status", ["new", "calling", "contacting"])
-        await markStepResult(row.id, "cancelled", "safety_net_already_contacted")
-        await log.complete({ skipped: true, reason: "safety_net_already_contacted" })
+        .eq("type", "call")
+        .in("call_outcome", ["connected_qualified", "connected_not_interested", "bad_number"])
+      if (terminalCalls && terminalCalls > 0) {
+        console.log(`[safety-net] Caught orphaned cadence step for lead ${row.lead_id} (${row.lead_name}) — terminal call outcome. Cancelling.`)
+        await cancelRemainingCadence(row.lead_id, "safety_net_terminal_outcome")
+        await markStepResult(row.id, "cancelled", "safety_net_terminal_outcome")
+        await log.complete({ skipped: true, reason: "safety_net_terminal_outcome" })
         resolved = true
         return
       }

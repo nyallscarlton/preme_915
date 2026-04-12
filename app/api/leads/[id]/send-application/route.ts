@@ -103,7 +103,7 @@ export async function POST(
         applicant_email: email || null,
         applicant_phone: phone || null,
         application_number: appNumber,
-        status: "draft",
+        status: "sent",
         loan_type: loan_type || null,
         loan_purpose: loan_purpose || null,
         loan_amount: loan_amount ? parseFloat(String(loan_amount).replace(/[^0-9.]/g, "")) : null,

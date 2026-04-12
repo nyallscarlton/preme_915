@@ -86,7 +86,7 @@ export async function POST(
       applicant_phone: e164Phone,
       applicant_email: lead.email || `${phoneDigits}@placeholder.preme`,
       application_number: appNumber,
-      status: "draft",
+      status: "sent",
       loan_type: loanType,
       loan_purpose: loanType,
       property_address: propertyAddress,

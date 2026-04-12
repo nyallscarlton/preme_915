@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       // Determine context from application status
       if (["submitted", "under_review", "approved"].includes(app.status)) {
         leadContext = "existing_applicant"
-      } else if (app.status === "draft") {
+      } else if (app.status === "sent") {
         leadContext = "incomplete_application"
       }
     }

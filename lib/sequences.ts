@@ -136,7 +136,7 @@ export async function autoEnrollByStatus(leadId: string, newStatus: string): Pro
 
     if (seqSlug === "7day-dscr-followup" && (seqStatus === "completed" || seqStatus === "cancelled")) {
       // 7-day is done — figure out which nurture segment
-      if (app && app.status === "draft") {
+      if (app && app.status === "sent") {
         // Started app but didn't finish
         await enrollLead(leadId, "nurture-started-app")
         await enrollLead(leadId, "weekly-newsletter")
@@ -475,7 +475,7 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
             .maybeSingle()
 
           let nurtureSlug = "nurture-never-talked" // Segment A default
-          if (app && app.status === "draft") {
+          if (app && app.status === "sent") {
             nurtureSlug = "nurture-started-app" // Segment C: started but didn't finish
           } else if (leadStatus === "contacted" || leadStatus === "calling") {
             nurtureSlug = "nurture-talked-not-ready" // Segment B: talked but not ready

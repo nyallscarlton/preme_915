@@ -286,3 +286,108 @@ export async function sendNewApplicationTelegram(app: NewApplicationAlert): Prom
     console.error("[notifications] New application Telegram error:", err)
   }
 }
+
+const PREME_CHANNEL_ID = "C0APBULDQS1"
+const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || "xoxb-10810278616865-10793966886901-IkgPJuagaGNceBA2WFIysKbC"
+
+/**
+ * Post application submission notification to #preme Slack channel.
+ * Also runs DSCR matcher and posts result as follow-up.
+ */
+export async function notifyPremeAppSubmission(app: {
+  applicant_name?: string | null
+  applicant_phone?: string | null
+  applicant_email?: string | null
+  property_state?: string | null
+  property_type?: string | null
+  loan_amount?: number | null
+  loan_type?: string | null
+  loan_purpose?: string | null
+  credit_score_range?: string | null
+  application_number?: string | null
+  id?: string
+}): Promise<void> {
+  const name = app.applicant_name || "Unknown"
+  const phone = app.applicant_phone || "none"
+  const email = app.applicant_email || "none"
+  const state = app.property_state || "N/A"
+  const propType = app.property_type || "N/A"
+  const amount = app.loan_amount ? `$${Number(app.loan_amount).toLocaleString("en-US")}` : "N/A"
+  const portalLink = `https://app.premerealestate.com/admin/applications/${app.id || ""}`
+
+  const text = [
+    `\u{1F4CB} *New application submitted*`,
+    `\u2022 Name: ${name}`,
+    `\u2022 Phone: ${phone}`,
+    `\u2022 Email: ${email}`,
+    `\u2022 Property: ${state}, ${propType}`,
+    `\u2022 Loan amount: ${amount}`,
+    `\u2022 App link: ${portalLink}`,
+  ].join("\n")
+
+  try {
+    await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ channel: PREME_CHANNEL_ID, text }),
+    })
+  } catch (err) {
+    console.error("[notifications] Preme Slack notification error:", err)
+  }
+
+  // Run DSCR matcher and post result
+  try {
+    const dscrApp = {
+      state: app.property_state || "",
+      propertyType: app.property_type || "residential",
+      loanPurpose: app.loan_purpose || app.loan_type || "purchase",
+      loanAmount: app.loan_amount || 0,
+      fico: parseFicoRange(app.credit_score_range),
+      ltv: 75,
+    }
+
+    const matchRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "https://app.premerealestate.com"}/api/dscr/match`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ application: dscrApp, applicationId: app.id, save: true }),
+    })
+
+    if (matchRes.ok) {
+      const result = await matchRes.json()
+      let matchText: string
+
+      if (result.qualifiedCount > 0) {
+        const top = result.qualified?.[0]
+        matchText = [
+          `\u{1F3E6} *Lender match: ${top?.lender?.name || "Found"}*`,
+          `\u2022 Max LTV: ${top?.lender?.ltv?.purchase || "N/A"}%`,
+          `\u2022 Min FICO: ${top?.lender?.min_fico || "N/A"}`,
+          `\u2022 ${result.qualifiedCount} total lenders qualified`,
+        ].join("\n")
+      } else {
+        const reason = result.disqualified?.[0]?.reasons?.[0] || "No matching lenders found"
+        matchText = `\u26A0\uFE0F *No lender match.* Reason: ${reason}`
+      }
+
+      await fetch("https://slack.com/api/chat.postMessage", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ channel: PREME_CHANNEL_ID, text: matchText }),
+      })
+    }
+  } catch (err) {
+    console.error("[notifications] DSCR matcher error:", err)
+  }
+}
+
+function parseFicoRange(range: string | null | undefined): number {
+  if (!range) return 0
+  const match = range.match(/(\d+)/)
+  return match ? parseInt(match[1], 10) : 0
+}

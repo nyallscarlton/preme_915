@@ -61,7 +61,7 @@ export async function POST(
       applicant_phone: lead.phone,
       loan_type: lead.loan_type || "conventional",
       loan_amount: lead.loan_amount || null,
-      status: "draft",
+      status: "sent",
       source: lead.source || "lead_conversion",
       notes: `Converted from lead on ${new Date().toISOString().split("T")[0]}. ${lead.message ? `Lead message: ${lead.message}` : ""}`.trim(),
       created_at: new Date().toISOString(),

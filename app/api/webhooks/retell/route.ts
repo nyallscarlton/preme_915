@@ -78,17 +78,42 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        // Update the call entry in lead_messages with duration, recording, transcript
+        // ── Classify call outcome ──
+        const callAnalysis = call.call_analysis || {}
+        const inVoicemail = callAnalysis.in_voicemail === true || call.disconnection_reason === "voicemail_reached"
+        const callSuccessful = callAnalysis.call_successful === true
+        const durationSec = call.duration_ms ? Math.round(call.duration_ms / 1000) : 0
+        const userSentiment = callAnalysis.user_sentiment || ""
+        const customData = callAnalysis.custom_analysis_data || {}
+        const leadTemp = customData.lead_temperature || ""
+
+        let callOutcome: string
+        if (call.disconnection_reason === "invalid_destination" || call.disconnection_reason === "unallocated_number") {
+          callOutcome = "bad_number"
+        } else if (noAnswer || durationSec < 10) {
+          callOutcome = "no_answer"
+        } else if (inVoicemail) {
+          callOutcome = "voicemail"
+        } else if (callSuccessful && !inVoicemail) {
+          callOutcome = "connected_qualified"
+        } else if (!inVoicemail && durationSec > 15 && (userSentiment === "Negative" || leadTemp === "Cold" || customData.caller_intent?.toLowerCase()?.includes("not interested"))) {
+          callOutcome = "connected_not_interested"
+        } else if (!inVoicemail && durationSec > 15) {
+          callOutcome = "connected_not_ready"
+        } else {
+          callOutcome = "no_answer"
+        }
+
+        // Update the call entry in lead_messages with duration, recording, transcript, and outcome
         try {
           const adminSb = createAdminClient()
-          const durationSec = call.duration_ms ? Math.round(call.duration_ms / 1000) : 0
           const durationStr = durationSec > 0 ? `${Math.floor(durationSec / 60)}m ${durationSec % 60}s` : "0s"
-          const statusText = noAnswer ? "No answer" : `Connected (${durationStr})`
 
           await adminSb
             .from("lead_messages")
             .update({
               body: `📞 Call ${noAnswer ? "— No answer" : `— ${durationStr}`}${callSummary ? `\n\n${callSummary}` : ""}`,
+              call_outcome: callOutcome,
               metadata: {
                 call_id: call.call_id,
                 status: noAnswer ? "no_answer" : "completed",
@@ -97,6 +122,7 @@ export async function POST(request: NextRequest) {
                 recording_url: recordingUrl,
                 transcript: transcript,
                 disconnection_reason: call.disconnection_reason,
+                call_outcome: callOutcome,
               },
             })
             .eq("type", "call")
@@ -105,10 +131,12 @@ export async function POST(request: NextRequest) {
           console.error("[retell-preme] Failed to update call message entry:", err)
         }
 
-        // Auto-cancel: 30+ second human conversation = cancel remaining cadence.
-        // Cancels BOTH the new preme.lead_cadence_queue (13-step) AND legacy
-        // zentryx.lead_followup_queue (in-flight rows from before the migration).
-        if (leadId && !noAnswer && call.duration_ms > 30000) {
+        // ── Outcome-based cadence management ──
+        // CONNECTED_QUALIFIED or CONNECTED_NOT_INTERESTED or BAD_NUMBER → cancel all cadence
+        // VOICEMAIL or NO_ANSWER or CONNECTED_NOT_READY → leave cadence running
+        const shouldCancelCadence = ["connected_qualified", "connected_not_interested", "bad_number"].includes(callOutcome)
+
+        if (leadId && shouldCancelCadence) {
           // 1. New Preme cadence cancel
           try {
             const result = await cancelRemainingCadence(leadId, "connected")
@@ -133,22 +161,128 @@ export async function POST(request: NextRequest) {
             console.error("[retell-preme] legacy queue cancel failed:", err)
           }
 
-          // 3. Cancel sequence_enrollments + update lead status to "contacted"
+          // 3. Cancel sequence_enrollments + update lead status based on outcome
           try {
             const zxSb = createZentrxClient()
             await zxSb
               .from("sequence_enrollments")
-              .update({ status: "completed", completed_at: new Date().toISOString(), pause_reason: "call_connected" })
+              .update({ status: "completed", completed_at: new Date().toISOString(), pause_reason: `call_${callOutcome}` })
               .eq("lead_id", leadId)
               .eq("status", "active")
+
+            const leadStatus = callOutcome === "connected_qualified" ? "qualified"
+              : callOutcome === "connected_not_interested" ? "not_interested"
+              : callOutcome === "bad_number" ? "bad_number"
+              : "contacted"
+
             await zxSb
               .from("leads")
-              .update({ status: "contacted", updated_at: new Date().toISOString() })
+              .update({ status: leadStatus, updated_at: new Date().toISOString() })
               .eq("id", leadId)
-              .in("status", ["new", "calling", "contacting"])
-            console.log(`[retell-preme] Cancelled sequence + set lead ${leadId} to contacted`)
+              .in("status", ["new", "calling", "contacting", "contacted"])
+            console.log(`[retell-preme] Cancelled cadence, set lead ${leadId} to ${leadStatus} (outcome: ${callOutcome})`)
           } catch (err) {
             console.error("[retell-preme] sequence/status update failed:", err)
+          }
+
+          // Send final "no problem" SMS for not-interested leads
+          if (callOutcome === "connected_not_interested") {
+            try {
+              const Retell = (await import("retell-sdk")).default
+              const retellClient = new Retell({ apiKey: process.env.RETELL_API_KEY! })
+              const phone = callerPhone.replace(/\D/g, "")
+              const e164 = phone.startsWith("1") ? `+${phone}` : `+1${phone}`
+              await retellClient.chat.createSMSChat({
+                from_number: process.env.RETELL_PHONE_NUMBER || "+14709425787",
+                to_number: e164,
+                retell_llm_dynamic_variables: {
+                  initial_message: "No problem at all. If your situation changes, reply to this and I'll be here.",
+                },
+                metadata: { source: "not_interested_final_sms" },
+              })
+            } catch (err) {
+              console.error("[retell-preme] Not-interested final SMS failed:", err)
+            }
+          }
+        }
+
+        // Auto-capture: create a lead record for real (non-training) inbound calls
+        // lasting 30+ seconds where no lead record exists yet.
+        if (!leadId && !noAnswer && call.duration_ms > 30000 && !TRAINING_PHONES.has(callerPhone) && !TRAINING_PHONES.has(call.from_number || "")) {
+          try {
+            const adminSb = createAdminClient()
+            const digits = callerPhone.replace(/\D/g, "").slice(-10)
+            if (digits.length >= 10) {
+              const { data: existingLead } = await adminSb
+                .from("leads")
+                .select("id")
+                .or(`phone.ilike.%${digits}%`)
+                .maybeSingle()
+
+              if (!existingLead) {
+                const e164 = `+1${digits}`
+                // Extract name from transcript if available
+                let firstName = "Inbound"
+                let lastName = "Caller"
+                if (callSummary) {
+                  // Try to pull a name from the call summary
+                  const nameMatch = callSummary.match(/(?:caller|customer|borrower|investor|client)(?:\s+(?:is|named|called))?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i)
+                  if (nameMatch) {
+                    const parts = nameMatch[1].trim().split(/\s+/)
+                    firstName = parts[0] || "Inbound"
+                    lastName = parts.slice(1).join(" ") || "Caller"
+                  }
+                }
+
+                const PREME_VERTICAL_ID = "6508f228-d3f5-4846-a936-363e4109fd6a"
+                const { data: newLead, error: leadErr } = await adminSb
+                  .from("leads")
+                  .insert({
+                    vertical_id: PREME_VERTICAL_ID,
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone: e164,
+                    email: null,
+                    source: "inbound_call",
+                    status: "new",
+                    retell_call_id: call.call_id,
+                    retell_summary: call.call_analysis?.call_summary || null,
+                    retell_recording_url: call.recording_url || null,
+                  })
+                  .select("id")
+                  .single()
+
+                if (!leadErr && newLead) {
+                  console.log(`[retell-preme] Auto-captured lead ${newLead.id} from inbound call ${call.call_id} (${Math.round(call.duration_ms / 1000)}s)`)
+
+                  // Enroll inbound caller into cadence at step 4 (first follow-up SMS)
+                  // Skip steps 1-3 (immediate calls) since they already talked to Riley
+                  // Only enroll if Riley did NOT send an app during the call
+                  const appSentDuringCall = call.call_analysis?.custom_analysis_data?.application_sent === true ||
+                    call.call_analysis?.custom_analysis_data?.application_sent === "true"
+
+                  if (!appSentDuringCall) {
+                    try {
+                      const { enqueueCadenceFromStep } = await import("@/lib/preme-cadence")
+                      await enqueueCadenceFromStep({
+                        id: newLead.id,
+                        first_name: firstName,
+                        last_name: lastName,
+                        phone: e164,
+                        email: undefined,
+                      }, 4) // Start from step 4 (T+7min follow-up SMS)
+                      console.log(`[retell-preme] Enrolled inbound lead ${newLead.id} in cadence from step 4`)
+                    } catch (err) {
+                      console.error("[retell-preme] Cadence enrollment for inbound lead failed:", err)
+                    }
+                  } else {
+                    console.log(`[retell-preme] Inbound lead ${newLead.id} sent app during call — app follow-up will handle`)
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            console.error("[retell-preme] Auto-capture lead failed (non-fatal):", err)
           }
         }
 

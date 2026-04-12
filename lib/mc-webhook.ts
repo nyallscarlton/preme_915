@@ -24,7 +24,8 @@ function mapPremeStatusToMC(status: string): string {
     rejected: "denied",
     on_hold: "on_hold",
     archived: "closed",
-    draft: "draft",
+    sent: "sent",
+    opened: "opened",
   }
   return statusMap[status] || "submitted"
 }

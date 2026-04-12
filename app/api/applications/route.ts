@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { notifyMCNewApplication } from "@/lib/mc-webhook"
 import { sendApplicationConfirmationEmail } from "@/lib/follow-up"
-import { sendNewApplicationTelegram } from "@/lib/notifications"
+import { sendNewApplicationTelegram, notifyPremeAppSubmission } from "@/lib/notifications"
 import { triggerApplicationFollowUp, cancelPendingFollowUps } from "@/lib/lead-followup"
 
 export const dynamic = "force-dynamic"
@@ -53,6 +53,9 @@ export async function POST(request: NextRequest) {
 
     // 1. MC notification
     notifyMCNewApplication(application).catch(() => {})
+
+    // 1b. #preme Slack notification + DSCR matcher
+    notifyPremeAppSubmission(application).catch(() => {})
 
     // 2. Confirmation email (immediate)
     if (applicantEmail && !applicantEmail.endsWith("@placeholder.preme")) {
