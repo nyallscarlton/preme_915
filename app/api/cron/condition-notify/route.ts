@@ -79,24 +79,29 @@ export async function GET() {
           source: "condition_notify_multi",
         })
 
-        // Email with details (via Resend if available, otherwise skip)
-        try {
-          const { Resend } = await import("resend")
-          const resend = new Resend(process.env.RESEND_API_KEY)
-          if (app.applicant_email && process.env.RESEND_API_KEY) {
+        // Email with details via Resend API (direct fetch, no SDK)
+        if (app.applicant_email && process.env.RESEND_API_KEY) {
+          try {
             const conditionList = conditions.map((c, i) =>
               `${i + 1}. ${c.title || c.condition_type}: ${c.description}`
             ).join("\n")
 
-            await resend.emails.send({
-              from: "Preme Home Loans <loans@premerealestate.com>",
-              to: app.applicant_email,
-              subject: `${firstName}, ${conditions.length} items needed for your loan`,
-              text: `Hey ${firstName},\n\nYour lender needs the following to keep your loan moving:\n\n${conditionList}\n\nYou're almost there! Reply to this email or text us if you need help with any of these.\n\nBest,\nPreme Home Loans Team`,
+            await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from: "Preme Home Loans <loans@premerealestate.com>",
+                to: app.applicant_email,
+                subject: `${firstName}, ${conditions.length} items needed for your loan`,
+                text: `Hey ${firstName},\n\nYour lender needs the following to keep your loan moving:\n\n${conditionList}\n\nYou're almost there! Reply to this email or text us if you need help with any of these.\n\nBest,\nPreme Home Loans Team`,
+              }),
             })
+          } catch (emailErr) {
+            console.error("[condition-notify] Email failed:", emailErr)
           }
-        } catch (emailErr) {
-          console.error("[condition-notify] Email failed:", emailErr)
         }
       }
 
