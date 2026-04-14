@@ -31,7 +31,7 @@ export async function GET() {
       const ageMinutes = Math.round((now - lastBeat) / 60000)
       const stale = ageMinutes > 15
 
-      services[row.service] = { last_beat: row.last_beat, stale, age_minutes }
+      services[row.service] = { last_beat: row.last_beat, stale, age_minutes: ageMinutes }
       if (stale) allOk = false
     }
 
