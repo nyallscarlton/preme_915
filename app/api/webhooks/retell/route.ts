@@ -255,13 +255,17 @@ export async function POST(request: NextRequest) {
                 if (!leadErr && newLead) {
                   console.log(`[retell-preme] Auto-captured lead ${newLead.id} from inbound call ${call.call_id} (${Math.round(call.duration_ms / 1000)}s)`)
 
-                  // Enroll inbound caller into cadence at step 4 (first follow-up SMS)
-                  // Skip steps 1-3 (immediate calls) since they already talked to Riley
-                  // Only enroll if Riley did NOT send an app during the call
-                  const appSentDuringCall = call.call_analysis?.custom_analysis_data?.application_sent === true ||
-                    call.call_analysis?.custom_analysis_data?.application_sent === "true"
+                  // Enroll inbound caller into follow-up cadence ONLY if Riley sent
+                  // the application during the call. These are quality leads who asked
+                  // for the app — they need nurture to complete it.
+                  // If Riley did NOT send the app, this is not a quality inbound lead
+                  // and does not get automatic follow-up.
+                  const appSentDuringCall = (call.tool_calls || []).some(
+                    (tc: { name?: string }) => tc.name === "send_application" || tc.name === "create_lead_and_text"
+                  ) || call.call_analysis?.custom_analysis_data?.application_sent === true
+                    || call.call_analysis?.custom_analysis_data?.application_sent === "true"
 
-                  if (!appSentDuringCall) {
+                  if (appSentDuringCall) {
                     try {
                       const { enqueueCadenceFromStep } = await import("@/lib/preme-cadence")
                       await enqueueCadenceFromStep({
@@ -270,13 +274,13 @@ export async function POST(request: NextRequest) {
                         last_name: lastName,
                         phone: e164,
                         email: undefined,
-                      }, 4) // Start from step 4 (T+7min follow-up SMS)
-                      console.log(`[retell-preme] Enrolled inbound lead ${newLead.id} in cadence from step 4`)
+                      }, 4) // Start from step 4 (T+7min follow-up SMS) — skip initial calls since they already talked to Riley
+                      console.log(`[retell-preme] Inbound lead ${newLead.id} asked for app — enrolled in follow-up cadence from step 4`)
                     } catch (err) {
                       console.error("[retell-preme] Cadence enrollment for inbound lead failed:", err)
                     }
                   } else {
-                    console.log(`[retell-preme] Inbound lead ${newLead.id} sent app during call — app follow-up will handle`)
+                    console.log(`[retell-preme] Inbound lead ${newLead.id} — no app sent, skipping cadence (not quality)`)
                   }
                 }
               }
