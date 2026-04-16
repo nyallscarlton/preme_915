@@ -112,6 +112,36 @@ Write a reply email.`
   const subjMatch = raw.match(/^Subject:\s*(.+?)(?:\r?\n)/i)
   const subject = subjMatch ? subjMatch[1].trim() : `Re: ${context.company_name || "your message"}`
   const body = raw.replace(/^Subject:.+?\r?\n\r?\n?/i, "").trim()
+
+  if (json.usage) {
+    const u = json.usage
+    const p = { input: 3, output: 15, cached: 0.30 }
+    const inputCost = (u.input_tokens / 1_000_000) * p.input
+    const cachedCost = ((u.cache_read_input_tokens || 0) / 1_000_000) * p.cached
+    const outputCost = (u.output_tokens / 1_000_000) * p.output
+    await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/agent_costs`, {
+      method: "POST",
+      headers: {
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Profile": "marathon",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        agent_name: "clover_ai_reply",
+        model: "claude-sonnet-4-6",
+        trigger_type: "cadence",
+        input_tokens: u.input_tokens,
+        cached_input_tokens: u.cache_read_input_tokens || 0,
+        output_tokens: u.output_tokens,
+        input_cost_usd: inputCost + cachedCost,
+        output_cost_usd: outputCost,
+        session_fee_usd: 0,
+        total_cost_usd: inputCost + cachedCost + outputCost,
+      }),
+    }).catch(() => {})
+  }
+
   return { subject, body }
 }
 
