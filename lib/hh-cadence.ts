@@ -83,6 +83,43 @@ async function sendEmail(to: string, subject: string, body: string) {
   }
 }
 
+/**
+ * Send reply in-thread via Instantly API.
+ * Returns true if successful, false if failed (caller should fall back to Resend).
+ */
+async function sendViaInstantly(opts: {
+  replyToUuid: string
+  fromAccount: string
+  to: string
+  subject: string
+  body: string
+}): Promise<boolean> {
+  const key = process.env.INSTANTLY_API_KEY
+  if (!key || !opts.replyToUuid || !opts.fromAccount) return false
+  try {
+    const res = await fetch("https://api.instantly.ai/api/v2/emails/reply", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        reply_to_uuid: opts.replyToUuid,
+        eaccount: opts.fromAccount,
+        subject: opts.subject,
+        body: { text: opts.body },
+      }),
+    })
+    if (res.ok) return true
+    const errText = await res.text().catch(() => "")
+    console.error(`[instantly-reply] ${res.status}: ${errText.slice(0, 200)}`)
+    return false
+  } catch (err: any) {
+    console.error(`[instantly-reply] ${err.message}`)
+    return false
+  }
+}
+
 async function generateAIEmailReply(context: {
   first_name: string
   property_address: string
@@ -204,7 +241,19 @@ export async function executeHHStep(row: HHQueueRow): Promise<{ ok: boolean; err
         const replySubject = ctx.original_subject
           ? `Re: ${ctx.original_subject.replace(/^Re:\s*/i, "")}`
           : ai.subject
-        await sendEmail(lead.email, replySubject, ai.body)
+
+        // Try Instantly reply-in-thread first (preserves email thread + sender)
+        const sentViaInstantly = await sendViaInstantly({
+          replyToUuid: ctx.instantly_email_uuid || "",
+          fromAccount: ctx.instantly_from_account || "",
+          to: ctx.lead_email || lead.email,
+          subject: replySubject,
+          body: ai.body,
+        })
+        if (!sentViaInstantly) {
+          // Fall back to Resend (different sender, breaks thread — but email gets sent)
+          await sendEmail(lead.email, replySubject, ai.body)
+        }
         await hh.from("leads").update({ status: "contacting", contacted_at: new Date().toISOString() }).eq("id", lead.id)
         break
       }
