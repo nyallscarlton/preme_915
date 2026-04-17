@@ -1823,11 +1823,12 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
 function SendFullAppButton({ applicationId, status }: { applicationId: string; status: string }) {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [result, setResult] = useState<{ email: boolean; sms: boolean } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const label = status === "pre_qualified" ? "Send Full 1003" : "Resend Application Link"
+  const label = status === "pre_qualified" ? "Send Pre-Qual + Finish Link" : "Resend Application Link"
 
   async function send(method: "email" | "sms" | "both") {
-    setSending(true); setError(null)
+    setSending(true); setError(null); setResult(null)
     try {
       const res = await fetch(`/api/applications/${applicationId}/send-full-app`, {
         method: "POST",
@@ -1837,7 +1838,8 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
       const j = await res.json()
       if (!res.ok || !j.success) throw new Error(j.error || "Failed")
       setSent(true)
-      setTimeout(() => setSent(false), 4000)
+      setResult({ email: !!j.emailSent, sms: !!j.smsSent })
+      setTimeout(() => { setSent(false); setResult(null) }, 6000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed")
       setTimeout(() => setError(null), 5000)
@@ -1851,10 +1853,10 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
       <div className="flex gap-1">
         <Button
           size="sm"
-          variant="outline"
-          className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
-          onClick={() => send("email")}
+          className="bg-[#997100] hover:bg-[#b8850a] text-black"
+          onClick={() => send("both")}
           disabled={sending}
+          title="Sends email + SMS with the finish-my-application link"
         >
           {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : sent ? <CheckCircle className="h-4 w-4 mr-1" /> : <Send className="h-4 w-4 mr-1" />}
           {sent ? "Sent" : label}
@@ -1863,13 +1865,30 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
           size="sm"
           variant="outline"
           className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+          onClick={() => send("email")}
+          disabled={sending}
+          title="Email only"
+        >
+          <Mail className="h-4 w-4" />
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
           onClick={() => send("sms")}
           disabled={sending}
-          title="Text the link instead"
+          title="SMS only"
         >
           <MessageSquare className="h-4 w-4" />
         </Button>
       </div>
+      {result && (
+        <span className="text-xs text-green-500 mt-1">
+          {result.email && result.sms ? "Email + SMS sent" :
+           result.email ? "Email sent" :
+           result.sms ? "SMS sent" : "Nothing went out — check contact info"}
+        </span>
+      )}
       {error && <span className="text-xs text-red-400 mt-1">{error}</span>}
     </div>
   )
