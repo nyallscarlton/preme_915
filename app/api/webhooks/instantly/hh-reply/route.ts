@@ -22,10 +22,25 @@ async function slackPost(channel: string, text: string) {
 export async function POST(req: NextRequest) {
   const payload: any = await req.json().catch(() => ({}))
 
+  // Log raw payload so we can inspect Instantly's exact field names
+  await logExecution("hh-instantly-raw-payload", "hurry_homes", "debug", {
+    keys: Object.keys(payload),
+    payload_preview: JSON.stringify(payload).slice(0, 2000),
+  })
+
   const email: string | undefined = payload.lead?.email || payload.email
   const firstName: string = payload.lead?.first_name || payload.first_name || ""
   const lastName: string = payload.lead?.last_name || payload.last_name || ""
   const phone: string | null = payload.lead?.phone || payload.phone || null
+
+  // Capture Instantly threading context for reply-in-thread
+  const instantlyEmailUuid: string | null =
+    payload.email_uuid || payload.uuid || payload.reply?.uuid ||
+    payload.reply?.id || payload.message_id || payload.id || null
+  const instantlyFromAccount: string | null =
+    payload.from_address || payload.from_email || payload.eaccount ||
+    payload.to_address_email_list || payload.reply?.to || null
+
   const propertyAddress: string =
     payload.lead?.custom_variables?.property_address ||
     payload.lead?.property_address || payload.property_address || ""
@@ -88,7 +103,10 @@ export async function POST(req: NextRequest) {
         original_subject: originalSubject,
         property_address: propertyAddress,
         first_name: firstName,
-        form_url: `https://www.premerealestate.com/sell?ref=${leadId}`,
+        form_url: `https://hurryhomes.co/sell?ref=${leadId}`,
+        instantly_email_uuid: instantlyEmailUuid || "",
+        instantly_from_account: instantlyFromAccount || "",
+        lead_email: email!,
       },
     })
   } catch (err: any) {
