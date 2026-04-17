@@ -5,6 +5,7 @@ import { notifyMCNewApplication } from "@/lib/mc-webhook"
 import { sendApplicationConfirmationEmail } from "@/lib/follow-up"
 import { sendNewApplicationTelegram, notifyPremeAppSubmission } from "@/lib/notifications"
 import { triggerApplicationFollowUp, cancelPendingFollowUps } from "@/lib/lead-followup"
+import { generateMISMO } from "@/lib/mismo"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -23,8 +24,26 @@ export async function POST(request: NextRequest) {
 
     const applicationNumber = `PREME-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().substring(0, 6).toUpperCase()}`
 
+    // Extract + encrypt PII, strip plaintext from insert payload
+    const plainSsn: string | null = data.applicant_ssn || null
+    const plainEin: string | null = data.entity_ein || null
+    const declarations = data._declarations || null
+    const reoProperties: unknown[] = Array.isArray(data._reo_properties) ? data._reo_properties : []
+
+    const applicantSsnEncrypted = plainSsn
+      ? (await adminClient.rpc("encrypt_pii", { plaintext: plainSsn })).data ?? null
+      : null
+    const entityEinEncrypted = plainEin
+      ? (await adminClient.rpc("encrypt_pii", { plaintext: plainEin })).data ?? null
+      : null
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { applicant_ssn, entity_ein, _declarations, _reo_properties, ...safe } = data
+
     const applicationData = {
-      ...data,
+      ...safe,
+      applicant_ssn_encrypted: applicantSsnEncrypted,
+      entity_ein_encrypted: entityEinEncrypted,
       user_id: user?.id || null,
       application_number: applicationNumber,
       guest_token: data.is_guest ? crypto.randomUUID() : null,
@@ -43,6 +62,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
+    // Insert child rows: declarations + REO schedule
+    if (declarations && typeof declarations === "object") {
+      const { error: declErr } = await adminClient
+        .from("loan_declarations")
+        .insert([{ loan_application_id: application.id, borrower_id: null, ...declarations }])
+      if (declErr) console.error("[applications] declarations insert error:", declErr.message)
+    }
+    if (reoProperties.length > 0) {
+      const rows = reoProperties.map((r: any) => ({
+        loan_application_id: application.id,
+        is_subject: false,
+        disposition_status: r.disposition_status || "HeldForInvestment",
+        usage_type: r.usage_type || "Investment",
+        address_line1: r.address_line1 || "",
+        city: r.city || "",
+        state: r.state || "",
+        postal_code: r.postal_code || "",
+        present_market_value: Number(r.present_market_value) || 0,
+        lien_upb_amount: Number(r.lien_upb_amount) || 0,
+        monthly_mortgage_payment: Number(r.monthly_mortgage_payment) || 0,
+        monthly_rental_income_gross: Number(r.monthly_rental_income_gross) || 0,
+        monthly_rental_income_net: Number(r.monthly_rental_income_net) || 0,
+        monthly_maintenance_expense: Number(r.monthly_maintenance_expense) || 0,
+        unit_count: Number(r.unit_count) || 1,
+      }))
+      const { error: reoErr } = await adminClient.from("loan_reo_properties").insert(rows)
+      if (reoErr) console.error("[applications] REO insert error:", reoErr.message)
+    }
+
     // --- POST-INSERT ACTIONS (all fire-and-forget) ---
 
     const applicantName = application.applicant_name || "Unknown"
@@ -51,11 +99,32 @@ export async function POST(request: NextRequest) {
     const applicantEmail = application.applicant_email || ""
     const loanPurpose = application.loan_purpose || application.loan_type || null
 
+    // 0. MISMO generation — run in parallel with notifications so the Slack
+    //    post at step 1b can include the download URL when it's ready.
+    const mismoPromise = generateMISMO(application.id).catch((err) => {
+      console.error("[applications] MISMO generation error:", err)
+      return null
+    })
+
+    // 0b. Borrower profile upsert (cross-application prefill) — fire-and-forget
+    adminClient
+      .rpc("upsert_profile_from_application", { p_loan_application_id: application.id })
+      .then(({ error }) => {
+        if (error) console.error("[applications] profile upsert error:", error.message)
+      })
+
     // 1. MC notification
     notifyMCNewApplication(application).catch(() => {})
 
-    // 1b. #preme Slack notification + DSCR matcher
-    notifyPremeAppSubmission(application).catch(() => {})
+    // 1b. #preme Slack notification + DSCR matcher — wait for MISMO so the
+    //     post includes the download link
+    const mismo = await mismoPromise
+    notifyPremeAppSubmission({
+      ...application,
+      mismo_xml_url: mismo?.mismoUrl ?? null,
+      fnm_url: mismo?.fnmUrl ?? null,
+      urla_pdf_url: mismo?.urlaUrl ?? null,
+    }).catch(() => {})
 
     // 2. Confirmation email (immediate)
     if (applicantEmail && !applicantEmail.endsWith("@placeholder.preme")) {
