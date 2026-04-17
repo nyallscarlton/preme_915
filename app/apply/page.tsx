@@ -325,24 +325,12 @@ export default function LoanApplicationPage() {
           gtagApplicationStart("guest")
           gtagFormStep(1, "guest")
           const app = data.application
+          // Everything the verify-token endpoint returns is already camelCase
+          // and already matches the form-state keys — shallow copy is enough.
           const prefilled: Record<string, unknown> = {
-            firstName: app.firstName || "",
-            lastName: app.lastName || "",
+            ...app,
             email: app.email && !app.email.endsWith("@placeholder.preme") ? app.email : "",
-            phone: app.phone || "",
-            propertyAddress: app.propertyAddress || "",
-            propertyCity: app.propertyCity || "",
-            propertyState: app.propertyState || "",
-            propertyZip: app.propertyZip || "",
-            propertyType: app.propertyType || "",
-            propertyValue: app.propertyValue || "",
-            loanAmount: app.loanAmount || "",
-            loanPurpose: app.loanPurpose || "",
-            creditScore: app.creditScore || "",
-            cashReserves: app.cashReserves || "",
-            investmentAccounts: app.investmentAccounts || "",
-            retirementAccounts: app.retirementAccounts || "",
-            tcpaConsent: true, // They already consented via phone call
+            tcpaConsent: true,
           }
           setFormData(prefilled)
           setExistingApplicationId(app.applicationId)

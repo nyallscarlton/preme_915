@@ -24,6 +24,8 @@ export async function POST(request: NextRequest) {
 
     const applicationNumber = `PREME-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().substring(0, 6).toUpperCase()}`
 
+    const isPreQual: boolean = !!data.is_pre_qual
+
     // Extract + encrypt PII, strip plaintext from insert payload
     const plainSsn: string | null = data.applicant_ssn || null
     const plainEin: string | null = data.entity_ein || null
@@ -40,6 +42,7 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { applicant_ssn, entity_ein, _declarations, _reo_properties, ...safe } = data
 
+    const nowIso = new Date().toISOString()
     const applicationData = {
       ...safe,
       applicant_ssn_encrypted: applicantSsnEncrypted,
@@ -47,8 +50,10 @@ export async function POST(request: NextRequest) {
       user_id: user?.id || null,
       application_number: applicationNumber,
       guest_token: data.is_guest ? crypto.randomUUID() : null,
-      status: "submitted",
-      submitted_at: new Date().toISOString(),
+      status: isPreQual ? "pre_qualified" : "submitted",
+      is_pre_qual: isPreQual,
+      pre_qualified_at: isPreQual ? nowIso : null,
+      submitted_at: isPreQual ? null : nowIso,
     }
 
     // Use admin client to bypass RLS for inserts (guests have no auth context)
@@ -98,6 +103,20 @@ export async function POST(request: NextRequest) {
     const applicantPhone = application.applicant_phone || ""
     const applicantEmail = application.applicant_email || ""
     const loanPurpose = application.loan_purpose || application.loan_type || null
+
+    // --- PRE-QUAL SHORT-CIRCUIT ---
+    // Pre-qual submissions: run DSCR matcher, cache result, return inline.
+    // No MISMO gen, no confirmation email, no lead follow-up cadence yet
+    // (those fire when they complete the full 1003).
+    if (isPreQual) {
+      const matchRes = await runDscrMatch(adminClient, application)
+      return NextResponse.json({
+        success: true,
+        application,
+        lenderMatch: matchRes,
+        message: "Pre-qualification complete",
+      })
+    }
 
     // 0. MISMO generation — run in parallel with notifications so the Slack
     //    post at step 1b can include the download URL when it's ready.
@@ -174,6 +193,55 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("API error:", error)
     return NextResponse.json({ error: "Failed to submit application" }, { status: 500 })
+  }
+}
+
+/**
+ * Run DSCR match against pre-qual inputs, cache the result on the row,
+ * and return a UI-friendly summary for the pre-approval screen.
+ */
+async function runDscrMatch(
+  adminClient: ReturnType<typeof createAdminClient>,
+  app: Record<string, any>
+): Promise<{
+  qualifiedCount: number
+  topLender: { name: string | null; min_fico: number | null; maxLtvPurchase: number | null } | null
+  reason: string | null
+}> {
+  try {
+    const ficoMatch = /(\d+)/.exec(app.credit_score_range ?? "")
+    const dscrApp = {
+      state: app.property_state || "",
+      propertyType: app.property_type || "residential",
+      loanPurpose: app.loan_purpose || "Purchase",
+      loanAmount: Number(app.loan_amount) || 0,
+      fico: ficoMatch ? parseInt(ficoMatch[1], 10) : 0,
+      ltv: Math.min(80, Math.round(((Number(app.loan_amount) || 0) / (Number(app.property_value) || 1)) * 100)),
+    }
+    const base = process.env.NEXT_PUBLIC_APP_URL || "https://app.premerealestate.com"
+    const res = await fetch(`${base}/api/dscr/match`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ application: dscrApp, applicationId: app.id, save: false }),
+    })
+    if (!res.ok) throw new Error(`matcher returned ${res.status}`)
+    const result = await res.json()
+    const top = result.qualified?.[0]
+    const summary = {
+      qualifiedCount: result.qualifiedCount ?? 0,
+      topLender: top
+        ? { name: top?.lender?.name ?? null, min_fico: top?.lender?.min_fico ?? null, maxLtvPurchase: top?.lender?.ltv?.purchase ?? null }
+        : null,
+      reason: (result.disqualified?.[0]?.reasons?.[0] as string | undefined) ?? null,
+    }
+    await adminClient
+      .from("loan_applications")
+      .update({ pre_qual_lender_match: { ...summary, rawQualified: result.qualified?.slice(0, 3) ?? [] } })
+      .eq("id", app.id)
+    return summary
+  } catch (err) {
+    console.error("[applications] DSCR match error:", err)
+    return { qualifiedCount: 0, topLender: null, reason: "Lender match engine unavailable — we'll review manually." }
   }
 }
 

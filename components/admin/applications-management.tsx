@@ -900,14 +900,17 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                       <span className="ml-2">{formatStatus(selectedApp.status)}</span>
                     </Badge>
                     {!isEditing ? (
-                      <Button
-                        variant="outline"
-                        className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
-                        onClick={() => setIsEditing(true)}
-                      >
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Edit
-                      </Button>
+                      <>
+                        <SendFullAppButton applicationId={selectedApp.id} status={selectedApp.status} />
+                        <Button
+                          variant="outline"
+                          className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+                          onClick={() => setIsEditing(true)}
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </>
                     ) : (
                       <div className="flex gap-2">
                         <Button
@@ -1813,6 +1816,61 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
           </CardContent>
         </Card>
       )}
+    </div>
+  )
+}
+
+function SendFullAppButton({ applicationId, status }: { applicationId: string; status: string }) {
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const label = status === "pre_qualified" ? "Send Full 1003" : "Resend Application Link"
+
+  async function send(method: "email" | "sms" | "both") {
+    setSending(true); setError(null)
+    try {
+      const res = await fetch(`/api/applications/${applicationId}/send-full-app`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delivery_method: method }),
+      })
+      const j = await res.json()
+      if (!res.ok || !j.success) throw new Error(j.error || "Failed")
+      setSent(true)
+      setTimeout(() => setSent(false), 4000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed")
+      setTimeout(() => setError(null), 5000)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end">
+      <div className="flex gap-1">
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+          onClick={() => send("email")}
+          disabled={sending}
+        >
+          {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : sent ? <CheckCircle className="h-4 w-4 mr-1" /> : <Send className="h-4 w-4 mr-1" />}
+          {sent ? "Sent" : label}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+          onClick={() => send("sms")}
+          disabled={sending}
+          title="Text the link instead"
+        >
+          <MessageSquare className="h-4 w-4" />
+        </Button>
+      </div>
+      {error && <span className="text-xs text-red-400 mt-1">{error}</span>}
     </div>
   )
 }
