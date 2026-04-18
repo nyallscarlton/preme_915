@@ -1827,8 +1827,10 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
   const [error, setError] = useState<string | null>(null)
 
   const isPreQual = status === "pre_qualified"
-  const label = isPreQual ? "Approve & Send 1003" : "Resend Application Link"
-  // Green (approval) when row is awaiting pre-qual review, gold (resend) otherwise
+  // 'Approve' is the admin's action; 'Issue 1003' is what auto-fires as a result.
+  // Deliberately distinct wording from the pre-qual screens so admin + borrower
+  // see two clearly-separate milestones: pre-qual submitted → pre-qual approved.
+  const label = isPreQual ? "Approve & Issue 1003" : "Resend Application Link"
   const primaryClass = isPreQual
     ? "bg-green-600 hover:bg-green-700 text-white"
     : "bg-[#997100] hover:bg-[#b8850a] text-black"
@@ -1862,7 +1864,7 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
           className={primaryClass}
           onClick={() => send("both")}
           disabled={sending}
-          title="Sends congrats email + SMS with the finish-my-application link"
+          title={isPreQual ? "Approves the pre-qualification AND auto-sends the borrower the full 1003 (email + SMS) — one click" : "Re-sends the borrower their full 1003 link via email + SMS"}
         >
           {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : sent ? <CheckCircle className="h-4 w-4 mr-1" /> : <Send className="h-4 w-4 mr-1" />}
           {sent ? "Sent" : label}
