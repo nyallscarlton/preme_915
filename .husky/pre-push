@@ -1,0 +1,6 @@
+#!/bin/sh
+# Only run on pushes to main
+branch=$(git rev-parse --abbrev-ref HEAD)
+if [ "$branch" = "main" ]; then
+  pnpm predeploy || exit 1
+fi

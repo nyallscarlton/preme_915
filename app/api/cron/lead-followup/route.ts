@@ -14,8 +14,8 @@
  *   day1_email  — Day 1 nurture email (both paths)
  *   day3_email  — Day 3 final touch email (both paths)
  *
- * Before executing each action, checks if a previous call was answered
- * (duration > 30s) -- if so, cancels all remaining follow-ups for that lead.
+ * Before executing each action, checks if lead is already qualified/converted
+ * (outcome-based) -- if so, cancels all remaining follow-ups for that lead.
  *
  * Protected by CRON_SECRET env var or Vercel's x-vercel-cron-signature header.
  */
@@ -108,7 +108,7 @@ export async function GET(request: Request) {
         continue
       }
 
-      // Check if a previous call for this lead was answered (duration > 30s)
+      // Check if lead already qualified/converted (outcome-based, not duration)
       const wasAnswered = await checkIfCallAnswered(supabase, lead.id)
       if (wasAnswered) {
         await cancelAction(supabase, action.id, "previous_call_answered")

@@ -104,31 +104,55 @@ export async function POST(request: NextRequest) {
           callOutcome = "no_answer"
         }
 
-        // Update the call entry in lead_messages with duration, recording, transcript, and outcome
+        // Update or insert the call entry in lead_messages.
+        // Cadence-initiated calls don't pre-create a row, so UPDATE alone misses them
+        // — without this row, the safety net never sees call_outcome and cadence keeps firing.
         try {
           const adminSb = createAdminClient()
           const durationStr = durationSec > 0 ? `${Math.floor(durationSec / 60)}m ${durationSec % 60}s` : "0s"
 
-          await adminSb
+          const messageBody = `📞 Call ${noAnswer ? "— No answer" : `— ${durationStr}`}${callSummary ? `\n\n${callSummary}` : ""}`
+          const messageMetadata = {
+            call_id: call.call_id,
+            status: noAnswer ? "no_answer" : "completed",
+            duration_ms: call.duration_ms,
+            duration_str: durationStr,
+            recording_url: recordingUrl,
+            transcript: transcript,
+            disconnection_reason: call.disconnection_reason,
+            call_outcome: callOutcome,
+          }
+
+          // Try to update an existing row first
+          const { data: updated } = await adminSb
             .from("lead_messages")
             .update({
-              body: `📞 Call ${noAnswer ? "— No answer" : `— ${durationStr}`}${callSummary ? `\n\n${callSummary}` : ""}`,
+              body: messageBody,
               call_outcome: callOutcome,
-              metadata: {
-                call_id: call.call_id,
-                status: noAnswer ? "no_answer" : "completed",
-                duration_ms: call.duration_ms,
-                duration_str: durationStr,
-                recording_url: recordingUrl,
-                transcript: transcript,
-                disconnection_reason: call.disconnection_reason,
-                call_outcome: callOutcome,
-              },
+              metadata: messageMetadata,
             })
             .eq("type", "call")
             .filter("metadata->>call_id", "eq", call.call_id)
+            .select("id")
+
+          // If no existing row was found, insert a new one (cadence-initiated call)
+          if (!updated || updated.length === 0) {
+            if (leadId) {
+              await adminSb.from("lead_messages").insert({
+                lead_id: leadId,
+                direction: "outbound",
+                type: "call",
+                body: messageBody,
+                from_number: call.from_number || "+14709425787",
+                to_number: call.to_number || "+10000000000",
+                call_outcome: callOutcome,
+                status: noAnswer ? "no_answer" : "completed",
+                metadata: messageMetadata,
+              })
+            }
+          }
         } catch (err) {
-          console.error("[retell-preme] Failed to update call message entry:", err)
+          console.error("[retell-preme] Failed to upsert call message entry:", err)
         }
 
         // ── Outcome-based cadence management ──
@@ -208,7 +232,8 @@ export async function POST(request: NextRequest) {
 
         // Auto-capture: create a lead record for real (non-training) inbound calls
         // lasting 30+ seconds where no lead record exists yet.
-        if (!leadId && !noAnswer && call.duration_ms > 30000 && !TRAINING_PHONES.has(callerPhone) && !TRAINING_PHONES.has(call.from_number || "")) {
+        const CONNECTED_OUTCOMES = ["connected_qualified", "connected_not_interested", "connected_not_ready"]
+        if (!leadId && CONNECTED_OUTCOMES.includes(callOutcome) && !TRAINING_PHONES.has(callerPhone) && !TRAINING_PHONES.has(call.from_number || "")) {
           try {
             const adminSb = createAdminClient()
             const digits = callerPhone.replace(/\D/g, "").slice(-10)
@@ -486,6 +511,9 @@ export async function POST(request: NextRequest) {
         }
 
         // --- Cancel follow-up cadence for qualified leads ---
+        // Critical: call_analyzed fires AFTER call_ended. call_ended often lacks
+        // call_analysis data, so outcome gets mis-classified. This block catches
+        // that by cancelling cadence when we KNOW the lead qualified.
         if (isQualified && leadId) {
           try {
             const adminSb = createAdminClient()
@@ -499,6 +527,14 @@ export async function POST(request: NextRequest) {
               .eq("lead_id", leadId)
               .eq("status", "pending")
 
+            // Cancel new Preme cadence queue (prevents double-calls after qualification)
+            try {
+              const result = await cancelRemainingCadence(leadId, "qualified_on_call_analyzed")
+              console.log(`[retell-preme] call_analyzed: cancelled ${result.cancelled} cadence steps for qualified lead ${leadId}`)
+            } catch (err) {
+              console.error("[retell-preme] call_analyzed cadence cancel failed:", err)
+            }
+
             // Update lead status to qualified
             await adminSb
               .from("leads")
@@ -506,6 +542,25 @@ export async function POST(request: NextRequest) {
               .eq("id", leadId)
           } catch (err) {
             console.error("[retell-preme] Failed to cancel follow-ups on qualification:", err)
+          }
+        }
+
+        // --- Correct call_outcome on lead_messages if call_ended mis-classified ---
+        if (leadId) {
+          try {
+            const adminSb = createAdminClient()
+            const correctOutcome = isQualified ? "connected_qualified"
+              : (leadTemperature === "Cold" || callerIntent?.toLowerCase()?.includes("not interested")) ? "connected_not_interested"
+              : "connected_not_ready"
+
+            await adminSb
+              .from("lead_messages")
+              .update({ call_outcome: correctOutcome })
+              .eq("lead_id", leadId)
+              .eq("type", "call")
+              .filter("metadata->>call_id", "eq", call.call_id)
+          } catch (err) {
+            console.error("[retell-preme] call_analyzed outcome correction failed:", err)
           }
         }
 

@@ -10,9 +10,9 @@
  *  Step | Time      | Type  | Template / Action
  *  -----+-----------+-------+--------------------
  *   1   | T+0       | call  | Riley single-dial (fired INLINE from lead-followup.ts)
- *   2   | T+1 min   | sms   | t1min-just-tried
+ *   2   | after #1  | sms   | t1min-just-tried (fires after call 1 = no answer)
  *   3   | T+5 min   | call  | Riley single-dial
- *   4   | T+7 min   | sms   | t7min-text-anytime
+ *   4   | after #3  | sms   | t7min-text-anytime (fires after call 2 = no answer)
  *   5   | T+60 min  | call  | Riley single-dial
  *   6   | T+2 hr    | email | t2hr-email-summary
  *   7   | T+24 hr   | call  | Riley single-dial
@@ -23,9 +23,10 @@
  *  12   | T+120 hr  | sms   | day6-soft-checkin
  *  13   | T+152 hr  | sms   | day7-final
  *
- * Auto-cancel: when Retell sends call_ended with duration_ms >= 30000, all
- * remaining pending steps for that lead are cancelled. Same for SMS opt-out
- * and explicit application submission.
+ * Auto-cancel: when Retell sends call_analyzed with a terminal outcome
+ * (connected_qualified, connected_not_interested, bad_number), all remaining
+ * pending steps for that lead are cancelled. Same for SMS opt-out and
+ * explicit application submission.
  *
  * Day-7 nurture handoff: after step 13 fires, the lead is enrolled in the
  * appropriate Zentryx nurture sequence based on its current status. The
@@ -41,19 +42,19 @@ import { ExecLog } from "@/lib/exec-log"
 
 // Cadence step definitions — single source of truth
 export const CADENCE_STEPS = [
-  { step: 1,  delayMin: 0,    type: "call",  template: null,                description: "T+0 immediate Riley call (single dial)" },
-  { step: 2,  delayMin: 1,    type: "sms",   template: "t1min-just-tried",  description: "T+1 min SMS" },
-  { step: 3,  delayMin: 5,    type: "call",  template: null,                description: "T+5 min Riley call (single dial)" },
-  { step: 4,  delayMin: 7,    type: "sms",   template: "t7min-text-anytime", description: "T+7 min SMS" },
-  { step: 5,  delayMin: 60,   type: "call",  template: null,                description: "T+60 min Riley call (single dial)" },
-  { step: 6,  delayMin: 120,  type: "email", template: "t2hr-email-summary", description: "T+2 hr email" },
-  { step: 7,  delayMin: 1440, type: "call",  template: null,                description: "T+24 hr Riley call (single dial)" },
-  { step: 8,  delayMin: 1920, type: "sms",   template: "day2-value",        description: "T+32 hr Day 2 value SMS" },
-  { step: 9,  delayMin: 3120, type: "sms",   template: "day3-social-proof", description: "T+52 hr Day 3 social-proof SMS" },
-  { step: 10, delayMin: 4320, type: "call",  template: null,                description: "T+72 hr Riley call (single dial)" },
-  { step: 11, delayMin: 4800, type: "sms",   template: "day4-urgency",      description: "T+80 hr Day 4 urgency SMS" },
-  { step: 12, delayMin: 7200, type: "sms",   template: "day6-soft-checkin", description: "T+120 hr Day 6 soft check-in SMS" },
-  { step: 13, delayMin: 9120, type: "sms",   template: "day7-final",        description: "T+152 hr Day 7 final SMS" },
+  { step: 1,  delayMin: 0,    type: "call",  template: null,                 afterStep: null, description: "T+0 immediate Riley call (single dial)" },
+  { step: 2,  delayMin: 1,    type: "sms",   template: "t1min-just-tried",   afterStep: 1,    description: "SMS after 1st call attempt (no answer)" },
+  { step: 3,  delayMin: 5,    type: "call",  template: null,                 afterStep: null, description: "T+5 min Riley call (single dial)" },
+  { step: 4,  delayMin: 7,    type: "sms",   template: "t7min-text-anytime", afterStep: 3,    description: "SMS after 2nd call attempt (no answer)" },
+  { step: 5,  delayMin: 60,   type: "call",  template: null,                 afterStep: null, description: "T+60 min Riley call (single dial)" },
+  { step: 6,  delayMin: 120,  type: "email", template: "t2hr-email-summary", afterStep: null, description: "T+2 hr email" },
+  { step: 7,  delayMin: 1440, type: "call",  template: null,                 afterStep: null, description: "T+24 hr Riley call (single dial)" },
+  { step: 8,  delayMin: 1920, type: "sms",   template: "day2-value",         afterStep: null, description: "T+32 hr Day 2 value SMS" },
+  { step: 9,  delayMin: 3120, type: "sms",   template: "day3-social-proof",  afterStep: null, description: "T+52 hr Day 3 social-proof SMS" },
+  { step: 10, delayMin: 4320, type: "call",  template: null,                 afterStep: null, description: "T+72 hr Riley call (single dial)" },
+  { step: 11, delayMin: 4800, type: "sms",   template: "day4-urgency",       afterStep: null, description: "T+80 hr Day 4 urgency SMS" },
+  { step: 12, delayMin: 7200, type: "sms",   template: "day6-soft-checkin",  afterStep: null, description: "T+120 hr Day 6 soft check-in SMS" },
+  { step: 13, delayMin: 9120, type: "sms",   template: "day7-final",         afterStep: null, description: "T+152 hr Day 7 final SMS" },
 ] as const
 
 // Training caller bot only — Nyalls's own phone (+19453088322) was previously
@@ -241,6 +242,17 @@ export async function enqueueCadence(lead: {
   email?: string
 }): Promise<{ ok: boolean; rows_created: number; error?: string }> {
   const supabase = premeClient()
+
+  // Dedup: skip if this lead already has cadence rows (prevents double-enrollment)
+  const { count } = await supabase
+    .from("lead_cadence_queue")
+    .select("id", { count: "exact", head: true })
+    .eq("lead_id", lead.id)
+  if (count && count > 0) {
+    console.log(`[preme-cadence] Lead ${lead.id} already has ${count} cadence rows — skipping duplicate enrollment`)
+    return { ok: true, rows_created: 0 }
+  }
+
   const now = new Date()
   const leadName = `${lead.first_name} ${lead.last_name}`.trim()
 
@@ -410,13 +422,15 @@ export async function executeStep(row: QueueRow): Promise<void> {
     }
 
     // SAFETY NET: Check if this lead has a call with a terminal outcome.
-    // Primary: check call_outcome on lead_messages (new calls).
-    // Fallback: check duration > 30s on lead_events call_ended (old calls without call_outcome).
+    // Uses call_outcome on lead_messages only — never duration.
     try {
       const { createZentrxClient } = await import("@/lib/supabase/admin")
       const zxSb = createZentrxClient()
 
-      // Primary: call_outcome classification
+      // Check call_outcome on lead_messages for terminal outcomes.
+      // This is the ONLY safety net — no duration-based fallback.
+      // Duration-based checks used string comparison (.gt on jsonb text)
+      // which caused "8347" > "30000" to be true, wrongly cancelling cadences.
       const { count: terminalCalls } = await zxSb
         .from("lead_messages")
         .select("id", { count: "exact", head: true })
@@ -424,25 +438,62 @@ export async function executeStep(row: QueueRow): Promise<void> {
         .eq("type", "call")
         .in("call_outcome", ["connected_qualified", "connected_not_interested", "bad_number"])
 
-      // Fallback: old-style duration check (for calls before call_outcome was deployed)
-      const { count: oldConnectedCalls } = await zxSb
-        .from("lead_events")
-        .select("id", { count: "exact", head: true })
-        .eq("lead_id", row.lead_id)
-        .eq("event_type", "call_ended")
-        .gt("event_data->>duration", "30000")
-
-      if ((terminalCalls && terminalCalls > 0) || (oldConnectedCalls && oldConnectedCalls > 0)) {
-        const reason = terminalCalls && terminalCalls > 0 ? "safety_net_terminal_outcome" : "safety_net_connected_legacy"
-        console.log(`[safety-net] Caught orphaned cadence step for lead ${row.lead_id} (${row.lead_name}) — ${reason}. Cancelling.`)
-        await cancelRemainingCadence(row.lead_id, reason)
-        await markStepResult(row.id, "cancelled", reason)
-        await log.complete({ skipped: true, reason })
+      if (terminalCalls && terminalCalls > 0) {
+        console.log(`[safety-net] Terminal call_outcome found for lead ${row.lead_id} (${row.lead_name}). Cancelling cadence.`)
+        await cancelRemainingCadence(row.lead_id, "safety_net_terminal_outcome")
+        await markStepResult(row.id, "cancelled", "safety_net_terminal_outcome")
+        await log.complete({ skipped: true, reason: "safety_net_terminal_outcome" })
         resolved = true
         return
       }
     } catch (err) {
       console.error("[safety-net] Check failed (proceeding with step):", err)
+    }
+
+    // DEPENDENCY CHECK: If this step depends on a prior call step's result,
+    // verify the prior call completed with a non-connected outcome before firing.
+    // e.g. step 2 (SMS) fires only after step 1 (call) got voicemail/no_answer.
+    // If the prior call connected, cadence should already be cancelled — but if
+    // the cancel failed, this catches it.
+    const stepDef = CADENCE_STEPS.find((s) => s.step === row.step_number)
+    if (stepDef?.afterStep) {
+      const supabaseCheck = premeClient()
+      const { data: priorStep } = await supabaseCheck
+        .from("lead_cadence_queue")
+        .select("status, result")
+        .eq("lead_id", row.lead_id)
+        .eq("step_number", stepDef.afterStep)
+        .maybeSingle()
+
+      if (!priorStep || priorStep.status === "pending") {
+        // Prior call hasn't fired yet — defer this step
+        console.log(`[preme-cadence] Deferred step ${row.step_number} for lead ${row.lead_id} — waiting for step ${stepDef.afterStep} to complete`)
+        await log.complete({ deferred: true, reason: `waiting_for_step_${stepDef.afterStep}` })
+        resolved = true
+        return
+      }
+      // If prior call connected (terminal outcome), cadence should be cancelled.
+      // But if it wasn't, cancel now as a safety net.
+      if (priorStep.status === "completed" && priorStep.result?.includes("call_id=")) {
+        // Prior call completed — check if it was a connected call by looking at lead_messages
+        const { createZentrxClient } = await import("@/lib/supabase/admin")
+        const checkSb = createZentrxClient()
+        const { count: terminalForStep } = await checkSb
+          .from("lead_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("lead_id", row.lead_id)
+          .eq("type", "call")
+          .in("call_outcome", ["connected_qualified", "connected_not_interested", "bad_number"])
+        if (terminalForStep && terminalForStep > 0) {
+          console.log(`[preme-cadence] Step ${row.step_number} skipped — prior call step ${stepDef.afterStep} resulted in terminal outcome`)
+          await cancelRemainingCadence(row.lead_id, `connected_after_step_${stepDef.afterStep}`)
+          await markStepResult(row.id, "cancelled", `connected_after_step_${stepDef.afterStep}`)
+          await log.complete({ skipped: true, reason: `connected_after_step_${stepDef.afterStep}` })
+          resolved = true
+          return
+        }
+      }
+      // Prior step failed or was non-connected — proceed with this SMS
     }
 
     // Build a "lead" object for template rendering / call dialing
@@ -575,6 +626,25 @@ async function sendSms(row: QueueRow, lead: { first_name: string; last_name: str
   })
 
   if (result.ok) {
+    // Log to contact_interactions so SMS shows in the lead thread UI
+    try {
+      await supabase.from("contact_interactions").insert({
+        phone: e164,
+        channel: "sms",
+        direction: "outbound",
+        content: message,
+        metadata: {
+          source: "preme-cadence",
+          entity: "preme",
+          step_number: String(row.step_number),
+          template: row.template_slug,
+          chat_id: result.chatId,
+          from_number: result.from,
+        },
+      })
+    } catch (err) {
+      console.error("[preme-cadence] Failed to log SMS to contact_interactions (non-fatal):", err)
+    }
     return { ok: true, detail: `chat_id=${result.chatId || "sent"} template=${row.template_slug}` }
   }
   return { ok: false, error: result.error || "preme-sms failed" }

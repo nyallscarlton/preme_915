@@ -33,6 +33,7 @@ interface CallData {
   lead_id: string | null
   property_address: string | null
   loan_type: string | null
+  call_outcome: string | null
 }
 
 function formatDuration(ms: number): string {
@@ -86,6 +87,17 @@ export default async function VoiceLabPage() {
           if (fn) callerName = `${fn} ${ln}`.trim()
         }
 
+        // Look up call_outcome from lead_messages
+        let callOutcome: string | null = null
+        const { data: msg } = await supabase
+          .from("lead_messages")
+          .select("call_outcome")
+          .eq("call_id", c.call_id)
+          .not("call_outcome", "is", null)
+          .limit(1)
+          .maybeSingle()
+        if (msg?.call_outcome) callOutcome = msg.call_outcome
+
         allCalls.push({
           call_id: c.call_id,
           direction: c.direction || "outbound",
@@ -105,6 +117,7 @@ export default async function VoiceLabPage() {
           lead_id: leadId,
           property_address: analysis.property_address || null,
           loan_type: analysis.loan_type_confirmed || null,
+          call_outcome: callOutcome,
         })
       }
     } catch (err) {
@@ -124,7 +137,8 @@ export default async function VoiceLabPage() {
   const avgDuration = totalCalls > 0
     ? Math.round(allCalls.reduce((s, c) => s + c.duration_ms, 0) / totalCalls / 1000)
     : 0
-  const connected = allCalls.filter(c => c.duration_ms > 10000).length
+  const CONNECTED_OUTCOMES = ["connected_qualified", "connected_not_interested", "connected_not_ready"]
+  const connected = allCalls.filter(c => c.call_outcome ? CONNECTED_OUTCOMES.includes(c.call_outcome) : false).length
   const connectRate = totalCalls > 0 ? Math.round(connected / totalCalls * 100) : 0
 
   return (
