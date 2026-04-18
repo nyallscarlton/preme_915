@@ -364,7 +364,7 @@ export default function DSCRLandingPage() {
                       ))}
                     </div>
                     <Button size="lg" className="w-full bg-[#997100] hover:bg-[#b8850a] text-white" asChild>
-                      <Link href="/apply">Get My Pre-Qual</Link>
+                      <Link href="/prequalify">Get My Pre-Qual</Link>
                     </Button>
                     <p className="text-xs text-white/60 text-center">Actual terms subject to underwriting.</p>
                   </CardContent>
@@ -450,7 +450,7 @@ export default function DSCRLandingPage() {
                     </div>
                     <h3 className="mt-6 text-xl font-semibold">{step.title}</h3>
                     <p className="mt-3 text-muted-foreground text-sm">{step.description}</p>
-                    <Link href="/apply" className="inline-flex items-center px-0 text-sm font-medium text-[#8B6914] hover:underline mt-2">
+                    <Link href="/prequalify" className="inline-flex items-center px-0 text-sm font-medium text-[#8B6914] hover:underline mt-2">
                       {step.cta}
                       <ArrowRight className="ml-2 h-3.5 w-3.5" />
                     </Link>
