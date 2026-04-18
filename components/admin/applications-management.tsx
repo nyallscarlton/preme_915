@@ -1820,20 +1820,31 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
   )
 }
 
+/**
+ * Header button for ALREADY-PROCESSED rows: re-sends the borrower their full
+ * 1003 magic link via email + SMS.
+ *
+ * For pre_qualified rows: hides the button and shows an inline hint pointing
+ * to the green Approve button in the Review Application panel below — that's
+ * the canonical entry point for issuing the 1003. Two buttons doing the same
+ * thing is confusing.
+ */
 function SendFullAppButton({ applicationId, status }: { applicationId: string; status: string }) {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [result, setResult] = useState<{ email: boolean; sms: boolean } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const isPreQual = status === "pre_qualified"
-  // 'Approve' is the admin's action; 'Issue 1003' is what auto-fires as a result.
-  // Deliberately distinct wording from the pre-qual screens so admin + borrower
-  // see two clearly-separate milestones: pre-qual submitted → pre-qual approved.
-  const label = isPreQual ? "Approve & Issue 1003" : "Resend Application Link"
-  const primaryClass = isPreQual
-    ? "bg-green-600 hover:bg-green-700 text-white"
-    : "bg-[#997100] hover:bg-[#b8850a] text-black"
+  if (status === "pre_qualified") {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-green-600/10 border border-green-600/30 max-w-[280px]">
+        <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+        <span className="text-xs text-green-500 leading-tight">
+          Use the green <strong>Approve</strong> button below — the full 1003 will auto-issue to the borrower.
+        </span>
+      </div>
+    )
+  }
 
   async function send(method: "email" | "sms" | "both") {
     setSending(true); setError(null); setResult(null)
@@ -1861,13 +1872,13 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
       <div className="flex gap-1">
         <Button
           size="sm"
-          className={primaryClass}
+          className="bg-[#997100] hover:bg-[#b8850a] text-black"
           onClick={() => send("both")}
           disabled={sending}
-          title={isPreQual ? "Approves the pre-qualification AND auto-sends the borrower the full 1003 (email + SMS) — one click" : "Re-sends the borrower their full 1003 link via email + SMS"}
+          title="Re-sends the borrower their full 1003 link via email + SMS"
         >
           {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : sent ? <CheckCircle className="h-4 w-4 mr-1" /> : <Send className="h-4 w-4 mr-1" />}
-          {sent ? "Sent" : label}
+          {sent ? "Sent" : "Resend Full 1003 Link"}
         </Button>
         <Button
           size="sm"
