@@ -52,9 +52,8 @@ export async function sendFullAppLink(
   let emailSent = false
   let smsSent = false
   const smsBody =
-    `🎉 ${firstName}, great news — you're PRE-QUALIFIED with Preme's lenders! ` +
-    `I just need a few final details to finish your file and get you a real rate quote. ` +
-    `Everything's pre-filled, takes about 5 min: ${link}\n\n` +
+    `${firstName} — your pre-qualification was just APPROVED ✓ ` +
+    `Our team matched you with a lender. Open your full 1003 (pre-filled, ~5 min) here: ${link}\n\n` +
     `— Riley @ Preme Home Loans. Reply STOP to opt out, or call (470) 942-5787 with questions.`
 
   if (method === "email" || method === "both") {
@@ -72,7 +71,7 @@ export async function sendFullAppLink(
           event_type: "email.sent",
           recipient_email: app.applicant_email,
           application_number: app.application_number ?? null,
-          subject: `🎉 You're pre-qualified, ${firstName} — finish your application`,
+          subject: `✓ Approved, ${firstName} — your full 1003 application is ready`,
           event_timestamp: new Date().toISOString(),
         })
       }
@@ -149,9 +148,9 @@ async function sendCongratsEmail(p: { to: string; firstName: string; application
   const fromEmail = process.env.RESEND_FROM_EMAIL || "Preme Home Loans <onboarding@resend.dev>"
 
   const steps = [
-    { n: "1", title: "Finish your application (5–8 min)",  body: "A few final details — your DOB, SSN, property address, rental income, and the usual 1003 disclosures. Everything you've already given us is pre-filled." },
-    { n: "2", title: "We pull your credit + run the full lender check",  body: "Soft-pull first to confirm your match, then a hard pull once you authorize the lock." },
-    { n: "3", title: "You get a written rate quote",  body: "We present the best rate from your matched lender(s). You choose, we lock it in." },
+    { n: "1", title: "Finish your full 1003 (5–8 min)",  body: "A few final details — your DOB, SSN, property address, rental income, and the usual disclosures. Everything you've already given us is pre-filled." },
+    { n: "2", title: "We pull your credit + run final underwriting",  body: "Soft-pull first to confirm your match, then a hard pull once you authorize the lock." },
+    { n: "3", title: "Written rate quote",  body: "We present the best rate from your matched lender. You choose, we lock it in." },
     { n: "4", title: "Appraisal + doc collection",  body: "We order the appraisal (borrower-paid), and collect entity docs, insurance binder, and lease if applicable." },
     { n: "5", title: "Close in 21–30 days",  body: "Final numbers, CD, and wire. You sign, we fund. Simple." },
   ]
@@ -179,16 +178,16 @@ async function sendCongratsEmail(p: { to: string; firstName: string; application
         <span style="color:#997100;font-size:14px;display:block;margin-top:4px;letter-spacing:1px">HOME LOANS</span>
       </td></tr>
       <tr><td style="padding:40px 40px 24px">
-        <div style="font-size:14px;color:#997100;letter-spacing:1.5px;font-weight:600;margin-bottom:12px">🎉 PRE-QUALIFIED</div>
+        <div style="font-size:14px;color:#16a34a;letter-spacing:1.5px;font-weight:600;margin-bottom:12px">✓ PRE-QUALIFICATION APPROVED</div>
         <h1 style="color:#1a1a1a;font-size:26px;margin:0 0 12px;font-weight:700;line-height:1.25">
-          Congrats, ${escapeHtml(p.firstName)} — you're pre-qualified with Preme's lenders.
+          ${escapeHtml(p.firstName)}, your pre-qualification was approved.
         </h1>
         <p style="color:#444;font-size:16px;line-height:1.7;margin:0 0 24px">
-          Based on what you told us, you fit our DSCR lender guidelines. Now we just need a few final details to fully underwrite your file and get you a real rate quote.
+          Our team reviewed your file and matched you with a wholesale lender. To move into formal underwriting and get your rate quote, we need you to complete the full 1003 loan application below — it's pre-filled with everything you've already given us.
         </p>
         <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:8px 0 24px">
-          <a href="${p.link}" style="display:inline-block;background:#997100;color:#fff;padding:16px 40px;text-decoration:none;border-radius:8px;font-size:16px;font-weight:600;letter-spacing:0.3px">Finish My Application →</a>
-          <div style="color:#888;font-size:12px;margin-top:8px">Takes 5–8 minutes • Everything's pre-filled</div>
+          <a href="${p.link}" style="display:inline-block;background:#16a34a;color:#fff;padding:16px 40px;text-decoration:none;border-radius:8px;font-size:16px;font-weight:600;letter-spacing:0.3px">Open My Full 1003 →</a>
+          <div style="color:#888;font-size:12px;margin-top:8px">Takes 5–8 minutes • Most fields already filled</div>
         </td></tr></table>
       </td></tr>
       <tr><td style="padding:0 40px 20px">
@@ -225,7 +224,7 @@ async function sendCongratsEmail(p: { to: string; firstName: string; application
       body: JSON.stringify({
         from: fromEmail,
         to: p.to,
-        subject: `🎉 You're pre-qualified, ${p.firstName} — finish your application`,
+        subject: `✓ Approved, ${p.firstName} — your full 1003 application is ready`,
         html,
         tags: p.applicationNumber ? [{ name: "application_number", value: p.applicationNumber }] : [],
       }),
