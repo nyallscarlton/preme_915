@@ -9,31 +9,37 @@ import { CheckCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { gtagLeadConversion, gtagFormStep, gtagFormStepComplete, gtagApplicationStart, gtagFormAbandon } from "@/lib/gtag"
-import { GuestContactForm } from "@/components/application/guest-contact-form"
-import { LoanDetailsForm } from "@/components/application/loan-details-form"
-import { PropertyInfoForm } from "@/components/application/property-info-form"
-import { FinancialInfoForm } from "@/components/application/financial-info-form"
+import { GuestContactForm } from "@/components/application-full/guest-contact-form"
+import { LoanDetailsForm } from "@/components/application-full/loan-details-form"
+import { PropertyInfoForm } from "@/components/application-full/property-info-form"
+import { VestingEntityForm } from "@/components/application-full/vesting-entity-form"
+import { FinancialInfoForm } from "@/components/application-full/financial-info-form"
 import { LiquidityInfoForm } from "@/components/application/liquidity-info-form"
+import { ReoScheduleForm } from "@/components/application-full/reo-schedule-form"
 import { DocumentUploadForm } from "@/components/application/document-upload-form"
 import { ReviewSubmitForm } from "@/components/application/review-submit-form"
 
 const steps = [
-  { id: 1, title: "Contact Info", description: "Your contact information" },
-  { id: 2, title: "Property Info", description: "Property details" },
-  { id: 3, title: "Loan Details", description: "Basic loan information" },
-  { id: 4, title: "Financial Info", description: "Credit profile" },
-  { id: 5, title: "Liquidity", description: "Assets and reserves" },
-  { id: 6, title: "Documents", description: "Upload required documents" },
-  { id: 7, title: "Review & Submit", description: "Final review" },
+  { id: 1, title: "Borrower", description: "Identity, SSN, residence" },
+  { id: 2, title: "Property", description: "Subject property + rent" },
+  { id: 3, title: "Loan", description: "Loan terms" },
+  { id: 4, title: "Vesting", description: "Individual or LLC" },
+  { id: 5, title: "Financial", description: "Credit + declarations" },
+  { id: 6, title: "Liquidity", description: "Reserves & assets" },
+  { id: 7, title: "REO", description: "Existing rentals" },
+  { id: 8, title: "Documents", description: "Upload docs" },
+  { id: 9, title: "Review", description: "Confirm & submit" },
 ]
 
 const accountSteps = [
-  { id: 1, title: "Property Info", description: "Property details" },
-  { id: 2, title: "Loan Details", description: "Basic loan information" },
-  { id: 3, title: "Financial Info", description: "Credit profile" },
-  { id: 4, title: "Liquidity", description: "Assets and reserves" },
-  { id: 5, title: "Documents", description: "Upload required documents" },
-  { id: 6, title: "Review & Submit", description: "Final review" },
+  { id: 1, title: "Property", description: "Subject property + rent" },
+  { id: 2, title: "Loan", description: "Loan terms" },
+  { id: 3, title: "Vesting", description: "Individual or LLC" },
+  { id: 4, title: "Financial", description: "Credit + declarations" },
+  { id: 5, title: "Liquidity", description: "Reserves & assets" },
+  { id: 6, title: "REO", description: "Existing rentals" },
+  { id: 7, title: "Documents", description: "Upload docs" },
+  { id: 8, title: "Review", description: "Confirm & submit" },
 ]
 
 export default function LoanApplicationPage() {
@@ -98,37 +104,134 @@ export default function LoanApplicationPage() {
     setSubmissionError(null)
 
     try {
-      // Prepare the application data for the API
-      const applicationData = {
-        // Contact info
+      const n = (v: any) => (v === "" || v == null ? null : Number(v))
+      const s = (v: any) => (v === "" || v == null ? null : String(v))
+
+      // Prepare the application data for the API — snake_case matching DB columns
+      const applicationData: Record<string, unknown> = {
+        // Contact + identity (PII encryption happens server-side)
         applicant_email: formData.email || "",
         applicant_name: `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
         applicant_phone: formData.phone || "",
+        applicant_first_name: s(formData.firstName),
+        applicant_middle_name: s(formData.middleName),
+        applicant_last_name: s(formData.lastName),
+        applicant_name_suffix: s(formData.nameSuffix),
+        applicant_dob: s(formData.dateOfBirth),
+        applicant_ssn: s(formData.ssn), // server will encrypt & drop
+        applicant_citizenship_type: s(formData.citizenshipType),
+        applicant_marital_status: s(formData.maritalStatus),
+        applicant_dependent_count: n(formData.dependentCount),
+        applicant_current_residence_basis: s(formData.currentResidenceBasis),
+        applicant_current_residence_months: n(formData.currentResidenceMonths),
         contact_address: formData.address || "",
         contact_city: formData.city || "",
         contact_state: formData.state || "",
         contact_zip: formData.zipCode || "",
 
         // Loan details
-        loan_amount: Number.parseFloat(formData.loanAmount) || 0,
-        loan_purpose: formData.loanPurpose || "",
-        loan_type: formData.propertyType || "",
+        loan_amount: n(formData.loanAmount) ?? 0,
+        loan_purpose: s(formData.loanPurpose),
+        loan_type: s(formData.propertyType),
+        mortgage_type: s(formData.mortgageType) ?? "Conventional",
+        lien_priority: "FirstLien",
+        note_amount: n(formData.loanAmount) ?? 0,
+        note_rate_percent: n(formData.noteRatePercent),
+        loan_term_months: n(formData.loanTermMonths) ?? 360,
+        amortization_type: s(formData.amortizationType) ?? "Fixed",
+        interest_only: !!formData.interestOnly,
+        balloon: !!formData.balloon,
+        has_prepay_penalty: !!formData.hasPrepayPenalty,
+        is_renovation_loan: !!formData.isRenovationLoan,
+        total_mortgaged_properties_count: n(formData.totalMortgagedPropertiesCount),
+        property_acquired_date: s(formData.propertyAcquiredDate),
+        property_original_cost: n(formData.propertyOriginalCost),
+        property_existing_lien_amount: n(formData.propertyExistingLienAmount),
+        arms_length: true,
 
-        // Property info
+        // Property
         property_address: formData.propertyAddress || "",
         property_city: formData.propertyCity || "",
         property_state: formData.propertyState || "",
         property_zip: formData.propertyZip || "",
+        property_county: s(formData.propertyCounty),
         property_type: formData.propertyType || "",
-        property_value: Number.parseFloat(formData.propertyValue) || 0,
+        property_value: n(formData.propertyValue) ?? 0,
+        property_usage_type: s(formData.propertyUsageType) ?? "Investment",
+        current_occupancy_type: s(formData.currentOccupancy),
+        financed_unit_count: n(formData.financedUnitCount),
+        year_built: n(formData.yearBuilt),
+        gross_living_area_sqft: n(formData.grossLivingAreaSqft),
+        acreage: n(formData.acreage),
+        attachment_type: s(formData.attachmentType) ?? "Detached",
+        is_pud: !!formData.isPUD,
 
-        // Financial info
+        // Rental income + PITIA
+        rental_gross_monthly: n(formData.rentalGrossMonthly),
+        rental_occupancy_pct: n(formData.rentalOccupancyPct) ?? 95,
+        lease_rent_monthly: n(formData.leaseRentMonthly),
+        lease_expiration_date: s(formData.leaseExpirationDate),
+        is_short_term_rental: !!formData.isShortTermRental,
+        annual_property_tax: n(formData.annualPropertyTax),
+        hazard_insurance_monthly: n(formData.hazardInsuranceMonthly),
+        hoa_monthly: n(formData.hoaMonthly),
+        flood_insurance_monthly: n(formData.floodInsuranceMonthly),
+        property_mgmt_fee_monthly: n(formData.propertyMgmtFeeMonthly),
+
+        // Vesting & entity
+        vesting_type: s(formData.vestingType) ?? "Individual",
+        entity_legal_name: s(formData.entityLegalName),
+        entity_org_type: s(formData.entityOrgType),
+        entity_state_of_formation: s(formData.entityStateOfFormation),
+        entity_formation_date: s(formData.entityFormationDate),
+        entity_ein: s(formData.entityEIN), // server encrypts
+        entity_address: s(formData.entityAddress),
+        entity_city: s(formData.entityCity),
+        entity_state: s(formData.entityState),
+        entity_zip: s(formData.entityZip),
+
+        // Financial + declarations
         credit_score_range: formData.creditScore || "",
+        credit_score_exact: n(formData.creditScoreExact),
+        employer_name: s(formData.employerName),
+        employment_status: s(formData.employmentStatus),
+        annual_income: n(formData.annualIncome),
+        _declarations: {
+          intent_to_occupy: formData.decl_intent_to_occupy ?? false,
+          homeowner_past_3yrs: formData.decl_homeowner_past_3yrs,
+          bankruptcy: formData.decl_bankruptcy ?? false,
+          bankruptcy_chapter: s(formData.decl_bankruptcy_chapter),
+          bankruptcy_filed_date: s(formData.decl_bankruptcy_filed_date),
+          bankruptcy_discharged_date: s(formData.decl_bankruptcy_discharged_date),
+          outstanding_judgments: formData.decl_outstanding_judgments ?? false,
+          party_to_lawsuit: formData.decl_party_to_lawsuit ?? false,
+          presently_delinquent_federal_debt: formData.decl_presently_delinquent_federal_debt ?? false,
+          undisclosed_borrowed_funds: formData.decl_undisclosed_borrowed_funds ?? false,
+          undisclosed_borrowed_funds_amount: n(formData.decl_undisclosed_borrowed_funds_amount),
+          undisclosed_mortgage_application: formData.decl_undisclosed_mortgage_application ?? false,
+          undisclosed_credit_application: formData.decl_undisclosed_credit_application ?? false,
+          undisclosed_comaker: formData.decl_undisclosed_comaker ?? false,
+          prior_deed_in_lieu: formData.decl_prior_deed_in_lieu ?? false,
+          prior_short_sale: formData.decl_prior_short_sale ?? false,
+          prior_foreclosure: formData.decl_prior_foreclosure ?? false,
+          proposed_clean_energy_lien: formData.decl_proposed_clean_energy_lien ?? false,
+        },
 
-        // Liquidity info
-        cash_reserves: Number.parseFloat(formData.cashReserves) || 0,
-        investment_accounts: Number.parseFloat(formData.investmentAccounts) || 0,
-        retirement_accounts: Number.parseFloat(formData.retirementAccounts) || 0,
+        // HMDA
+        hmda_gender: s(formData.hmda_gender),
+        hmda_ethnicity_refused: !!formData.hmda_ethnicity_refused,
+        hmda_race_refused: !!formData.hmda_race_refused,
+
+        // Liquidity
+        cash_reserves: n(formData.cashReserves) ?? 0,
+        investment_accounts: n(formData.investmentAccounts) ?? 0,
+        retirement_accounts: n(formData.retirementAccounts) ?? 0,
+
+        // REO schedule (child rows)
+        _reo_properties: Array.isArray(formData.reoProperties) ? formData.reoProperties : [],
+
+        // Attestations
+        credit_report_authorization_indicator: !!formData.tcpaConsent,
 
         // Guest flag
         is_guest: authChoice === "guest",
@@ -180,124 +283,31 @@ export default function LoanApplicationPage() {
   }
 
   const renderStepContent = () => {
+    const p = { onNext: handleNext, onPrevious: handlePrevious, onDataChange: handleStepData, initialData: formData }
     if (authChoice === "guest") {
       switch (currentStep) {
-        case 1:
-          return (
-            <GuestContactForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 2:
-          return (
-            <PropertyInfoForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 3:
-          return (
-            <LoanDetailsForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 4:
-          return (
-            <FinancialInfoForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 5:
-          return (
-            <LiquidityInfoForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 6:
-          return (
-            <DocumentUploadForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-              applicationId={existingApplicationId || undefined}
-              guestToken={existingGuestToken || undefined}
-            />
-          )
-        case 7:
-          return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
-        default:
-          return null
+        case 1: return <GuestContactForm {...p} />
+        case 2: return <PropertyInfoForm {...p} />
+        case 3: return <LoanDetailsForm {...p} />
+        case 4: return <VestingEntityForm {...p} />
+        case 5: return <FinancialInfoForm {...p} />
+        case 6: return <LiquidityInfoForm {...p} />
+        case 7: return <ReoScheduleForm {...p} />
+        case 8: return <DocumentUploadForm {...p} applicationId={existingApplicationId || undefined} guestToken={existingGuestToken || undefined} />
+        case 9: return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
+        default: return null
       }
-    } else {
-      // Account creation flow
-      switch (currentStep) {
-        case 1:
-          return (
-            <PropertyInfoForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 2:
-          return (
-            <LoanDetailsForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 3:
-          return (
-            <FinancialInfoForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 4:
-          return (
-            <LiquidityInfoForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-            />
-          )
-        case 5:
-          return (
-            <DocumentUploadForm
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onDataChange={handleStepData}
-              initialData={formData}
-              applicationId={existingApplicationId || undefined}
-              guestToken={existingGuestToken || undefined}
-            />
-          )
-        case 6:
-          return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
-        default:
-          return null
-      }
+    }
+    switch (currentStep) {
+      case 1: return <PropertyInfoForm {...p} />
+      case 2: return <LoanDetailsForm {...p} />
+      case 3: return <VestingEntityForm {...p} />
+      case 4: return <FinancialInfoForm {...p} />
+      case 5: return <LiquidityInfoForm {...p} />
+      case 6: return <ReoScheduleForm {...p} />
+      case 7: return <DocumentUploadForm {...p} applicationId={existingApplicationId || undefined} guestToken={existingGuestToken || undefined} />
+      case 8: return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
+      default: return null
     }
   }
 
@@ -315,24 +325,12 @@ export default function LoanApplicationPage() {
           gtagApplicationStart("guest")
           gtagFormStep(1, "guest")
           const app = data.application
+          // Everything the verify-token endpoint returns is already camelCase
+          // and already matches the form-state keys — shallow copy is enough.
           const prefilled: Record<string, unknown> = {
-            firstName: app.firstName || "",
-            lastName: app.lastName || "",
+            ...app,
             email: app.email && !app.email.endsWith("@placeholder.preme") ? app.email : "",
-            phone: app.phone || "",
-            propertyAddress: app.propertyAddress || "",
-            propertyCity: app.propertyCity || "",
-            propertyState: app.propertyState || "",
-            propertyZip: app.propertyZip || "",
-            propertyType: app.propertyType || "",
-            propertyValue: app.propertyValue || "",
-            loanAmount: app.loanAmount || "",
-            loanPurpose: app.loanPurpose || "",
-            creditScore: app.creditScore || "",
-            cashReserves: app.cashReserves || "",
-            investmentAccounts: app.investmentAccounts || "",
-            retirementAccounts: app.retirementAccounts || "",
-            tcpaConsent: true, // They already consented via phone call
+            tcpaConsent: true,
           }
           setFormData(prefilled)
           setExistingApplicationId(app.applicationId)

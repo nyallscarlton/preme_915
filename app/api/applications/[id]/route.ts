@@ -117,20 +117,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    // Fire-and-forget notifications only on status change
+    // Fire-and-forget notifications only on status change.
+    // NOTE: the 1003 is NEVER auto-issued on approve anymore — admin manually
+    // triggers it via the 'Send Full 1003 Link' button after reviewing the
+    // DSCR match. This keeps human review in the loop for every file.
     if (statusChanged && app?.application_number) {
       notifyMCStatusChange(id, body.status, app.application_number).catch(() => {})
 
-      // Auto-issue full 1003 when admin approves a pre_qualified row.
-      // The Approve button in Review Application is the trigger; the email
-      // + SMS are the automatic consequence (no separate "Send" click needed).
-      if (oldStatus === "pre_qualified" && body.status === "approved") {
-        const { sendFullAppLink } = await import("@/lib/send-full-app")
-        sendFullAppLink(id, "both", "auto_prequal_approval", user.id).catch((err) =>
-          console.error("[applications PATCH] auto-issue 1003 failed:", err)
-        )
-      } else if (app.applicant_email) {
-        // Standard borrower-facing status email for any other transition
+      if (app.applicant_email) {
         sendStatusNotification({
           email: app.applicant_email,
           name: app.applicant_name || "",
@@ -223,8 +217,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Invalid token or application" }, { status: 403 })
     }
 
-    // Build update payload (strip internal fields)
-    const { guest_token: _gt, is_guest: _ig, ...updateFields } = data
+    // Build update payload (strip internal fields that aren't DB columns)
+    const { guest_token: _gt, is_guest: _ig, _declarations, _reo_properties, applicant_ssn, entity_ein, ...updateFields } = data
 
     const { data: application, error } = await adminClient
       .from("loan_applications")
@@ -241,6 +235,24 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (error) {
       console.error("[applications] PUT error:", error)
       return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    // Upsert declarations if provided
+    if (_declarations && typeof _declarations === "object") {
+      // Delete existing, then insert fresh
+      await adminClient.from("loan_declarations").delete().eq("loan_application_id", id).is("borrower_id", null)
+      const { error: declErr } = await adminClient
+        .from("loan_declarations")
+        .insert([{ loan_application_id: id, borrower_id: null, ..._declarations }])
+      if (declErr) console.error("[applications] PUT declarations insert error:", declErr.message)
+    }
+
+    // Upsert REO properties if provided
+    if (_reo_properties && Array.isArray(_reo_properties) && _reo_properties.length > 0) {
+      await adminClient.from("loan_reo_properties").delete().eq("loan_application_id", id)
+      const rows = _reo_properties.map((r: any) => ({ loan_application_id: id, ...r }))
+      const { error: reoErr } = await adminClient.from("loan_reo_properties").insert(rows)
+      if (reoErr) console.error("[applications] PUT REO insert error:", reoErr.message)
     }
 
     // Fire-and-forget MC notification
