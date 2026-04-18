@@ -278,14 +278,12 @@ async function main() {
     (reviewed || []).map((r: any) => r.metadata?.call_id).filter(Boolean)
   )
 
-  // Filter to unreviewed calls with transcripts > 30s
+  // Filter to unreviewed calls with transcripts that had real conversations
+  const NO_REVIEW_REASONS = new Set(["no_answer", "dial_no_answer", "invalid_destination", "busy"])
   const toReview = calls.filter((c: any) => {
     if (reviewedIds.has(c.call_id)) return false
     if (!c.transcript || c.transcript.length < 50) return false
-    const duration = c.end_timestamp && c.start_timestamp
-      ? (c.end_timestamp - c.start_timestamp) / 1000
-      : 0
-    if (duration < 30) return false
+    if (NO_REVIEW_REASONS.has(c.disconnection_reason)) return false
     // Skip training calls
     const phone = c.from_number || c.to_number || ""
     if (TRAINING_PHONES.has(phone)) return false

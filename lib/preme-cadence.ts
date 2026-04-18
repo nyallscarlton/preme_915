@@ -23,9 +23,10 @@
  *  12   | T+120 hr  | sms   | day6-soft-checkin
  *  13   | T+152 hr  | sms   | day7-final
  *
- * Auto-cancel: when Retell sends call_ended with duration_ms >= 30000, all
- * remaining pending steps for that lead are cancelled. Same for SMS opt-out
- * and explicit application submission.
+ * Auto-cancel: when Retell sends call_analyzed with a terminal outcome
+ * (connected_qualified, connected_not_interested, bad_number), all remaining
+ * pending steps for that lead are cancelled. Same for SMS opt-out and
+ * explicit application submission.
  *
  * Day-7 nurture handoff: after step 13 fires, the lead is enrolled in the
  * appropriate Zentryx nurture sequence based on its current status. The
@@ -421,8 +422,7 @@ export async function executeStep(row: QueueRow): Promise<void> {
     }
 
     // SAFETY NET: Check if this lead has a call with a terminal outcome.
-    // Primary: check call_outcome on lead_messages (new calls).
-    // Fallback: check duration > 30s on lead_events call_ended (old calls without call_outcome).
+    // Uses call_outcome on lead_messages only — never duration.
     try {
       const { createZentrxClient } = await import("@/lib/supabase/admin")
       const zxSb = createZentrxClient()

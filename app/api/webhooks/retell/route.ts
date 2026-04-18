@@ -232,7 +232,8 @@ export async function POST(request: NextRequest) {
 
         // Auto-capture: create a lead record for real (non-training) inbound calls
         // lasting 30+ seconds where no lead record exists yet.
-        if (!leadId && !noAnswer && call.duration_ms > 30000 && !TRAINING_PHONES.has(callerPhone) && !TRAINING_PHONES.has(call.from_number || "")) {
+        const CONNECTED_OUTCOMES = ["connected_qualified", "connected_not_interested", "connected_not_ready"]
+        if (!leadId && CONNECTED_OUTCOMES.includes(callOutcome) && !TRAINING_PHONES.has(callerPhone) && !TRAINING_PHONES.has(call.from_number || "")) {
           try {
             const adminSb = createAdminClient()
             const digits = callerPhone.replace(/\D/g, "").slice(-10)
