@@ -1,7 +1,5 @@
 "use client"
 
-export const dynamic = "force-dynamic"
-
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -44,7 +42,7 @@ const accountSteps = [
   { id: 8, title: "Review", description: "Confirm & submit" },
 ]
 
-export default function LoanApplicationPage() {
+export default function LoanApplicationFullClient() {
   const [currentStep, setCurrentStep] = useState(0)
   const [authChoice, setAuthChoice] = useState<"account" | "guest" | null>(null)
   const [formData, setFormData] = useState<any>({})
