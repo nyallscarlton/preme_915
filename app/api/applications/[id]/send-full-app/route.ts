@@ -9,6 +9,7 @@
  */
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { sendFullAppLink, type SendMethod } from "@/lib/send-full-app"
 
 export const dynamic = "force-dynamic"
@@ -22,7 +23,14 @@ export async function POST(
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    const { data: profile } = await supabase.from("profiles").select("role").eq("user_id", user.id).single()
+
+    // Profile lookup uses the admin client to bypass RLS — mirrors the
+    // PATCH /applications/:id pattern. The session-scoped client was
+    // returning null here because RLS on preme.profiles doesn't allow
+    // the authenticated user to read their own role row, which caused
+    // a spurious 403 Forbidden even for real admins.
+    const admin = createAdminClient()
+    const { data: profile } = await admin.from("profiles").select("role").eq("user_id", user.id).single()
     if (!profile || !["lender", "admin"].includes(profile.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
