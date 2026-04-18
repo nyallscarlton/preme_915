@@ -11,6 +11,7 @@
  */
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getBaseUrl } from "@/lib/config"
+import { sendPremeSms, PREME_SMS_FROM } from "@/lib/preme-sms"
 
 export type SendMethod = "email" | "sms" | "both"
 
@@ -26,11 +27,12 @@ export async function sendFullAppLink(
   applicationId: string,
   method: SendMethod,
   trigger: "admin_manual" | "auto_prequal_approval" = "admin_manual",
+  changedBy: string | null = null,
 ): Promise<SendFullAppResult> {
   const admin = createAdminClient()
   const { data: app, error } = await admin
     .from("loan_applications")
-    .select("id, guest_token, applicant_email, applicant_name, applicant_first_name, applicant_phone, application_number, status")
+    .select("id, guest_token, applicant_email, applicant_name, applicant_first_name, applicant_phone, application_number, status, lead_id")
     .eq("id", applicationId)
     .single()
   if (error || !app) {
@@ -49,6 +51,11 @@ export async function sendFullAppLink(
 
   let emailSent = false
   let smsSent = false
+  const smsBody =
+    `🎉 ${firstName}, great news — you're PRE-QUALIFIED with Preme's lenders! ` +
+    `I just need a few final details to finish your file and get you a real rate quote. ` +
+    `Everything's pre-filled, takes about 5 min: ${link}\n\n` +
+    `— Riley @ Preme Home Loans. Reply STOP to opt out, or call (470) 942-5787 with questions.`
 
   if (method === "email" || method === "both") {
     if (app.applicant_email && !app.applicant_email.endsWith("@placeholder.preme")) {
@@ -58,25 +65,80 @@ export async function sendFullAppLink(
         applicationNumber: app.application_number,
         link,
       })
+      // Log a "sent" email event so the timeline has an entry immediately.
+      // Resend webhook will add delivered / opened / clicked events on top.
+      if (emailSent) {
+        await admin.from("email_events").insert({
+          event_type: "email.sent",
+          recipient_email: app.applicant_email,
+          application_number: app.application_number ?? null,
+          subject: `🎉 You're pre-qualified, ${firstName} — finish your application`,
+          event_timestamp: new Date().toISOString(),
+        })
+      }
     }
   }
 
   if (method === "sms" || method === "both") {
     if (app.applicant_phone) {
-      smsSent = await sendCongratsSms({ to: app.applicant_phone, firstName, link })
+      const smsRes = await sendPremeSms({
+        toPhone: app.applicant_phone,
+        message: smsBody,
+        firstName,
+        leadId: app.lead_id ?? undefined,
+        source: trigger === "auto_prequal_approval" ? "prequal_auto_approval" : "admin_send_full_app",
+        metadata: { application_id: app.id, application_number: app.application_number ?? "" },
+      })
+      smsSent = smsRes.ok
+
+      // Log to lead_messages so the SMS thread shows the outgoing touch
+      if (smsRes.ok && app.lead_id) {
+        await admin.from("lead_messages").insert({
+          lead_id: app.lead_id,
+          direction: "outbound",
+          body: smsBody,
+          from_number: PREME_SMS_FROM,
+          to_number: app.applicant_phone,
+          status: "queued",
+          type: "sms",
+          metadata: { source: "send_full_app", application_id: app.id, chat_id: smsRes.chatId ?? null },
+        })
+      }
+      // Also log to contact_interactions for the generic contact timeline
+      await admin.from("contact_interactions").insert({
+        phone: app.applicant_phone.replace(/\D/g, "").startsWith("1") ? `+${app.applicant_phone.replace(/\D/g, "")}` : `+1${app.applicant_phone.replace(/\D/g, "")}`,
+        channel: "sms",
+        direction: "outbound",
+        content: smsBody,
+        summary: "Sent pre-qual approval + finish-application link",
+        metadata: { source: "send_full_app", application_id: app.id, trigger },
+      })
     }
   }
 
-  // Tracking: same columns as the original send-app flow
+  const nowIso = new Date().toISOString()
+  const oldStatus = app.status
+  const newStatus = app.status === "pre_qualified" ? "sent" : app.status
+
   await admin
     .from("loan_applications")
     .update({
-      sent_at: new Date().toISOString(),
+      sent_at: nowIso,
       sent_via: trigger === "auto_prequal_approval" ? `auto_prequal_${method}` : method,
-      pre_qual_to_full_sent_at: new Date().toISOString(),
-      status: app.status === "pre_qualified" ? "sent" : app.status,
+      pre_qual_to_full_sent_at: nowIso,
+      status: newStatus,
     })
     .eq("id", app.id)
+
+  // Log status transition for the timeline
+  if (oldStatus !== newStatus) {
+    await admin.from("status_history").insert({
+      application_id: app.id,
+      old_status: oldStatus,
+      new_status: newStatus,
+      changed_by: changedBy,
+    })
+  }
 
   return { success: true, emailSent, smsSent, link }
 }
@@ -167,27 +229,6 @@ async function sendCongratsEmail(p: { to: string; firstName: string; application
         html,
         tags: p.applicationNumber ? [{ name: "application_number", value: p.applicationNumber }] : [],
       }),
-    })
-    return res.ok
-  } catch {
-    return false
-  }
-}
-
-async function sendCongratsSms(p: { to: string; firstName: string; link: string }): Promise<boolean> {
-  const retellKey = process.env.RETELL_API_KEY
-  const retellFrom = process.env.RETELL_SMS_NUMBER || "+14709425787"
-  if (!retellKey) return false
-  try {
-    const text =
-      `🎉 ${p.firstName}, great news — you're PRE-QUALIFIED with Preme's lenders! ` +
-      `I just need a few final details to finish your file and get you a real rate quote. ` +
-      `Everything's pre-filled, takes about 5 min: ${p.link}\n\n` +
-      `— Riley @ Preme Home Loans. Reply STOP to opt out, or call (470) 942-5787 with questions.`
-    const res = await fetch("https://api.retellai.com/create-chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${retellKey}` },
-      body: JSON.stringify({ from_number: retellFrom, to_number: p.to, content: text }),
     })
     return res.ok
   } catch {
