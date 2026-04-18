@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { writeAgentMemory } from "@/lib/agent-memory"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -54,14 +55,14 @@ export async function GET(request: NextRequest) {
 
   // Budget alerts
   if (window === "today" && total > 15) {
-    await supabase.from("agent_memory").insert({
+    await writeAgentMemory({
       agent_name: "cost_monitor",
       memory_type: "escalation",
       summary: `Daily agent costs exceeded $15: currently $${total.toFixed(2)}`,
       details: { by_agent: byAgent, projected_monthly: projectedMonthly },
       entity: "marathon",
       importance: 0.7,
-    }).then(() => {}).catch(() => {})
+    })
   }
   if (window === "today" && total > 25 && process.env.SLACK_BOT_TOKEN) {
     await fetch("https://slack.com/api/chat.postMessage", {
