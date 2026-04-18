@@ -241,6 +241,17 @@ export async function enqueueCadence(lead: {
   email?: string
 }): Promise<{ ok: boolean; rows_created: number; error?: string }> {
   const supabase = premeClient()
+
+  // Dedup: skip if this lead already has cadence rows (prevents double-enrollment)
+  const { count } = await supabase
+    .from("lead_cadence_queue")
+    .select("id", { count: "exact", head: true })
+    .eq("lead_id", lead.id)
+  if (count && count > 0) {
+    console.log(`[preme-cadence] Lead ${lead.id} already has ${count} cadence rows — skipping duplicate enrollment`)
+    return { ok: true, rows_created: 0 }
+  }
+
   const now = new Date()
   const leadName = `${lead.first_name} ${lead.last_name}`.trim()
 
@@ -416,7 +427,10 @@ export async function executeStep(row: QueueRow): Promise<void> {
       const { createZentrxClient } = await import("@/lib/supabase/admin")
       const zxSb = createZentrxClient()
 
-      // Primary: call_outcome classification
+      // Check call_outcome on lead_messages for terminal outcomes.
+      // This is the ONLY safety net — no duration-based fallback.
+      // Duration-based checks used string comparison (.gt on jsonb text)
+      // which caused "8347" > "30000" to be true, wrongly cancelling cadences.
       const { count: terminalCalls } = await zxSb
         .from("lead_messages")
         .select("id", { count: "exact", head: true })
@@ -424,20 +438,11 @@ export async function executeStep(row: QueueRow): Promise<void> {
         .eq("type", "call")
         .in("call_outcome", ["connected_qualified", "connected_not_interested", "bad_number"])
 
-      // Fallback: old-style duration check (for calls before call_outcome was deployed)
-      const { count: oldConnectedCalls } = await zxSb
-        .from("lead_events")
-        .select("id", { count: "exact", head: true })
-        .eq("lead_id", row.lead_id)
-        .eq("event_type", "call_ended")
-        .gt("event_data->>duration", "30000")
-
-      if ((terminalCalls && terminalCalls > 0) || (oldConnectedCalls && oldConnectedCalls > 0)) {
-        const reason = terminalCalls && terminalCalls > 0 ? "safety_net_terminal_outcome" : "safety_net_connected_legacy"
-        console.log(`[safety-net] Caught orphaned cadence step for lead ${row.lead_id} (${row.lead_name}) — ${reason}. Cancelling.`)
-        await cancelRemainingCadence(row.lead_id, reason)
-        await markStepResult(row.id, "cancelled", reason)
-        await log.complete({ skipped: true, reason })
+      if (terminalCalls && terminalCalls > 0) {
+        console.log(`[safety-net] Terminal call_outcome found for lead ${row.lead_id} (${row.lead_name}). Cancelling cadence.`)
+        await cancelRemainingCadence(row.lead_id, "safety_net_terminal_outcome")
+        await markStepResult(row.id, "cancelled", "safety_net_terminal_outcome")
+        await log.complete({ skipped: true, reason: "safety_net_terminal_outcome" })
         resolved = true
         return
       }
@@ -575,6 +580,25 @@ async function sendSms(row: QueueRow, lead: { first_name: string; last_name: str
   })
 
   if (result.ok) {
+    // Log to contact_interactions so SMS shows in the lead thread UI
+    try {
+      await supabase.from("contact_interactions").insert({
+        phone: e164,
+        channel: "sms",
+        direction: "outbound",
+        content: message,
+        metadata: {
+          source: "preme-cadence",
+          entity: "preme",
+          step_number: String(row.step_number),
+          template: row.template_slug,
+          chat_id: result.chatId,
+          from_number: result.from,
+        },
+      })
+    } catch (err) {
+      console.error("[preme-cadence] Failed to log SMS to contact_interactions (non-fatal):", err)
+    }
     return { ok: true, detail: `chat_id=${result.chatId || "sent"} template=${row.template_slug}` }
   }
   return { ok: false, error: result.error || "preme-sms failed" }

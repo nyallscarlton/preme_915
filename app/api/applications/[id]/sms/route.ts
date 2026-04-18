@@ -28,8 +28,12 @@ export async function POST(
     return NextResponse.json({ error: "No phone number on file" }, { status: 400 })
   }
 
+  // Normalize phone to E.164
+  const phoneDigits = app.applicant_phone.replace(/\D/g, "")
+  const e164Phone = phoneDigits.startsWith("1") ? `+${phoneDigits}` : `+1${phoneDigits}`
+
   const result = await sendPremeSms({
-    toPhone: app.applicant_phone,
+    toPhone: e164Phone,
     message: message.trim(),
     firstName: app.applicant_name?.split(" ")[0] || undefined,
     source: "application_sms",
@@ -38,6 +42,24 @@ export async function POST(
 
   if (!result.ok) {
     return NextResponse.json({ error: `SMS failed: ${result.error}` }, { status: 500 })
+  }
+
+  // Log to contact_interactions so it shows in the communication thread
+  try {
+    await supabase.from("contact_interactions").insert({
+      phone: e164Phone,
+      channel: "sms",
+      direction: "outbound",
+      content: message.trim(),
+      metadata: {
+        source: "admin_portal",
+        entity: "preme",
+        application_number: app.application_number,
+        chat_id: result.chatId,
+      },
+    })
+  } catch (err) {
+    console.error("[app-sms] Failed to log interaction (non-fatal):", err)
   }
 
   return NextResponse.json({ success: true })

@@ -15,7 +15,7 @@ export async function GET(
   try {
     // Get the application to find the phone number
     const { data: app, error: appError } = await supabase
-      .from("applications")
+      .from("loan_applications")
       .select("applicant_phone, applicant_email, applicant_name")
       .eq("id", params.id)
       .single()
