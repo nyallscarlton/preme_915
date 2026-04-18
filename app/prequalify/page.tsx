@@ -38,7 +38,7 @@ export default function PrequalifyPage() {
 
 function PreApprovalScreen({ result }: { result: PrequalResult }) {
   const qualified = result.qualifiedCount > 0
-  const continueHref = `/apply?guest=1&token=${encodeURIComponent(result.guestToken)}`
+  const continueHref = `/apply-full?guest=1&token=${encodeURIComponent(result.guestToken)}`
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
