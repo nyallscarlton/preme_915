@@ -6,7 +6,6 @@ import { sendApplicationConfirmationEmail } from "@/lib/follow-up"
 import { sendNewApplicationTelegram, notifyPremeAppSubmission } from "@/lib/notifications"
 import { triggerApplicationFollowUp, cancelPendingFollowUps } from "@/lib/lead-followup"
 import { generateMISMO } from "@/lib/mismo"
-import { sendFullAppLink } from "@/lib/send-full-app"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -106,29 +105,17 @@ export async function POST(request: NextRequest) {
     const loanPurpose = application.loan_purpose || application.loan_type || null
 
     // --- PRE-QUAL SHORT-CIRCUIT ---
-    // Pre-qual submissions: run DSCR matcher. If >=1 lender qualifies, treat
-    // that as auto-approval and immediately fire the congrats email + SMS
-    // with the finish-my-application link. If zero matches, leave row in
-    // pre_qualified status for human review (admin can still click the
-    // manual Send button). No MISMO gen until the full 1003 lands.
+    // Pre-qual submissions: run DSCR matcher, cache result, and leave the
+    // row in pre_qualified status for human review. The congrats email +
+    // SMS fire when an admin clicks the green Approve button in the admin
+    // dashboard — never automatically.
     if (isPreQual) {
       const matchRes = await runDscrMatch(adminClient, application)
-      let autoSent: { emailSent: boolean; smsSent: boolean } | null = null
-      if (matchRes.qualifiedCount > 0) {
-        const r = await sendFullAppLink(application.id, "both", "auto_prequal_approval").catch((err) => {
-          console.error("[applications] auto-send failed:", err)
-          return null
-        })
-        if (r?.success) autoSent = { emailSent: r.emailSent, smsSent: r.smsSent }
-      }
       return NextResponse.json({
         success: true,
         application,
         lenderMatch: matchRes,
-        autoSent,
-        message: matchRes.qualifiedCount > 0
-          ? "Pre-qualification approved — finish-application link sent"
-          : "Pre-qualification logged for manual review",
+        message: "Pre-qualification logged — awaiting admin approval",
       })
     }
 

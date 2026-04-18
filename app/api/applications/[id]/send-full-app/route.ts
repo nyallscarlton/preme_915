@@ -30,7 +30,7 @@ export async function POST(
     const body = await request.json().catch(() => ({}))
     const method: SendMethod = body.delivery_method ?? "both"
 
-    const result = await sendFullAppLink(params.id, method, "admin_manual")
+    const result = await sendFullAppLink(params.id, method, "admin_manual", user.id)
     if (!result.success) return NextResponse.json(result, { status: 404 })
     return NextResponse.json(result)
   } catch (err) {

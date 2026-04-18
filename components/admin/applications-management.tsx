@@ -1825,7 +1825,13 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
   const [sent, setSent] = useState(false)
   const [result, setResult] = useState<{ email: boolean; sms: boolean } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const label = status === "pre_qualified" ? "Send Pre-Qual + Finish Link" : "Resend Application Link"
+
+  const isPreQual = status === "pre_qualified"
+  const label = isPreQual ? "Approve & Send 1003" : "Resend Application Link"
+  // Green (approval) when row is awaiting pre-qual review, gold (resend) otherwise
+  const primaryClass = isPreQual
+    ? "bg-green-600 hover:bg-green-700 text-white"
+    : "bg-[#997100] hover:bg-[#b8850a] text-black"
 
   async function send(method: "email" | "sms" | "both") {
     setSending(true); setError(null); setResult(null)
@@ -1853,10 +1859,10 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
       <div className="flex gap-1">
         <Button
           size="sm"
-          className="bg-[#997100] hover:bg-[#b8850a] text-black"
+          className={primaryClass}
           onClick={() => send("both")}
           disabled={sending}
-          title="Sends email + SMS with the finish-my-application link"
+          title="Sends congrats email + SMS with the finish-my-application link"
         >
           {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : sent ? <CheckCircle className="h-4 w-4 mr-1" /> : <Send className="h-4 w-4 mr-1" />}
           {sent ? "Sent" : label}
