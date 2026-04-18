@@ -1,7 +1,11 @@
 import { createZentrxClient } from "@/lib/supabase/admin"
 import OpenAI from "openai"
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+let _openai: OpenAI | null = null
+function openaiClient(): OpenAI {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  return _openai
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -272,7 +276,7 @@ export async function updateProfileSummary(phone: string): Promise<void> {
   }).join("\n")
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await openaiClient().chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
         {
@@ -303,7 +307,7 @@ export async function generateSmsReply(phone: string, inboundMessage: string): P
   const profile = await getOrCreateProfile(phone)
   const firstName = profile.first_name || "there"
 
-  const response = await openai.chat.completions.create({
+  const response = await openaiClient().chat.completions.create({
     model: "gpt-4.1-mini",
     temperature: 0.9,
     messages: [
@@ -367,7 +371,7 @@ export async function generateWaterDamageSmsReply(phone: string, inboundMessage:
   const profile = await getOrCreateProfile(phone)
   const firstName = profile.first_name || "there"
 
-  const response = await openai.chat.completions.create({
+  const response = await openaiClient().chat.completions.create({
     model: "gpt-4.1-mini",
     temperature: 0.7,
     messages: [
