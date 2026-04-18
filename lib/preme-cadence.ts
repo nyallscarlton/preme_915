@@ -10,9 +10,9 @@
  *  Step | Time      | Type  | Template / Action
  *  -----+-----------+-------+--------------------
  *   1   | T+0       | call  | Riley single-dial (fired INLINE from lead-followup.ts)
- *   2   | T+1 min   | sms   | t1min-just-tried
+ *   2   | after #1  | sms   | t1min-just-tried (fires after call 1 = no answer)
  *   3   | T+5 min   | call  | Riley single-dial
- *   4   | T+7 min   | sms   | t7min-text-anytime
+ *   4   | after #3  | sms   | t7min-text-anytime (fires after call 2 = no answer)
  *   5   | T+60 min  | call  | Riley single-dial
  *   6   | T+2 hr    | email | t2hr-email-summary
  *   7   | T+24 hr   | call  | Riley single-dial
@@ -42,19 +42,19 @@ import { ExecLog } from "@/lib/exec-log"
 
 // Cadence step definitions — single source of truth
 export const CADENCE_STEPS = [
-  { step: 1,  delayMin: 0,    type: "call",  template: null,                description: "T+0 immediate Riley call (single dial)" },
-  { step: 2,  delayMin: 1,    type: "sms",   template: "t1min-just-tried",  description: "T+1 min SMS" },
-  { step: 3,  delayMin: 5,    type: "call",  template: null,                description: "T+5 min Riley call (single dial)" },
-  { step: 4,  delayMin: 7,    type: "sms",   template: "t7min-text-anytime", description: "T+7 min SMS" },
-  { step: 5,  delayMin: 60,   type: "call",  template: null,                description: "T+60 min Riley call (single dial)" },
-  { step: 6,  delayMin: 120,  type: "email", template: "t2hr-email-summary", description: "T+2 hr email" },
-  { step: 7,  delayMin: 1440, type: "call",  template: null,                description: "T+24 hr Riley call (single dial)" },
-  { step: 8,  delayMin: 1920, type: "sms",   template: "day2-value",        description: "T+32 hr Day 2 value SMS" },
-  { step: 9,  delayMin: 3120, type: "sms",   template: "day3-social-proof", description: "T+52 hr Day 3 social-proof SMS" },
-  { step: 10, delayMin: 4320, type: "call",  template: null,                description: "T+72 hr Riley call (single dial)" },
-  { step: 11, delayMin: 4800, type: "sms",   template: "day4-urgency",      description: "T+80 hr Day 4 urgency SMS" },
-  { step: 12, delayMin: 7200, type: "sms",   template: "day6-soft-checkin", description: "T+120 hr Day 6 soft check-in SMS" },
-  { step: 13, delayMin: 9120, type: "sms",   template: "day7-final",        description: "T+152 hr Day 7 final SMS" },
+  { step: 1,  delayMin: 0,    type: "call",  template: null,                 afterStep: null, description: "T+0 immediate Riley call (single dial)" },
+  { step: 2,  delayMin: 1,    type: "sms",   template: "t1min-just-tried",   afterStep: 1,    description: "SMS after 1st call attempt (no answer)" },
+  { step: 3,  delayMin: 5,    type: "call",  template: null,                 afterStep: null, description: "T+5 min Riley call (single dial)" },
+  { step: 4,  delayMin: 7,    type: "sms",   template: "t7min-text-anytime", afterStep: 3,    description: "SMS after 2nd call attempt (no answer)" },
+  { step: 5,  delayMin: 60,   type: "call",  template: null,                 afterStep: null, description: "T+60 min Riley call (single dial)" },
+  { step: 6,  delayMin: 120,  type: "email", template: "t2hr-email-summary", afterStep: null, description: "T+2 hr email" },
+  { step: 7,  delayMin: 1440, type: "call",  template: null,                 afterStep: null, description: "T+24 hr Riley call (single dial)" },
+  { step: 8,  delayMin: 1920, type: "sms",   template: "day2-value",         afterStep: null, description: "T+32 hr Day 2 value SMS" },
+  { step: 9,  delayMin: 3120, type: "sms",   template: "day3-social-proof",  afterStep: null, description: "T+52 hr Day 3 social-proof SMS" },
+  { step: 10, delayMin: 4320, type: "call",  template: null,                 afterStep: null, description: "T+72 hr Riley call (single dial)" },
+  { step: 11, delayMin: 4800, type: "sms",   template: "day4-urgency",       afterStep: null, description: "T+80 hr Day 4 urgency SMS" },
+  { step: 12, delayMin: 7200, type: "sms",   template: "day6-soft-checkin",  afterStep: null, description: "T+120 hr Day 6 soft check-in SMS" },
+  { step: 13, delayMin: 9120, type: "sms",   template: "day7-final",         afterStep: null, description: "T+152 hr Day 7 final SMS" },
 ] as const
 
 // Training caller bot only — Nyalls's own phone (+19453088322) was previously
@@ -448,6 +448,52 @@ export async function executeStep(row: QueueRow): Promise<void> {
       }
     } catch (err) {
       console.error("[safety-net] Check failed (proceeding with step):", err)
+    }
+
+    // DEPENDENCY CHECK: If this step depends on a prior call step's result,
+    // verify the prior call completed with a non-connected outcome before firing.
+    // e.g. step 2 (SMS) fires only after step 1 (call) got voicemail/no_answer.
+    // If the prior call connected, cadence should already be cancelled — but if
+    // the cancel failed, this catches it.
+    const stepDef = CADENCE_STEPS.find((s) => s.step === row.step_number)
+    if (stepDef?.afterStep) {
+      const supabaseCheck = premeClient()
+      const { data: priorStep } = await supabaseCheck
+        .from("lead_cadence_queue")
+        .select("status, result")
+        .eq("lead_id", row.lead_id)
+        .eq("step_number", stepDef.afterStep)
+        .maybeSingle()
+
+      if (!priorStep || priorStep.status === "pending") {
+        // Prior call hasn't fired yet — defer this step
+        console.log(`[preme-cadence] Deferred step ${row.step_number} for lead ${row.lead_id} — waiting for step ${stepDef.afterStep} to complete`)
+        await log.complete({ deferred: true, reason: `waiting_for_step_${stepDef.afterStep}` })
+        resolved = true
+        return
+      }
+      // If prior call connected (terminal outcome), cadence should be cancelled.
+      // But if it wasn't, cancel now as a safety net.
+      if (priorStep.status === "completed" && priorStep.result?.includes("call_id=")) {
+        // Prior call completed — check if it was a connected call by looking at lead_messages
+        const { createZentrxClient } = await import("@/lib/supabase/admin")
+        const checkSb = createZentrxClient()
+        const { count: terminalForStep } = await checkSb
+          .from("lead_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("lead_id", row.lead_id)
+          .eq("type", "call")
+          .in("call_outcome", ["connected_qualified", "connected_not_interested", "bad_number"])
+        if (terminalForStep && terminalForStep > 0) {
+          console.log(`[preme-cadence] Step ${row.step_number} skipped — prior call step ${stepDef.afterStep} resulted in terminal outcome`)
+          await cancelRemainingCadence(row.lead_id, `connected_after_step_${stepDef.afterStep}`)
+          await markStepResult(row.id, "cancelled", `connected_after_step_${stepDef.afterStep}`)
+          await log.complete({ skipped: true, reason: `connected_after_step_${stepDef.afterStep}` })
+          resolved = true
+          return
+        }
+      }
+      // Prior step failed or was non-connected — proceed with this SMS
     }
 
     // Build a "lead" object for template rendering / call dialing
