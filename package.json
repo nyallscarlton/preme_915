@@ -8,7 +8,9 @@
     "lint": "next lint",
     "start": "next start",
     "test:mismo": "tsx --env-file=.env.local tests/mismo/run-tests.ts",
-    "seed:mismo": "tsx --env-file=.env.local tests/mismo/seed-fixtures.ts"
+    "seed:mismo": "tsx --env-file=.env.local tests/mismo/seed-fixtures.ts",
+    "predeploy": "tsx --env-file=.env.local scripts/pre-deploy-check.ts",
+    "deploy": "pnpm predeploy && vercel --prod --yes"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
