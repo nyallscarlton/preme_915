@@ -121,7 +121,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (statusChanged && app?.application_number) {
       notifyMCStatusChange(id, body.status, app.application_number).catch(() => {})
 
-      if (app.applicant_email) {
+      // Auto-issue full 1003 when admin approves a pre_qualified row.
+      // The Approve button in Review Application is the trigger; the email
+      // + SMS are the automatic consequence (no separate "Send" click needed).
+      if (oldStatus === "pre_qualified" && body.status === "approved") {
+        const { sendFullAppLink } = await import("@/lib/send-full-app")
+        sendFullAppLink(id, "both", "auto_prequal_approval", user.id).catch((err) =>
+          console.error("[applications PATCH] auto-issue 1003 failed:", err)
+        )
+      } else if (app.applicant_email) {
+        // Standard borrower-facing status email for any other transition
         sendStatusNotification({
           email: app.applicant_email,
           name: app.applicant_name || "",
