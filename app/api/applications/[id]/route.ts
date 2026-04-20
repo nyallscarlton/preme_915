@@ -218,12 +218,34 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     // Build update payload (strip internal fields that aren't DB columns)
-    const { guest_token: _gt, is_guest: _ig, _declarations, _reo_properties, applicant_ssn, entity_ein, ...updateFields } = data
+    const {
+      guest_token: _gt,
+      is_guest: _ig,
+      _declarations,
+      _reo_properties,
+      applicant_ssn,
+      entity_ein,
+      ...updateFields
+    } = data
+
+    // Encrypt PII on submit — same treatment as the POST path
+    let applicant_ssn_encrypted: string | null = null
+    let entity_ein_encrypted: string | null = null
+    if (applicant_ssn) {
+      const { data: ct } = await adminClient.rpc("encrypt_pii", { plaintext: applicant_ssn })
+      applicant_ssn_encrypted = (ct as string) ?? null
+    }
+    if (entity_ein) {
+      const { data: ct } = await adminClient.rpc("encrypt_pii", { plaintext: entity_ein })
+      entity_ein_encrypted = (ct as string) ?? null
+    }
 
     const { data: application, error } = await adminClient
       .from("loan_applications")
       .update({
         ...updateFields,
+        ...(applicant_ssn_encrypted ? { applicant_ssn_encrypted } : {}),
+        ...(entity_ein_encrypted ? { entity_ein_encrypted } : {}),
         status: "submitted",
         submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -239,7 +261,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Upsert declarations if provided
     if (_declarations && typeof _declarations === "object") {
-      // Delete existing, then insert fresh
       await adminClient.from("loan_declarations").delete().eq("loan_application_id", id).is("borrower_id", null)
       const { error: declErr } = await adminClient
         .from("loan_declarations")
@@ -255,15 +276,34 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       if (reoErr) console.error("[applications] PUT REO insert error:", reoErr.message)
     }
 
+    // Upsert borrower profile for cross-application prefill — fire-and-forget
+    adminClient.rpc("upsert_profile_from_application", { p_loan_application_id: id })
+      .then(({ error }: { error: unknown }) => { if (error) console.error("[applications] PUT profile upsert:", error) })
+
+    // Fire MISMO + FNM + 1003 PDF generation, wait so Slack post has the URLs
+    const { generateMISMO } = await import("@/lib/mismo")
+    const mismo = await generateMISMO(id).catch((err) => {
+      console.error("[applications] PUT MISMO generation error:", err)
+      return null
+    })
+
     // Fire-and-forget MC notification
     notifyMCNewApplication(application).catch(() => {})
 
-    // Fire-and-forget #preme Slack notification + DSCR matcher
-    notifyPremeAppSubmission(application).catch(() => {})
+    // #preme Slack notification — now includes MISMO + PDF + FNM download buttons
+    notifyPremeAppSubmission({
+      ...application,
+      mismo_xml_url: mismo?.mismoUrl ?? null,
+      fnm_url: mismo?.fnmUrl ?? null,
+      urla_pdf_url: mismo?.urlaUrl ?? null,
+    }).catch(() => {})
 
     return NextResponse.json({
       success: true,
       application,
+      mismoUrl: mismo?.mismoUrl ?? null,
+      urlaUrl: mismo?.urlaUrl ?? null,
+      fnmUrl: mismo?.fnmUrl ?? null,
       message: "Application submitted successfully",
     })
   } catch (error) {
