@@ -901,7 +901,8 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                     </Badge>
                     {!isEditing ? (
                       <>
-                        <SendFullAppButton applicationId={selectedApp.id} status={selectedApp.status} />
+                        <SendFullAppButton applicationId={selectedApp.dbId} status={selectedApp.status} />
+                        <MismoDownloadsBar applicationId={selectedApp.dbId} status={selectedApp.status} />
                         <Button
                           variant="outline"
                           className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
@@ -1835,16 +1836,13 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
   const [result, setResult] = useState<{ email: boolean; sms: boolean } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  if (status === "pre_qualified") {
-    return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-green-600/10 border border-green-600/30 max-w-[280px]">
-        <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-        <span className="text-xs text-green-500 leading-tight">
-          Use the green <strong>Approve</strong> button below — the full 1003 will auto-issue to the borrower.
-        </span>
-      </div>
-    )
-  }
+  const isPreQual = status === "pre_qualified"
+  // Green primary when row is awaiting the first manual 1003 issuance,
+  // gold when this is a resend on an already-sent row.
+  const primaryClass = isPreQual
+    ? "bg-green-600 hover:bg-green-700 text-white"
+    : "bg-[#997100] hover:bg-[#b8850a] text-black"
+  const primaryLabel = isPreQual ? "Send Full 1003 Link" : "Resend Full 1003 Link"
 
   async function send(method: "email" | "sms" | "both") {
     setSending(true); setError(null); setResult(null)
@@ -1872,13 +1870,15 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
       <div className="flex gap-1">
         <Button
           size="sm"
-          className="bg-[#997100] hover:bg-[#b8850a] text-black"
+          className={primaryClass}
           onClick={() => send("both")}
           disabled={sending}
-          title="Re-sends the borrower their full 1003 link via email + SMS"
+          title={isPreQual
+            ? "Manually issues the full MISMO 1003 application link to the borrower via email + SMS. Use after you've reviewed the DSCR match."
+            : "Re-sends the borrower their full 1003 link via email + SMS"}
         >
           {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : sent ? <CheckCircle className="h-4 w-4 mr-1" /> : <Send className="h-4 w-4 mr-1" />}
-          {sent ? "Sent" : "Resend Full 1003 Link"}
+          {sent ? "Sent" : primaryLabel}
         </Button>
         <Button
           size="sm"
@@ -1909,6 +1909,76 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
         </span>
       )}
       {error && <span className="text-xs text-red-400 mt-1">{error}</span>}
+    </div>
+  )
+}
+
+/**
+ * Downloads for the generated 1003 artifacts: MISMO 3.4 XML, Fannie 3.2 FNM,
+ * URLA 1003 PDF. Files are generated automatically when a borrower submits
+ * (or via PUT-as-admin edits); this bar also exposes a manual Regenerate for
+ * when a previous generation failed.
+ *
+ * Hidden for rows that definitely can't have artifacts yet (pre_qualified
+ * without a submission, or empty drafts). Regenerate is available whenever
+ * the row is at least submitted so admins can recover from transient
+ * generator failures (e.g., the XSD-not-present regression in Apr 2026).
+ */
+function MismoDownloadsBar({ applicationId, status }: { applicationId: string; status: string }) {
+  const [regenerating, setRegenerating] = useState(false)
+  const [regenMsg, setRegenMsg] = useState<string | null>(null)
+
+  // Don't render for statuses that won't have artifacts.
+  const showable = ["submitted", "in_review", "pre_approved", "approved", "conditional_approval", "funded", "denied"]
+  if (!showable.includes(status)) return null
+
+  async function regenerate() {
+    setRegenerating(true); setRegenMsg(null)
+    try {
+      const res = await fetch(`/api/applications/${applicationId}/mismo`, { method: "POST" })
+      const j = await res.json()
+      if (!res.ok || !j.success) throw new Error(j.error || "Regenerate failed")
+      setRegenMsg("Regenerated — refresh to download")
+      setTimeout(() => setRegenMsg(null), 6000)
+    } catch (err) {
+      setRegenMsg(err instanceof Error ? err.message : "Regenerate failed")
+      setTimeout(() => setRegenMsg(null), 8000)
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  const btnClass = "border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+  return (
+    <div className="flex flex-col items-end">
+      <div className="flex gap-1">
+        <a href={`/api/applications/${applicationId}/mismo`} target="_blank" rel="noopener noreferrer">
+          <Button size="sm" variant="outline" className={btnClass} title="Download MISMO 3.4 XML">
+            <Download className="h-4 w-4 mr-1" /> XML
+          </Button>
+        </a>
+        <a href={`/api/applications/${applicationId}/mismo?f=fnm`} target="_blank" rel="noopener noreferrer">
+          <Button size="sm" variant="outline" className={btnClass} title="Download Fannie 3.2 FNM">
+            <Download className="h-4 w-4 mr-1" /> FNM
+          </Button>
+        </a>
+        <a href={`/api/applications/${applicationId}/mismo?f=pdf`} target="_blank" rel="noopener noreferrer">
+          <Button size="sm" variant="outline" className={btnClass} title="Download 1003 URLA PDF">
+            <Download className="h-4 w-4 mr-1" /> PDF
+          </Button>
+        </a>
+        <Button
+          size="sm"
+          variant="outline"
+          className={btnClass}
+          title="Regenerate MISMO + FNM + PDF from current DB state"
+          onClick={regenerate}
+          disabled={regenerating}
+        >
+          {regenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+        </Button>
+      </div>
+      {regenMsg && <span className="text-xs text-green-500 mt-1">{regenMsg}</span>}
     </div>
   )
 }
