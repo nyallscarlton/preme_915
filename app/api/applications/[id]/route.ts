@@ -217,6 +217,33 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Invalid token or application" }, { status: 403 })
     }
 
+    // Reject empty/near-empty submissions. Angela's case (April 2026): the
+    // client PUT with just {guest_token} and the server happily flipped
+    // status to "submitted" with every 1003 field null. A real 1003 requires
+    // at minimum SSN + DOB + name + property address + loan amount before we
+    // can legitimately mark it submitted and fire MISMO generation.
+    const requiredForSubmit: Array<{ key: string; label: string }> = [
+      { key: "applicant_ssn", label: "SSN" },
+      { key: "applicant_dob", label: "Date of birth" },
+      { key: "applicant_first_name", label: "First name" },
+      { key: "applicant_last_name", label: "Last name" },
+      { key: "property_address", label: "Property address" },
+      { key: "loan_amount", label: "Loan amount" },
+    ]
+    const missing = requiredForSubmit.filter(({ key }) => {
+      const v = (data as Record<string, unknown>)[key]
+      return v === null || v === undefined || v === "" || v === 0
+    })
+    if (missing.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Missing required 1003 fields",
+          missing: missing.map((m) => m.label),
+        },
+        { status: 400 }
+      )
+    }
+
     // Build update payload (strip internal fields that aren't DB columns)
     const {
       guest_token: _gt,
