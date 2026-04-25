@@ -902,7 +902,12 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                     {!isEditing ? (
                       <>
                         <SendFullAppButton applicationId={selectedApp.dbId} status={selectedApp.status} />
-                        <MismoDownloadsBar applicationId={selectedApp.dbId} status={selectedApp.status} />
+                        <MismoDownloadsBar
+                          applicationId={selectedApp.dbId}
+                          status={selectedApp.status}
+                          mismoGeneratedAt={selectedApp.raw?.mismo_generated_at ?? null}
+                          ssnEncryptedPresent={!!selectedApp.raw?.applicant_ssn_encrypted}
+                        />
                         <Button
                           variant="outline"
                           className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
@@ -1915,22 +1920,39 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
 
 /**
  * Downloads for the generated 1003 artifacts: MISMO 3.4 XML, Fannie 3.2 FNM,
- * URLA 1003 PDF. Files are generated automatically when a borrower submits
- * (or via PUT-as-admin edits); this bar also exposes a manual Regenerate for
- * when a previous generation failed.
+ * URLA 1003 PDF. Per Bible Doc 02.8 (Portal Scope), these artifacts are only
+ * produced when a borrower actually completes the full 1003 (`/apply-full`)
+ * at Stage 8 — NOT on pre-qual submission. Pre-qual rows and Retell-webhook
+ * phantom "submitted" rows (created from inbound calls without any form fill)
+ * do NOT have these files and MUST NOT show the bar.
  *
- * Hidden for rows that definitely can't have artifacts yet (pre_qualified
- * without a submission, or empty drafts). Regenerate is available whenever
- * the row is at least submitted so admins can recover from transient
- * generator failures (e.g., the XSD-not-present regression in Apr 2026).
+ * Gating rule: only render when `mismo_generated_at` is set on the row, which
+ * is the unambiguous signal that `generateMISMO(id)` ran to completion on a
+ * real 1003 submit. We also accept `ssnEncryptedPresent` as a fallback so
+ * the admin can click Generate on a row where the 1003 was filled but the
+ * MISMO run failed (e.g., pre-XSD-fix rows that need to be regenerated).
  */
-function MismoDownloadsBar({ applicationId, status }: { applicationId: string; status: string }) {
+function MismoDownloadsBar({
+  applicationId,
+  status,
+  mismoGeneratedAt,
+  ssnEncryptedPresent,
+}: {
+  applicationId: string
+  status: string
+  mismoGeneratedAt: string | null
+  ssnEncryptedPresent: boolean
+}) {
   const [regenerating, setRegenerating] = useState(false)
   const [regenMsg, setRegenMsg] = useState<string | null>(null)
 
-  // Don't render for statuses that won't have artifacts.
-  const showable = ["submitted", "in_review", "pre_approved", "approved", "conditional_approval", "funded", "denied"]
-  if (!showable.includes(status)) return null
+  // Hide for pre-qual / phantom-submitted rows. A row earns the bar only if
+  // MISMO actually ran, OR the row has encrypted SSN (which only the full
+  // 1003 submission path collects — never set by pre-qual POST or Retell
+  // webhook). Either signal proves the borrower actually completed /apply-full.
+  const hasMismo = !!mismoGeneratedAt
+  const isFullOneThirty = ssnEncryptedPresent || hasMismo
+  if (!isFullOneThirty) return null
 
   async function regenerate() {
     setRegenerating(true); setRegenMsg(null)
