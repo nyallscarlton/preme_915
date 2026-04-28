@@ -217,31 +217,40 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Invalid token or application" }, { status: 403 })
     }
 
-    // Reject empty/near-empty submissions. Angela's case (April 2026): the
-    // client PUT with just {guest_token} and the server happily flipped
-    // status to "submitted" with every 1003 field null. A real 1003 requires
-    // at minimum SSN + DOB + name + property address + loan amount before we
-    // can legitimately mark it submitted and fire MISMO generation.
-    const requiredForSubmit: Array<{ key: string; label: string }> = [
-      { key: "applicant_ssn", label: "SSN" },
-      { key: "applicant_dob", label: "Date of birth" },
-      { key: "applicant_first_name", label: "First name" },
-      { key: "applicant_last_name", label: "Last name" },
-      { key: "property_address", label: "Property address" },
-      { key: "loan_amount", label: "Loan amount" },
-    ]
-    const missing = requiredForSubmit.filter(({ key }) => {
-      const v = (data as Record<string, unknown>)[key]
-      return v === null || v === undefined || v === "" || v === 0
-    })
-    if (missing.length > 0) {
-      return NextResponse.json(
-        {
-          error: "Missing required 1003 fields",
-          missing: missing.map((m) => m.label),
-        },
-        { status: 400 }
-      )
+    // Distinguish full-1003 PUTs from short-form (Riley's /apply) PUTs by
+    // looking at the body shape. /apply-full's submit serializer always
+    // includes `applicant_ssn` as a key (value may be null if the user left
+    // it blank); /apply's serializer never sends `applicant_ssn` at all.
+    //
+    // - Full-1003 PUT: validate the required 1003 fields. If anything is
+    //   missing, reject with 400 + the list, do not flip status to submitted.
+    // - Short-form PUT (Riley/pre-qual link): accept whatever fields the
+    //   borrower filled, persist them, but DO NOT mark this as a real 1003
+    //   submit (no MISMO). Status moves to "submitted" only when the full
+    //   1003 path runs successfully.
+    const isFullOneThirty = "applicant_ssn" in (data as Record<string, unknown>)
+    if (isFullOneThirty) {
+      const requiredForSubmit: Array<{ key: string; label: string }> = [
+        { key: "applicant_ssn", label: "SSN" },
+        { key: "applicant_dob", label: "Date of birth" },
+        { key: "applicant_first_name", label: "First name" },
+        { key: "applicant_last_name", label: "Last name" },
+        { key: "property_address", label: "Property address" },
+        { key: "loan_amount", label: "Loan amount" },
+      ]
+      const missing = requiredForSubmit.filter(({ key }) => {
+        const v = (data as Record<string, unknown>)[key]
+        return v === null || v === undefined || v === "" || v === 0
+      })
+      if (missing.length > 0) {
+        return NextResponse.json(
+          {
+            error: "Missing required 1003 fields",
+            missing: missing.map((m) => m.label),
+          },
+          { status: 400 }
+        )
+      }
     }
 
     // Build update payload (strip internal fields that aren't DB columns)
@@ -307,12 +316,20 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     adminClient.rpc("upsert_profile_from_application", { p_loan_application_id: id })
       .then(({ error }: { error: unknown }) => { if (error) console.error("[applications] PUT profile upsert:", error) })
 
-    // Fire MISMO + FNM + 1003 PDF generation, wait so Slack post has the URLs
-    const { generateMISMO } = await import("@/lib/mismo")
-    const mismo = await generateMISMO(id).catch((err) => {
-      console.error("[applications] PUT MISMO generation error:", err)
-      return null
-    })
+    // Fire MISMO + FNM + 1003 PDF generation ONLY for full-1003 PUTs.
+    // Per Bible Doc 02.8 (Portal Scope), MISMO artifacts are produced only at
+    // Stage 8 when the borrower completes /apply-full. Riley's short form
+    // (/apply) and other partial PUTs must NOT generate MISMO — gating on
+    // isFullOneThirty (presence of applicant_ssn in the body) keeps that
+    // promise. See related: validation block above.
+    const mismo = isFullOneThirty
+      ? await (await import("@/lib/mismo"))
+          .generateMISMO(id)
+          .catch((err) => {
+            console.error("[applications] PUT MISMO generation error:", err)
+            return null
+          })
+      : null
 
     // Fire-and-forget MC notification
     notifyMCNewApplication(application).catch(() => {})
