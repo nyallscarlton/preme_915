@@ -156,7 +156,7 @@ export async function findOrCreateConversation(
 }
 
 /**
- * Sync an SMS message into GHL's conversation thread.
+ * Sync a single SMS message into GHL's conversation thread.
  * Fire-and-forget safe — callers should never await this on the critical path.
  */
 export async function syncSmsToGhl(
@@ -166,13 +166,56 @@ export async function syncSmsToGhl(
 ): Promise<GhlResult> {
   const convRes = await findOrCreateConversation(contactId)
   if (!convRes.ok || !convRes.data) return convRes
+  const label = direction === "inbound" ? "📥 Lead: " : "📤 Riley: "
   return ghlFetch("POST", "/conversations/messages", {
     type: "SMS",
     contactId,
     conversationId: convRes.data.conversationId,
     direction,
-    message: body,
+    message: label + body,
   })
+}
+
+/**
+ * Sync a full Retell SMS chat transcript into GHL, skipping messages already present.
+ * Call this on every inbound webhook to keep GHL in sync with Riley's side of the conversation.
+ */
+export async function syncRetellChatToGhl(
+  contactId: string,
+  retellMessages: Array<{ role: "agent" | "user"; content: string }>,
+): Promise<void> {
+  const creds = getCreds()
+  if ("error" in creds) return
+
+  const convRes = await findOrCreateConversation(contactId)
+  if (!convRes.ok || !convRes.data) return
+  const conversationId = convRes.data.conversationId
+
+  // Fetch existing GHL messages to deduplicate
+  const existingRes = await ghlFetch<{ messages?: { messages?: Array<{ body?: string }> } }>(
+    "GET",
+    `/conversations/${conversationId}/messages?limit=100`,
+  )
+  const existingBodies = new Set(
+    (existingRes.data?.messages?.messages || []).map((m) => (m.body || "").trim()),
+  )
+
+  for (const msg of retellMessages) {
+    const text = (msg.content || "").trim()
+    if (!text || existingBodies.has(text)) continue
+    existingBodies.add(text) // prevent duplicates within this batch
+    const direction = msg.role === "user" ? "inbound" : "outbound"
+    // GHL shows all API-logged messages on the outbound side regardless of direction.
+    // Prefix with speaker label so the conversation is readable in the thread.
+    const label = msg.role === "user" ? "📥 Lead: " : "📤 Riley: "
+    await ghlFetch("POST", "/conversations/messages", {
+      type: "SMS",
+      contactId,
+      conversationId,
+      direction,
+      message: label + text,
+    }).catch(() => {})
+  }
 }
 
 /** Convenience: state field + tag in one call. Sequenced — field PATCH first, then tag. */

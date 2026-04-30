@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { cancelRemainingCadence } from "@/lib/preme-cadence"
-import { syncSmsToGhl } from "@/lib/ghl-client"
+import { syncRetellChatToGhl } from "@/lib/ghl-client"
 
 export const dynamic = "force-dynamic"
 
@@ -104,13 +104,21 @@ export async function POST(request: NextRequest) {
       const ghlContactId = metadata.contact_id
 
       void (async () => {
-        // 1. Sync inbound reply to GHL conversation thread
-        if (ghlContactId) {
-          syncSmsToGhl(ghlContactId, "inbound", inboundText).catch((err) =>
-            console.error(`[sms-memory] GHL inbound sync failed (contact=${ghlContactId}):`, err),
-          )
-        } else {
-          console.warn(`[sms-memory] No contact_id in metadata — inbound reply not synced to GHL (phone=${leadPhone})`)
+        // 1. Sync full Retell chat transcript to GHL (deduped) — catches Riley's replies too
+        if (ghlContactId && chatId) {
+          const retellMsgs = await fetch(`https://api.retellai.com/get-chat/${chatId}`, {
+            headers: { Authorization: `Bearer ${process.env.RETELL_API_KEY}` },
+          }).then(r => r.json() as Promise<{ message_with_tool_calls?: Array<{role:string;content:string}> }>)
+            .then(d => (d.message_with_tool_calls || []).filter(m => m.role === "agent" || m.role === "user") as Array<{role:"agent"|"user";content:string}>)
+            .catch(() => [] as Array<{role:"agent"|"user";content:string}>)
+
+          if (retellMsgs.length > 0) {
+            syncRetellChatToGhl(ghlContactId, retellMsgs).catch((err) =>
+              console.error(`[sms-memory] GHL chat sync failed (contact=${ghlContactId}):`, err),
+            )
+          }
+        } else if (!ghlContactId) {
+          console.warn(`[sms-memory] No contact_id in metadata — chat not synced to GHL (phone=${leadPhone})`)
         }
 
         // 2. Supabase: log interaction + cancel cadence
