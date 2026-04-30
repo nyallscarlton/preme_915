@@ -7,18 +7,5 @@
       "permanent": true
     }
   ],
-  "crons": [
-    {
-      "path": "/api/cron/lead-followup",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/follow-ups",
-      "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/cron/app-followup",
-      "schedule": "0 14 * * *"
-    }
-  ]
+  "crons": []
 }
