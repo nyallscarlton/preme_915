@@ -393,12 +393,13 @@ export async function processDueSteps(): Promise<{ processed: number; errors: nu
 
       // SAFETY NET: Check if Riley already had a real conversation with this lead
       // This catches cases where the webhook failed to cancel the sequence
+      // Uses call_outcome from lead_messages, not duration
       const { count: connectedCalls } = await supabase
-        .from("lead_events")
+        .from("lead_messages")
         .select("id", { count: "exact", head: true })
         .eq("lead_id", lead.id as string)
-        .eq("event_type", "call_ended")
-        .gt("event_data->>duration", "30000")
+        .eq("direction", "outbound")
+        .in("call_outcome", ["connected_qualified", "connected_not_interested", "connected_not_ready"])
       if (connectedCalls && connectedCalls > 0) {
         console.log(`[safety-net] Caught orphaned follow-up for lead ${lead.id} (${lead.first_name} ${lead.last_name}) — already contacted. Cancelling.`)
         await cancelSequences(lead.id as string)

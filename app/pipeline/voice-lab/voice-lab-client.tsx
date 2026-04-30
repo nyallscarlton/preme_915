@@ -26,6 +26,7 @@ interface CallData {
   lead_id: string | null
   property_address: string | null
   loan_type: string | null
+  call_outcome: string | null
 }
 
 const TEMP_CONFIG: Record<string, { icon: string; bg: string; text: string }> = {
@@ -53,7 +54,7 @@ export function VoiceLabClient({ calls }: { calls: CallData[] }) {
     if (filter === "inbound") return c.direction === "inbound"
     if (filter === "outbound") return c.direction === "outbound"
     if (filter === "hot") return c.temperature === "hot"
-    if (filter === "connected") return c.duration_ms > 10000
+    if (filter === "connected") return c.call_outcome ? ["connected_qualified", "connected_not_interested", "connected_not_ready"].includes(c.call_outcome) : false
     return true
   })
 
@@ -95,7 +96,7 @@ export function VoiceLabClient({ calls }: { calls: CallData[] }) {
           >
             {f === "all" ? `All (${calls.length})` :
              f === "hot" ? `🔥 Hot (${calls.filter(c => c.temperature === "hot").length})` :
-             f === "connected" ? `Connected (${calls.filter(c => c.duration_ms > 10000).length})` :
+             f === "connected" ? `Connected (${calls.filter(c => c.call_outcome ? ["connected_qualified", "connected_not_interested", "connected_not_ready"].includes(c.call_outcome) : false).length})` :
              `${f.charAt(0).toUpperCase() + f.slice(1)} (${calls.filter(c => c.direction === f).length})`}
           </button>
         ))}

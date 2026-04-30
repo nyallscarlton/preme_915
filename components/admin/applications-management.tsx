@@ -900,14 +900,23 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                       <span className="ml-2">{formatStatus(selectedApp.status)}</span>
                     </Badge>
                     {!isEditing ? (
-                      <Button
-                        variant="outline"
-                        className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
-                        onClick={() => setIsEditing(true)}
-                      >
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Edit
-                      </Button>
+                      <>
+                        <SendFullAppButton applicationId={selectedApp.dbId} status={selectedApp.status} />
+                        <MismoDownloadsBar
+                          applicationId={selectedApp.dbId}
+                          status={selectedApp.status}
+                          mismoGeneratedAt={selectedApp.raw?.mismo_generated_at ?? null}
+                          ssnEncryptedPresent={!!selectedApp.raw?.applicant_ssn_encrypted}
+                        />
+                        <Button
+                          variant="outline"
+                          className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+                          onClick={() => setIsEditing(true)}
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </>
                     ) : (
                       <div className="flex gap-2">
                         <Button
@@ -1813,6 +1822,185 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
           </CardContent>
         </Card>
       )}
+    </div>
+  )
+}
+
+/**
+ * Header button for ALREADY-PROCESSED rows: re-sends the borrower their full
+ * 1003 magic link via email + SMS.
+ *
+ * For pre_qualified rows: hides the button and shows an inline hint pointing
+ * to the green Approve button in the Review Application panel below — that's
+ * the canonical entry point for issuing the 1003. Two buttons doing the same
+ * thing is confusing.
+ */
+function SendFullAppButton({ applicationId, status }: { applicationId: string; status: string }) {
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [result, setResult] = useState<{ email: boolean; sms: boolean } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const isPreQual = status === "pre_qualified"
+  // Green primary when row is awaiting the first manual 1003 issuance,
+  // gold when this is a resend on an already-sent row.
+  const primaryClass = isPreQual
+    ? "bg-green-600 hover:bg-green-700 text-white"
+    : "bg-[#997100] hover:bg-[#b8850a] text-black"
+  const primaryLabel = isPreQual ? "Send Full 1003 Link" : "Resend Full 1003 Link"
+
+  async function send(method: "email" | "sms" | "both") {
+    setSending(true); setError(null); setResult(null)
+    try {
+      const res = await fetch(`/api/applications/${applicationId}/send-full-app`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delivery_method: method }),
+      })
+      const j = await res.json()
+      if (!res.ok || !j.success) throw new Error(j.error || "Failed")
+      setSent(true)
+      setResult({ email: !!j.emailSent, sms: !!j.smsSent })
+      setTimeout(() => { setSent(false); setResult(null) }, 6000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed")
+      setTimeout(() => setError(null), 5000)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end">
+      <div className="flex gap-1">
+        <Button
+          size="sm"
+          className={primaryClass}
+          onClick={() => send("both")}
+          disabled={sending}
+          title={isPreQual
+            ? "Manually issues the full MISMO 1003 application link to the borrower via email + SMS. Use after you've reviewed the DSCR match."
+            : "Re-sends the borrower their full 1003 link via email + SMS"}
+        >
+          {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : sent ? <CheckCircle className="h-4 w-4 mr-1" /> : <Send className="h-4 w-4 mr-1" />}
+          {sent ? "Sent" : primaryLabel}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+          onClick={() => send("email")}
+          disabled={sending}
+          title="Email only"
+        >
+          <Mail className="h-4 w-4" />
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+          onClick={() => send("sms")}
+          disabled={sending}
+          title="SMS only"
+        >
+          <MessageSquare className="h-4 w-4" />
+        </Button>
+      </div>
+      {result && (
+        <span className="text-xs text-green-500 mt-1">
+          {result.email && result.sms ? "Email + SMS sent" :
+           result.email ? "Email sent" :
+           result.sms ? "SMS sent" : "Nothing went out — check contact info"}
+        </span>
+      )}
+      {error && <span className="text-xs text-red-400 mt-1">{error}</span>}
+    </div>
+  )
+}
+
+/**
+ * Downloads for the generated 1003 artifacts: MISMO 3.4 XML, Fannie 3.2 FNM,
+ * URLA 1003 PDF. Per Bible Doc 02.8 (Portal Scope), these artifacts are only
+ * produced when a borrower actually completes the full 1003 (`/apply-full`)
+ * at Stage 8 — NOT on pre-qual submission. Pre-qual rows and Retell-webhook
+ * phantom "submitted" rows (created from inbound calls without any form fill)
+ * do NOT have these files and MUST NOT show the bar.
+ *
+ * Gating rule: only render when `mismo_generated_at` is set on the row, which
+ * is the unambiguous signal that `generateMISMO(id)` ran to completion on a
+ * real 1003 submit. We also accept `ssnEncryptedPresent` as a fallback so
+ * the admin can click Generate on a row where the 1003 was filled but the
+ * MISMO run failed (e.g., pre-XSD-fix rows that need to be regenerated).
+ */
+function MismoDownloadsBar({
+  applicationId,
+  status,
+  mismoGeneratedAt,
+  ssnEncryptedPresent,
+}: {
+  applicationId: string
+  status: string
+  mismoGeneratedAt: string | null
+  ssnEncryptedPresent: boolean
+}) {
+  const [regenerating, setRegenerating] = useState(false)
+  const [regenMsg, setRegenMsg] = useState<string | null>(null)
+
+  // Hide for pre-qual / phantom-submitted rows. A row earns the bar only if
+  // MISMO actually ran, OR the row has encrypted SSN (which only the full
+  // 1003 submission path collects — never set by pre-qual POST or Retell
+  // webhook). Either signal proves the borrower actually completed /apply-full.
+  const hasMismo = !!mismoGeneratedAt
+  const isFullOneThirty = ssnEncryptedPresent || hasMismo
+  if (!isFullOneThirty) return null
+
+  async function regenerate() {
+    setRegenerating(true); setRegenMsg(null)
+    try {
+      const res = await fetch(`/api/applications/${applicationId}/mismo`, { method: "POST" })
+      const j = await res.json()
+      if (!res.ok || !j.success) throw new Error(j.error || "Regenerate failed")
+      setRegenMsg("Regenerated — refresh to download")
+      setTimeout(() => setRegenMsg(null), 6000)
+    } catch (err) {
+      setRegenMsg(err instanceof Error ? err.message : "Regenerate failed")
+      setTimeout(() => setRegenMsg(null), 8000)
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  const btnClass = "border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black bg-transparent"
+  return (
+    <div className="flex flex-col items-end">
+      <div className="flex gap-1">
+        <a href={`/api/applications/${applicationId}/mismo`} target="_blank" rel="noopener noreferrer">
+          <Button size="sm" variant="outline" className={btnClass} title="Download MISMO 3.4 XML">
+            <Download className="h-4 w-4 mr-1" /> XML
+          </Button>
+        </a>
+        <a href={`/api/applications/${applicationId}/mismo?f=fnm`} target="_blank" rel="noopener noreferrer">
+          <Button size="sm" variant="outline" className={btnClass} title="Download Fannie 3.2 FNM">
+            <Download className="h-4 w-4 mr-1" /> FNM
+          </Button>
+        </a>
+        <a href={`/api/applications/${applicationId}/mismo?f=pdf`} target="_blank" rel="noopener noreferrer">
+          <Button size="sm" variant="outline" className={btnClass} title="Download 1003 URLA PDF">
+            <Download className="h-4 w-4 mr-1" /> PDF
+          </Button>
+        </a>
+        <Button
+          size="sm"
+          variant="outline"
+          className={btnClass}
+          title="Regenerate MISMO + FNM + PDF from current DB state"
+          onClick={regenerate}
+          disabled={regenerating}
+        >
+          {regenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+        </Button>
+      </div>
+      {regenMsg && <span className="text-xs text-green-500 mt-1">{regenMsg}</span>}
     </div>
   )
 }

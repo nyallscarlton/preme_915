@@ -306,6 +306,9 @@ export async function notifyPremeAppSubmission(app: {
   credit_score_range?: string | null
   application_number?: string | null
   id?: string
+  mismo_xml_url?: string | null
+  fnm_url?: string | null
+  urla_pdf_url?: string | null
 }): Promise<void> {
   const name = app.applicant_name || "Unknown"
   const phone = app.applicant_phone || "none"
@@ -315,7 +318,7 @@ export async function notifyPremeAppSubmission(app: {
   const amount = app.loan_amount ? `$${Number(app.loan_amount).toLocaleString("en-US")}` : "N/A"
   const portalLink = `https://app.premerealestate.com/admin/applications/${app.id || ""}`
 
-  const text = [
+  const textLines = [
     `\u{1F4CB} *New application submitted*`,
     `\u2022 Name: ${name}`,
     `\u2022 Phone: ${phone}`,
@@ -323,16 +326,55 @@ export async function notifyPremeAppSubmission(app: {
     `\u2022 Property: ${state}, ${propType}`,
     `\u2022 Loan amount: ${amount}`,
     `\u2022 App link: ${portalLink}`,
-  ].join("\n")
+  ]
+  if (app.mismo_xml_url || app.urla_pdf_url) {
+    const parts: string[] = []
+    if (app.mismo_xml_url) parts.push(`<${app.mismo_xml_url}|MISMO XML>`)
+    if (app.urla_pdf_url) parts.push(`<${app.urla_pdf_url}|1003 PDF>`)
+    if (app.fnm_url) parts.push(`<${app.fnm_url}|FNM>`)
+    textLines.push(`\u2022 Downloads: ${parts.join("  ·  ")}`)
+  }
+  const text = textLines.join("\n")
 
   try {
+    const blocks: unknown[] = [
+      { type: "section", text: { type: "mrkdwn", text } },
+    ]
+    if (app.mismo_xml_url || app.urla_pdf_url) {
+      const elements: unknown[] = []
+      if (app.urla_pdf_url) {
+        elements.push({
+          type: "button",
+          text: { type: "plain_text", text: "Download 1003 PDF" },
+          url: app.urla_pdf_url,
+          style: "primary",
+        })
+      }
+      if (app.mismo_xml_url) {
+        elements.push({
+          type: "button",
+          text: { type: "plain_text", text: "Download MISMO XML" },
+          url: app.mismo_xml_url,
+        })
+      }
+      if (app.fnm_url) {
+        elements.push({ type: "button", text: { type: "plain_text", text: "FNM" }, url: app.fnm_url })
+      }
+      elements.push({
+        type: "button",
+        text: { type: "plain_text", text: "Regenerate" },
+        url: `${process.env.NEXT_PUBLIC_APP_URL || "https://app.premerealestate.com"}/api/applications/${app.id}/mismo`,
+      })
+      blocks.push({ type: "actions", elements })
+    }
+
     await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ channel: PREME_CHANNEL_ID, text }),
+      body: JSON.stringify({ channel: PREME_CHANNEL_ID, text, blocks }),
     })
   } catch (err) {
     console.error("[notifications] Preme Slack notification error:", err)
@@ -372,13 +414,30 @@ export async function notifyPremeAppSubmission(app: {
         matchText = `\u26A0\uFE0F *No lender match.* Reason: ${reason}`
       }
 
+      const matchBlocks: unknown[] = [
+        { type: "section", text: { type: "mrkdwn", text: matchText } },
+      ]
+      if (app.mismo_xml_url) {
+        matchBlocks.push({
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              text: { type: "plain_text", text: "Send MISMO to Lender" },
+              url: app.mismo_xml_url,
+              style: "primary",
+            },
+          ],
+        })
+      }
+
       await fetch("https://slack.com/api/chat.postMessage", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ channel: PREME_CHANNEL_ID, text: matchText }),
+        body: JSON.stringify({ channel: PREME_CHANNEL_ID, text: matchText, blocks: matchBlocks }),
       })
     }
   } catch (err) {
