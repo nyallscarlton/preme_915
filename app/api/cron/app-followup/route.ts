@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
 
     // Check if app was submitted — send confirmation
     if (app.status === "submitted" && app.submitted_at) {
-      const alreadySent = await hasEvent(supabase, app.lead_id, "app_submitted_confirmation")
+      const alreadySent = await hasEvent(supabase, app.lead_id, "app_submitted_confirmation", e164)
       if (!alreadySent) {
         try {
           await sendRetellSms(e164, `${firstName}, we got your application! Our team is reviewing it now and will reach out within a few hours.`)
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
       if (rule.condition.startsWith("opened_not_submitted") && !app.first_opened_at) continue
       if (rule.condition.startsWith("opened_not_submitted") && app.submitted_at) continue
 
-      const alreadySent = await hasEvent(supabase, app.lead_id, rule.eventType)
+      const alreadySent = await hasEvent(supabase, app.lead_id, rule.eventType, e164)
       if (alreadySent) continue
 
       try {
@@ -183,24 +183,48 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ success: true, sent, errors, errorDetails: errorDetails.length > 0 ? errorDetails : undefined })
 }
 
-async function hasEvent(supabase: ReturnType<typeof createAdminClient>, leadId: string | null, eventType: string): Promise<boolean> {
-  if (!leadId) return false
-  const { data } = await supabase
-    .from("lead_events")
-    .select("id")
-    .eq("lead_id", leadId)
-    .eq("event_type", eventType)
-    .limit(1)
-  return (data?.length ?? 0) > 0
+async function hasEvent(supabase: ReturnType<typeof createAdminClient>, leadId: string | null, eventType: string, phone?: string): Promise<boolean> {
+  // Primary dedup: lead_events by lead_id
+  if (leadId) {
+    const { data } = await supabase
+      .from("lead_events")
+      .select("id")
+      .eq("lead_id", leadId)
+      .eq("event_type", eventType)
+      .limit(1)
+    if ((data?.length ?? 0) > 0) return true
+  }
+  // Fallback dedup when lead_id is null: check contact_interactions by phone
+  if (phone) {
+    const digits = phone.replace(/\D/g, "").slice(-10)
+    const { data } = await supabase
+      .from("contact_interactions")
+      .select("id")
+      .ilike("phone", `%${digits}`)
+      .eq("channel", "sms")
+      .ilike("content", `%${eventType}%`)
+      .limit(1)
+    if ((data?.length ?? 0) > 0) return true
+  }
+  return false
 }
 
 async function logEvent(supabase: ReturnType<typeof createAdminClient>, leadId: string | null, eventType: string, phone: string) {
-  if (!leadId) return
-  await supabase.from("lead_events").insert({
-    lead_id: leadId,
-    event_type: eventType,
-    event_data: { phone, sent_at: new Date().toISOString() },
-  })
+  if (leadId) {
+    await supabase.from("lead_events").insert({
+      lead_id: leadId,
+      event_type: eventType,
+      event_data: { phone, sent_at: new Date().toISOString() },
+    })
+  }
+  // Also log to contact_interactions so phone-based dedup works when lead_id is null
+  await supabase.from("contact_interactions").insert({
+    phone,
+    channel: "sms",
+    direction: "outbound",
+    content: eventType,
+    metadata: { source: "app_followup_cron", sent_at: new Date().toISOString() },
+  }).catch(() => {})
 }
 
 async function sendRetellSms(to: string, message: string) {
