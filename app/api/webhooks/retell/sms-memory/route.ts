@@ -103,9 +103,30 @@ export async function POST(request: NextRequest) {
       // GHL contact_id is in Retell chat metadata
       const ghlContactId = metadata.contact_id
 
+      // If metadata didn't carry contact_id, resolve from GHL by phone number
+      let resolvedContactId = ghlContactId
+      if (!resolvedContactId && leadPhone) {
+        try {
+          const digits = leadPhone.replace(/\D/g, "")
+          const e164 = digits.length === 10 ? `+1${digits}` : `+${digits}`
+          const searchRes = await fetch(
+            `https://services.leadconnectorhq.com/contacts/?locationId=${process.env.GHL_LOCATION_ID}&query=${encodeURIComponent(digits)}&limit=1`,
+            { headers: { Authorization: `Bearer ${process.env.GHL_API_KEY}`, Version: "2021-07-28" } },
+          )
+          const searchData = await searchRes.json() as { contacts?: Array<{ id: string; phone?: string }> }
+          const match = searchData.contacts?.find(c =>
+            (c.phone || "").replace(/\D/g, "").endsWith(digits.slice(-10))
+          )
+          if (match) resolvedContactId = match.id
+          console.log(`[sms-memory] phone lookup for ${e164}: ${resolvedContactId || "not found"}`)
+        } catch (err) {
+          console.error("[sms-memory] phone lookup failed:", err)
+        }
+      }
+
       void (async () => {
         // 1. Sync full Retell chat transcript to GHL (deduped) — catches Riley's replies too
-        if (ghlContactId && chatId) {
+        if (resolvedContactId && chatId) {
           const retellMsgs = await fetch(`https://api.retellai.com/get-chat/${chatId}`, {
             headers: { Authorization: `Bearer ${process.env.RETELL_API_KEY}` },
           }).then(r => r.json() as Promise<{ message_with_tool_calls?: Array<{role:string;content:string}> }>)
@@ -113,12 +134,12 @@ export async function POST(request: NextRequest) {
             .catch(() => [] as Array<{role:"agent"|"user";content:string}>)
 
           if (retellMsgs.length > 0) {
-            syncRetellChatToGhl(ghlContactId, retellMsgs).catch((err) =>
-              console.error(`[sms-memory] GHL chat sync failed (contact=${ghlContactId}):`, err),
+            syncRetellChatToGhl(resolvedContactId, retellMsgs).catch((err) =>
+              console.error(`[sms-memory] GHL chat sync failed (contact=${resolvedContactId}):`, err),
             )
           }
-        } else if (!ghlContactId) {
-          console.warn(`[sms-memory] No contact_id in metadata — chat not synced to GHL (phone=${leadPhone})`)
+        } else if (!resolvedContactId) {
+          console.warn(`[sms-memory] No contact_id found — chat not synced to GHL (phone=${leadPhone})`)
         }
 
         // 2. Supabase: log interaction + cancel cadence
