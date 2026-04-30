@@ -166,13 +166,24 @@ export async function syncSmsToGhl(
 ): Promise<GhlResult> {
   const convRes = await findOrCreateConversation(contactId)
   if (!convRes.ok || !convRes.data) return convRes
-  const label = direction === "inbound" ? "📥 Lead: " : "📤 Riley: "
+  const conversationId = convRes.data.conversationId
+
+  if (direction === "inbound") {
+    // /conversations/messages/inbound logs without sending and displays on the lead's side
+    return ghlFetch("POST", "/conversations/messages/inbound", {
+      type: "SMS",
+      contactId,
+      conversationId,
+      message: body,
+    })
+  }
+
   return ghlFetch("POST", "/conversations/messages", {
     type: "SMS",
     contactId,
-    conversationId: convRes.data.conversationId,
-    direction,
-    message: label + body,
+    conversationId,
+    direction: "outbound",
+    message: body,
   })
 }
 
@@ -207,14 +218,22 @@ export async function syncRetellChatToGhl(
     const direction = msg.role === "user" ? "inbound" : "outbound"
     // GHL shows all API-logged messages on the outbound side regardless of direction.
     // Prefix with speaker label so the conversation is readable in the thread.
-    const label = msg.role === "user" ? "📥 Lead: " : "📤 Riley: "
-    await ghlFetch("POST", "/conversations/messages", {
-      type: "SMS",
-      contactId,
-      conversationId,
-      direction,
-      message: label + text,
-    }).catch(() => {})
+    if (msg.role === "user") {
+      await ghlFetch("POST", "/conversations/messages/inbound", {
+        type: "SMS",
+        contactId,
+        conversationId,
+        message: text,
+      }).catch(() => {})
+    } else {
+      await ghlFetch("POST", "/conversations/messages", {
+        type: "SMS",
+        contactId,
+        conversationId,
+        direction: "outbound",
+        message: text,
+      }).catch(() => {})
+    }
   }
 }
 
