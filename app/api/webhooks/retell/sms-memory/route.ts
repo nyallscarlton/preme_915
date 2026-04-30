@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     if (msgs.length > 0) {
       const contactId = await resolveGhlContactId(metadata.contact_id, actualLeadPhone)
       if (contactId) {
-        void syncRetellChatToGhl(contactId, msgs).catch(err =>
+        await syncRetellChatToGhl(contactId, msgs).catch(err =>
           console.error(`[sms-memory] GHL sync on ${event} failed (contact=${contactId}):`, err)
         )
       }
@@ -142,43 +142,41 @@ export async function POST(request: NextRequest) {
     } catch {}
   }
 
-  // Side effects for inbound messages — fire-and-forget
+  // Sync GHL and log — must complete before returning (Vercel kills fire-and-forget)
   if (isInbound && inboundText) {
     const supabase = premeClient()
-    void (async () => {
-      const contactId = await resolveGhlContactId(metadata.contact_id, leadPhone)
+    const contactId = await resolveGhlContactId(metadata.contact_id, leadPhone)
 
-      // Sync full chat to GHL
-      if (contactId && retellMsgs.length > 0) {
-        syncRetellChatToGhl(contactId, retellMsgs).catch(err =>
-          console.error(`[sms-memory] GHL sync failed (contact=${contactId}):`, err)
-        )
-      } else if (!contactId) {
-        console.warn(`[sms-memory] No contact_id — GHL sync skipped (phone=${leadPhone})`)
-      }
+    // Sync full chat to GHL synchronously
+    if (contactId && retellMsgs.length > 0) {
+      await syncRetellChatToGhl(contactId, retellMsgs).catch(err =>
+        console.error(`[sms-memory] GHL sync failed (contact=${contactId}):`, err)
+      )
+    } else if (!contactId) {
+      console.warn(`[sms-memory] No contact_id — GHL sync skipped (phone=${leadPhone})`)
+    }
 
-      // Supabase: log + cancel cadence
-      const digits = leadPhone.replace(/\D/g, "")
-      const variants = [leadPhone, digits.length === 10 ? `+1${digits}` : `+${digits}`]
-      const { data: lead } = await supabase
-        .from("leads").select("id, first_name, last_name")
-        .or(variants.map(p => `phone.eq.${p}`).join(","))
-        .limit(1).maybeSingle()
-
-      await supabase.from("contact_interactions").insert({
+    // Log + cancel cadence (parallel, non-blocking for response timing)
+    const digits = leadPhone.replace(/\D/g, "")
+    const variants = [leadPhone, digits.length === 10 ? `+1${digits}` : `+${digits}`]
+    const [{ data: lead }] = await Promise.all([
+      supabase.from("leads").select("id, first_name, last_name")
+        .or(variants.map(p => `phone.eq.${p}`).join(",")).limit(1).maybeSingle(),
+      supabase.from("contact_interactions").insert({
         phone: leadPhone, channel: "sms", direction: "inbound", content: inboundText,
         metadata: { chat_id: chatId, source: "retell_sms_webhook" },
-      }).catch(() => {})
+      }).catch(() => {}),
+    ])
 
-      if (lead?.id) {
-        const { cancelled } = await cancelRemainingCadence(lead.id, "inbound_sms_reply")
-        if (cancelled > 0) console.log(`[sms-memory] Cancelled ${cancelled} cadence steps for ${lead.first_name}`)
-      }
+    if (lead?.id) {
+      const { cancelled } = await cancelRemainingCadence(lead.id, "inbound_sms_reply")
+      if (cancelled > 0) console.log(`[sms-memory] Cancelled ${cancelled} cadence steps for ${lead.first_name}`)
+    }
 
-      await slackAlert(
-        `*Inbound SMS Reply*\nFrom: ${lead ? `${lead.first_name} ${lead.last_name}` : leadPhone} (${leadPhone})\nMessage: "${inboundText.slice(0, 200)}"\n_Lead is engaged._`
-      )
-    })()
+    // Slack alert fire-and-forget (non-critical, ok if killed)
+    slackAlert(
+      `*Inbound SMS Reply*\nFrom: ${lead ? `${lead.first_name} ${lead.last_name}` : leadPhone} (${leadPhone})\nMessage: "${inboundText.slice(0, 200)}"\n_Lead is engaged._`
+    ).catch(() => {})
   }
 
   return NextResponse.json({
