@@ -21,176 +21,167 @@ async function slackAlert(text: string) {
   try {
     await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${SLACK_TOKEN}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${SLACK_TOKEN}`, "Content-Type": "application/json" },
       body: JSON.stringify({ channel: SLACK_CHANNEL, text }),
     })
   } catch {}
 }
 
+const PREME_NUMBERS = new Set([
+  "+14709425787", "+14707301614", "+14709342303",
+  "+14704706861", "+14708024973", "+14709286438",
+  "+14706196417", "+14708353966", "+14707405808",
+])
+
+async function resolveGhlContactId(
+  metadataContactId: string | undefined,
+  leadPhone: string,
+): Promise<string | null> {
+  if (metadataContactId) return metadataContactId
+  if (!leadPhone) return null
+  try {
+    const digits = leadPhone.replace(/\D/g, "")
+    const res = await fetch(
+      `https://services.leadconnectorhq.com/contacts/?locationId=${process.env.GHL_LOCATION_ID}&query=${encodeURIComponent(digits)}&limit=3`,
+      { headers: { Authorization: `Bearer ${process.env.GHL_API_KEY}`, Version: "2021-07-28" } },
+    )
+    const data = await res.json() as { contacts?: Array<{ id: string; phone?: string }> }
+    const match = (data.contacts || []).find(c =>
+      (c.phone || "").replace(/\D/g, "").endsWith(digits.slice(-10))
+    )
+    console.log(`[sms-memory] phone lookup ${leadPhone} → ${match?.id || "not found"}`)
+    return match?.id || null
+  } catch (err) {
+    console.error("[sms-memory] GHL phone lookup failed:", err)
+    return null
+  }
+}
+
 /**
  * POST /api/webhooks/retell/sms-memory
  *
- * Retell calls this as a context-injection webhook (inbound_sms_webhook_url).
- * Fires synchronously for every inbound SMS — both new conversations and replies
- * to API-created chats. Retell waits for our response to get dynamic variables
- * before the agent replies.
+ * Handles TWO Retell webhook shapes:
  *
- * Retell payload shape (no "event" field — it's a context hook, not a notification):
- * {
- *   "from_number": "+1...",   // sender (lead on inbound)
- *   "to_number": "+1...",     // recipient (Preme number on inbound)
- *   "message": "...",         // the inbound message text
- *   "chat_id": "...",
- *   "agent_id": "...",
- *   "metadata": { contact_id, source, ... }
- * }
+ * 1. Chat agent webhook (event = "chat_ended" | "chat_analyzed"):
+ *    Fired by the SMS chat agent when a conversation ends. Contains full transcript.
+ *    Body: { event, chat: { chat_id, message_with_tool_calls, metadata, to_number, ... } }
  *
- * We must return { retell_llm_dynamic_variables: { ... } } for the agent.
+ * 2. Context-injection webhook (no event field — phone-number inbound_sms_webhook_url):
+ *    Fired synchronously for each inbound SMS so we can return dynamic variables.
+ *    Body: { from_number, to_number, message, chat_id, agent_id, metadata }
+ *    Must return { retell_llm_dynamic_variables: { ... } }
  */
 export async function POST(request: NextRequest) {
-  let rawBody: Record<string, unknown> = {}
+  let body: Record<string, unknown> = {}
   try {
-    rawBody = (await request.json()) as Record<string, unknown>
+    body = (await request.json()) as Record<string, unknown>
   } catch {
     return NextResponse.json({ retell_llm_dynamic_variables: {} })
   }
 
-  try {
-    const fromNumber = (rawBody.from_number as string) || ""
-    const toNumber = (rawBody.to_number as string) || ""
-    const chatId = (rawBody.chat_id as string) || ""
-    const metadata = (rawBody.metadata as Record<string, string>) || {}
+  const event = (body.event as string) || ""
 
-    // The inbound message text — Retell sends it as "message" (string), not nested object
-    const inboundText = (rawBody.message as string) || ""
+  // ── Path 1: Chat agent event (chat_ended / chat_analyzed) ──────────────────
+  if (event === "chat_ended" || event === "chat_analyzed") {
+    const chat = (body.chat || {}) as Record<string, unknown>
+    const chatId = (chat.chat_id as string) || ""
+    const metadata = (chat.metadata as Record<string, string>) || {}
+    const toNumber = (chat.to_number as string) || ""
+    const leadPhone = PREME_NUMBERS.has(toNumber) ? toNumber : toNumber // to_number = lead for outbound chats
 
-    const premeNumbers = new Set([
-      "+14709425787", "+14707301614", "+14709342303",
-      "+14704706861", "+14708024973", "+14709286438",
-      "+14706196417", "+14708353966", "+14707405808",
-    ])
+    // For outbound API-created chats, to_number is the lead
+    const actualLeadPhone = PREME_NUMBERS.has(chat.from_number as string || "")
+      ? (chat.to_number as string) || ""
+      : (chat.from_number as string) || toNumber
 
-    const leadPhone = premeNumbers.has(fromNumber) ? toNumber : fromNumber
-    const isInbound = !!leadPhone && !premeNumbers.has(fromNumber)
+    const msgs = ((chat.message_with_tool_calls as Array<{role:string;content:string}>) || [])
+      .filter(m => m.role === "agent" || m.role === "user") as Array<{role:"agent"|"user";content:string}>
 
-    console.log(`[sms-memory] from=${fromNumber} to=${toNumber} chat=${chatId} inbound=${isInbound} msg="${inboundText.slice(0,60)}"`)
+    console.log(`[sms-memory] ${event} chat=${chatId} msgs=${msgs.length} phone=${actualLeadPhone}`)
 
-    const supabase = premeClient()
-
-    // Pull conversation history from Retell for context injection
-    let conversationHistory = ""
-    if (chatId) {
-      try {
-        const chatRes = await fetch(`https://api.retellai.com/get-chat/${chatId}`, {
-          headers: { Authorization: `Bearer ${process.env.RETELL_API_KEY}` },
-        })
-        if (chatRes.ok) {
-          const chatData = await chatRes.json() as { message_with_tool_calls?: Array<{role:string;content:string}> }
-          const msgs = chatData.message_with_tool_calls || []
-          conversationHistory = msgs
-            .filter(m => m.role === "user" || m.role === "agent")
-            .map(m => `${m.role === "user" ? "Lead" : "Riley"}: ${m.content}`)
-            .join("\n")
-        }
-      } catch {}
+    if (msgs.length > 0) {
+      const contactId = await resolveGhlContactId(metadata.contact_id, actualLeadPhone)
+      if (contactId) {
+        void syncRetellChatToGhl(contactId, msgs).catch(err =>
+          console.error(`[sms-memory] GHL sync on ${event} failed (contact=${contactId}):`, err)
+        )
+      }
     }
 
-    // Side effects — fire-and-forget so they don't delay Retell's response
-    if (isInbound && inboundText) {
-      // GHL contact_id is in Retell chat metadata
-      const ghlContactId = metadata.contact_id
+    return NextResponse.json({ ok: true })
+  }
 
-      // If metadata didn't carry contact_id, resolve from GHL by phone number
-      let resolvedContactId = ghlContactId
-      if (!resolvedContactId && leadPhone) {
-        try {
-          const digits = leadPhone.replace(/\D/g, "")
-          const e164 = digits.length === 10 ? `+1${digits}` : `+${digits}`
-          const searchRes = await fetch(
-            `https://services.leadconnectorhq.com/contacts/?locationId=${process.env.GHL_LOCATION_ID}&query=${encodeURIComponent(digits)}&limit=1`,
-            { headers: { Authorization: `Bearer ${process.env.GHL_API_KEY}`, Version: "2021-07-28" } },
-          )
-          const searchData = await searchRes.json() as { contacts?: Array<{ id: string; phone?: string }> }
-          const match = searchData.contacts?.find(c =>
-            (c.phone || "").replace(/\D/g, "").endsWith(digits.slice(-10))
-          )
-          if (match) resolvedContactId = match.id
-          console.log(`[sms-memory] phone lookup for ${e164}: ${resolvedContactId || "not found"}`)
-        } catch (err) {
-          console.error("[sms-memory] phone lookup failed:", err)
-        }
+  // ── Path 2: Context-injection (inbound_sms_webhook_url, no event field) ────
+  const fromNumber = (body.from_number as string) || ""
+  const toNumber   = (body.to_number as string) || ""
+  const chatId     = (body.chat_id as string) || ""
+  const metadata   = (body.metadata as Record<string, string>) || {}
+  const inboundText = (body.message as string) || ""
+
+  const leadPhone = PREME_NUMBERS.has(fromNumber) ? toNumber : fromNumber
+  const isInbound = !!leadPhone && !PREME_NUMBERS.has(fromNumber)
+
+  console.log(`[sms-memory] context-inject from=${fromNumber} to=${toNumber} chat=${chatId} inbound=${isInbound} msg="${inboundText.slice(0,60)}"`)
+
+  // Fetch Retell chat history to return as context to the agent
+  let conversationHistory = ""
+  let retellMsgs: Array<{role:"agent"|"user";content:string}> = []
+  if (chatId) {
+    try {
+      const chatRes = await fetch(`https://api.retellai.com/get-chat/${chatId}`, {
+        headers: { Authorization: `Bearer ${process.env.RETELL_API_KEY}` },
+      })
+      if (chatRes.ok) {
+        const chatData = await chatRes.json() as { message_with_tool_calls?: Array<{role:string;content:string}> }
+        const all = chatData.message_with_tool_calls || []
+        retellMsgs = all.filter(m => m.role === "agent" || m.role === "user") as Array<{role:"agent"|"user";content:string}>
+        conversationHistory = retellMsgs
+          .map(m => `${m.role === "user" ? "Lead" : "Riley"}: ${m.content}`)
+          .join("\n")
+      }
+    } catch {}
+  }
+
+  // Side effects for inbound messages — fire-and-forget
+  if (isInbound && inboundText) {
+    const supabase = premeClient()
+    void (async () => {
+      const contactId = await resolveGhlContactId(metadata.contact_id, leadPhone)
+
+      // Sync full chat to GHL
+      if (contactId && retellMsgs.length > 0) {
+        syncRetellChatToGhl(contactId, retellMsgs).catch(err =>
+          console.error(`[sms-memory] GHL sync failed (contact=${contactId}):`, err)
+        )
+      } else if (!contactId) {
+        console.warn(`[sms-memory] No contact_id — GHL sync skipped (phone=${leadPhone})`)
       }
 
-      void (async () => {
-        // 1. Sync full Retell chat transcript to GHL (deduped) — catches Riley's replies too
-        if (resolvedContactId && chatId) {
-          const retellMsgs = await fetch(`https://api.retellai.com/get-chat/${chatId}`, {
-            headers: { Authorization: `Bearer ${process.env.RETELL_API_KEY}` },
-          }).then(r => r.json() as Promise<{ message_with_tool_calls?: Array<{role:string;content:string}> }>)
-            .then(d => (d.message_with_tool_calls || []).filter(m => m.role === "agent" || m.role === "user") as Array<{role:"agent"|"user";content:string}>)
-            .catch(() => [] as Array<{role:"agent"|"user";content:string}>)
+      // Supabase: log + cancel cadence
+      const digits = leadPhone.replace(/\D/g, "")
+      const variants = [leadPhone, digits.length === 10 ? `+1${digits}` : `+${digits}`]
+      const { data: lead } = await supabase
+        .from("leads").select("id, first_name, last_name")
+        .or(variants.map(p => `phone.eq.${p}`).join(","))
+        .limit(1).maybeSingle()
 
-          if (retellMsgs.length > 0) {
-            syncRetellChatToGhl(resolvedContactId, retellMsgs).catch((err) =>
-              console.error(`[sms-memory] GHL chat sync failed (contact=${resolvedContactId}):`, err),
-            )
-          }
-        } else if (!resolvedContactId) {
-          console.warn(`[sms-memory] No contact_id found — chat not synced to GHL (phone=${leadPhone})`)
-        }
+      await supabase.from("contact_interactions").insert({
+        phone: leadPhone, channel: "sms", direction: "inbound", content: inboundText,
+        metadata: { chat_id: chatId, source: "retell_sms_webhook" },
+      }).catch(() => {})
 
-        // 2. Supabase: log interaction + cancel cadence
-        const rawDigits = leadPhone.replace(/\D/g, "")
-        const phoneVariants = [leadPhone]
-        if (rawDigits.length === 11 && rawDigits.startsWith("1")) phoneVariants.push(rawDigits.slice(1))
-        else if (rawDigits.length === 10) phoneVariants.push(`+1${rawDigits}`)
+      if (lead?.id) {
+        const { cancelled } = await cancelRemainingCadence(lead.id, "inbound_sms_reply")
+        if (cancelled > 0) console.log(`[sms-memory] Cancelled ${cancelled} cadence steps for ${lead.first_name}`)
+      }
 
-        const { data: lead } = await supabase
-          .from("leads")
-          .select("id, first_name, last_name")
-          .or(phoneVariants.map(p => `phone.eq.${p}`).join(","))
-          .limit(1)
-          .maybeSingle()
-
-        const name = lead ? `${lead.first_name} ${lead.last_name}` : leadPhone
-
-        await supabase.from("contact_interactions").insert({
-          phone: leadPhone,
-          channel: "sms",
-          direction: "inbound",
-          content: inboundText,
-          metadata: { chat_id: chatId, source: "retell_sms_webhook" },
-        }).catch(() => {})
-
-        if (lead?.id) {
-          const { cancelled } = await cancelRemainingCadence(lead.id, "inbound_sms_reply")
-          if (cancelled > 0) {
-            console.log(`[sms-memory] Cancelled ${cancelled} cadence steps for ${name}`)
-          }
-        }
-
-        // 3. Slack alert
-        await slackAlert(
-          `*Inbound SMS Reply*\n` +
-          `From: ${name} (${leadPhone})\n` +
-          `Message: "${inboundText.slice(0, 200)}"\n` +
-          `_Lead is engaged — reply needed._`
-        )
-      })()
-    }
-
-    // Return dynamic variables to the Retell SMS agent
-    return NextResponse.json({
-      retell_llm_dynamic_variables: {
-        conversation_history: conversationHistory,
-      },
-    })
-  } catch (error) {
-    console.error("[sms-memory] Webhook error:", error)
-    // Always return valid dynamic variables so Retell can proceed
-    return NextResponse.json({ retell_llm_dynamic_variables: {} })
+      await slackAlert(
+        `*Inbound SMS Reply*\nFrom: ${lead ? `${lead.first_name} ${lead.last_name}` : leadPhone} (${leadPhone})\nMessage: "${inboundText.slice(0, 200)}"\n_Lead is engaged._`
+      )
+    })()
   }
+
+  return NextResponse.json({
+    retell_llm_dynamic_variables: { conversation_history: conversationHistory },
+  })
 }
