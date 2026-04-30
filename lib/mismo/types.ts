@@ -110,6 +110,16 @@ export type LoanApplication = {
   flood_insurance_monthly: number | null
   property_mgmt_fee_monthly: number | null
 
+  // Deal structure (bridge / hard money)
+  renovation_costs: number | null
+  anticipated_arv: number | null
+  flood_zone: boolean | null
+  project_summary: string | null
+  exit_strategy: string | null
+  funds_available_for_project: number | null
+  target_closing_date: string | null
+  target_closing_reason: string | null
+
   // Originator
   originator_nmls_individual: string | null
   originator_first_name: string | null

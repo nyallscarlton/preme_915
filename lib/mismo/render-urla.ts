@@ -304,6 +304,44 @@ function sec4_loan_property(ctx: RenderCtx): void {
     { label: "HOA (mo)", value: money(loan.hoa_monthly) },
     { label: "PM Fee (mo)", value: money(loan.property_mgmt_fee_monthly) },
   ])
+  const hasDealFields =
+    loan.renovation_costs != null ||
+    loan.anticipated_arv != null ||
+    loan.project_summary ||
+    loan.exit_strategy ||
+    loan.target_closing_date ||
+    loan.funds_available_for_project != null
+  if (hasDealFields) {
+    newLine(ctx, 4)
+    text(ctx, "Deal Structure", { size: 9, bold: true })
+    newLine(ctx, 14)
+    row(ctx, [
+      { label: "Renovation Costs", value: money(loan.renovation_costs) },
+      { label: "Anticipated ARV", value: money(loan.anticipated_arv) },
+      { label: "Funds Available (Project)", value: money(loan.funds_available_for_project) },
+      { label: "Flood Zone", value: loan.flood_zone === true ? "Yes" : loan.flood_zone === false ? "No" : null },
+    ])
+    row(ctx, [
+      { label: "Target Closing Date", value: loan.target_closing_date },
+      { label: "Reason for Target Date", value: loan.target_closing_reason, w: 350 },
+    ])
+    if (loan.project_summary) {
+      newLine(ctx, 4)
+      text(ctx, "Project Summary:", { size: 8, bold: true })
+      newLine(ctx, 11)
+      ensureSpace(ctx, 30)
+      drawWrapped(ctx, loan.project_summary, 8, 10)
+      newLine(ctx, 4)
+    }
+    if (loan.exit_strategy) {
+      newLine(ctx, 4)
+      text(ctx, "Exit Strategy:", { size: 8, bold: true })
+      newLine(ctx, 11)
+      ensureSpace(ctx, 30)
+      drawWrapped(ctx, loan.exit_strategy, 8, 10)
+      newLine(ctx, 4)
+    }
+  }
 }
 
 function sec5_declarations(ctx: RenderCtx): void {
