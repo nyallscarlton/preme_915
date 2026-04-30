@@ -43,6 +43,14 @@ export function PropertyInfoForm({ onNext, onPrevious, onDataChange, initialData
     hoaMonthly: initialData.hoaMonthly || "",
     floodInsuranceMonthly: initialData.floodInsuranceMonthly || "",
     propertyMgmtFeeMonthly: initialData.propertyMgmtFeeMonthly || "",
+    renovationCosts: initialData.renovationCosts || "",
+    anticipatedArv: initialData.anticipatedArv || "",
+    floodZone: initialData.floodZone ?? null,
+    projectSummary: initialData.projectSummary || "",
+    exitStrategy: initialData.exitStrategy || "",
+    fundsAvailableForProject: initialData.fundsAvailableForProject || "",
+    targetClosingDate: initialData.targetClosingDate || "",
+    targetClosingReason: initialData.targetClosingReason || "",
     ...initialData,
   })
 
@@ -222,6 +230,65 @@ export function PropertyInfoForm({ onNext, onPrevious, onDataChange, initialData
                 <Label>Property Management Fee (monthly)</Label>
                 <Input type="number" value={formData.propertyMgmtFeeMonthly} onChange={(e) => update("propertyMgmtFeeMonthly", e.target.value)} placeholder="0" />
               </div>
+            </div>
+          </fieldset>
+
+          <fieldset className="border rounded-lg p-4 space-y-4">
+            <legend className="px-2 text-sm font-semibold">Deal Structure (Bridge / Hard Money)</legend>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Renovation Costs</Label>
+                <Input type="number" value={formData.renovationCosts} onChange={(e) => update("renovationCosts", e.target.value)} placeholder="45000" />
+              </div>
+              <div className="space-y-2">
+                <Label>Anticipated ARV (After Repair Value)</Label>
+                <Input type="number" value={formData.anticipatedArv} onChange={(e) => update("anticipatedArv", e.target.value)} placeholder="350000" />
+              </div>
+              <div className="space-y-2">
+                <Label>Funds Available for Project</Label>
+                <Input type="number" value={formData.fundsAvailableForProject} onChange={(e) => update("fundsAvailableForProject", e.target.value)} placeholder="75000" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Target Closing Date</Label>
+                <Input type="date" value={formData.targetClosingDate} onChange={(e) => update("targetClosingDate", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Reason for Target Date</Label>
+                <Input type="text" value={formData.targetClosingReason} onChange={(e) => update("targetClosingReason", e.target.value)} placeholder="e.g. Seller deadline, auction date" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Is the property in a flood zone?</Label>
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="floodZone" checked={formData.floodZone === true} onChange={() => update("floodZone", true as any)} />
+                  Yes
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="floodZone" checked={formData.floodZone === false} onChange={() => update("floodZone", false as any)} />
+                  No
+                </label>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Project Summary</Label>
+              <textarea
+                className="w-full border rounded-md px-3 py-2 text-sm min-h-[80px] resize-y"
+                value={formData.projectSummary}
+                onChange={(e) => update("projectSummary", e.target.value)}
+                placeholder="Describe the project scope, current condition, and planned improvements..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Exit Strategy</Label>
+              <textarea
+                className="w-full border rounded-md px-3 py-2 text-sm min-h-[80px] resize-y"
+                value={formData.exitStrategy}
+                onChange={(e) => update("exitStrategy", e.target.value)}
+                placeholder="e.g. Sell upon completion, refinance into 30-year conventional, hold as rental..."
+              />
             </div>
           </fieldset>
 

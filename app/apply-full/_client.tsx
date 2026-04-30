@@ -177,6 +177,14 @@ export default function LoanApplicationFullClient() {
         hoa_monthly: n(formData.hoaMonthly),
         flood_insurance_monthly: n(formData.floodInsuranceMonthly),
         property_mgmt_fee_monthly: n(formData.propertyMgmtFeeMonthly),
+        renovation_costs: n(formData.renovationCosts),
+        anticipated_arv: n(formData.anticipatedArv),
+        flood_zone: formData.floodZone === true ? true : formData.floodZone === false ? false : null,
+        project_summary: s(formData.projectSummary),
+        exit_strategy: s(formData.exitStrategy),
+        funds_available_for_project: n(formData.fundsAvailableForProject),
+        target_closing_date: s(formData.targetClosingDate),
+        target_closing_reason: s(formData.targetClosingReason),
 
         // Vesting & entity
         vesting_type: s(formData.vestingType) ?? "Individual",
