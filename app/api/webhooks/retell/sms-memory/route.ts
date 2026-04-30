@@ -33,144 +33,135 @@ async function slackAlert(text: string) {
 /**
  * POST /api/webhooks/retell/sms-memory
  *
- * Retell calls this during SMS chat conversations.
- * Captures inbound replies from leads into preme.contact_interactions
- * and alerts Slack on new inbound messages so the team can follow up.
+ * Retell calls this as a context-injection webhook (inbound_sms_webhook_url).
+ * Fires synchronously for every inbound SMS — both new conversations and replies
+ * to API-created chats. Retell waits for our response to get dynamic variables
+ * before the agent replies.
+ *
+ * Retell payload shape (no "event" field — it's a context hook, not a notification):
+ * {
+ *   "from_number": "+1...",   // sender (lead on inbound)
+ *   "to_number": "+1...",     // recipient (Preme number on inbound)
+ *   "message": "...",         // the inbound message text
+ *   "chat_id": "...",
+ *   "agent_id": "...",
+ *   "metadata": { contact_id, source, ... }
+ * }
+ *
+ * We must return { retell_llm_dynamic_variables: { ... } } for the agent.
  */
 export async function POST(request: NextRequest) {
+  let rawBody: Record<string, unknown> = {}
   try {
-    const body = await request.json()
+    rawBody = (await request.json()) as Record<string, unknown>
+  } catch {
+    return NextResponse.json({ retell_llm_dynamic_variables: {} })
+  }
 
-    const event = body.event || body.type || ""
-    const chat = body.chat || body
-    const message = body.message || body.data || {}
+  try {
+    const fromNumber = (rawBody.from_number as string) || ""
+    const toNumber = (rawBody.to_number as string) || ""
+    const chatId = (rawBody.chat_id as string) || ""
+    const metadata = (rawBody.metadata as Record<string, string>) || {}
 
-    const fromNumber = chat.from_number || body.from_number || ""
-    const toNumber = chat.to_number || body.to_number || ""
+    // The inbound message text — Retell sends it as "message" (string), not nested object
+    const inboundText = (rawBody.message as string) || ""
 
-    // Determine which number is the lead
     const premeNumbers = new Set([
       "+14709425787", "+14707301614", "+14709342303",
       "+14704706861", "+14708024973", "+14709286438",
       "+14706196417", "+14708353966", "+14707405808",
     ])
-    const leadPhone = premeNumbers.has(fromNumber) ? toNumber : fromNumber
-    const isInbound = !premeNumbers.has(fromNumber)
 
-    if (!leadPhone) {
-      return NextResponse.json({ ok: true, skipped: "no_phone" })
-    }
+    const leadPhone = premeNumbers.has(fromNumber) ? toNumber : fromNumber
+    const isInbound = !!leadPhone && !premeNumbers.has(fromNumber)
+
+    console.log(`[sms-memory] from=${fromNumber} to=${toNumber} chat=${chatId} inbound=${isInbound} msg="${inboundText.slice(0,60)}"`)
 
     const supabase = premeClient()
 
-    // Handle message events
-    if (event === "message_received" || event === "chat_message") {
-      const content = message.content || message.text || body.content || ""
-      const role = message.role || body.role || (isInbound ? "user" : "agent")
+    // Pull conversation history from Retell for context injection
+    let conversationHistory = ""
+    if (chatId) {
+      try {
+        const chatRes = await fetch(`https://api.retellai.com/get-chat/${chatId}`, {
+          headers: { Authorization: `Bearer ${process.env.RETELL_API_KEY}` },
+        })
+        if (chatRes.ok) {
+          const chatData = await chatRes.json() as { message_with_tool_calls?: Array<{role:string;content:string}> }
+          const msgs = chatData.message_with_tool_calls || []
+          conversationHistory = msgs
+            .filter(m => m.role === "user" || m.role === "agent")
+            .map(m => `${m.role === "user" ? "Lead" : "Riley"}: ${m.content}`)
+            .join("\n")
+        }
+      } catch {}
+    }
 
-      if (content) {
+    // Side effects — fire-and-forget so they don't delay Retell's response
+    if (isInbound && inboundText) {
+      // GHL contact_id is in Retell chat metadata
+      const ghlContactId = metadata.contact_id
+
+      void (async () => {
+        // 1. Sync inbound reply to GHL conversation thread
+        if (ghlContactId) {
+          syncSmsToGhl(ghlContactId, "inbound", inboundText).catch((err) =>
+            console.error(`[sms-memory] GHL inbound sync failed (contact=${ghlContactId}):`, err),
+          )
+        } else {
+          console.warn(`[sms-memory] No contact_id in metadata — inbound reply not synced to GHL (phone=${leadPhone})`)
+        }
+
+        // 2. Supabase: log interaction + cancel cadence
+        const rawDigits = leadPhone.replace(/\D/g, "")
+        const phoneVariants = [leadPhone]
+        if (rawDigits.length === 11 && rawDigits.startsWith("1")) phoneVariants.push(rawDigits.slice(1))
+        else if (rawDigits.length === 10) phoneVariants.push(`+1${rawDigits}`)
+
+        const { data: lead } = await supabase
+          .from("leads")
+          .select("id, first_name, last_name")
+          .or(phoneVariants.map(p => `phone.eq.${p}`).join(","))
+          .limit(1)
+          .maybeSingle()
+
+        const name = lead ? `${lead.first_name} ${lead.last_name}` : leadPhone
+
         await supabase.from("contact_interactions").insert({
           phone: leadPhone,
           channel: "sms",
-          direction: role === "user" ? "inbound" : "outbound",
-          content,
-          metadata: {
-            chat_id: chat.chat_id || body.chat_id,
-            source: "retell_sms_webhook",
-          },
-        })
+          direction: "inbound",
+          content: inboundText,
+          metadata: { chat_id: chatId, source: "retell_sms_webhook" },
+        }).catch(() => {})
 
-        // On inbound lead reply: cancel cadence + alert Slack + sync to GHL
-        if (role === "user") {
-          // GHL contact_id stored in chat metadata at send time — no Supabase lookup needed
-          const ghlContactId = (chat.metadata?.contact_id as string | undefined) ||
-            (body.metadata?.contact_id as string | undefined)
-
-          // Also try Supabase for cadence cancellation (lead.id needed)
-          const rawDigits = leadPhone.replace(/\D/g, "")
-          const phoneVariants = [leadPhone]
-          if (rawDigits.length === 11 && rawDigits.startsWith("1")) {
-            phoneVariants.push(rawDigits.slice(1))
-          } else if (rawDigits.length === 10) {
-            phoneVariants.push(`+1${rawDigits}`)
-          }
-
-          const { data: lead } = await supabase
-            .from("leads")
-            .select("id, first_name, last_name")
-            .or(phoneVariants.map(p => `phone.eq.${p}`).join(","))
-            .limit(1)
-            .maybeSingle()
-
-          const name = lead
-            ? `${lead.first_name} ${lead.last_name}`
-            : leadPhone
-
-          // Cancel remaining cadence — lead is engaged via text
-          if (lead?.id) {
-            const { cancelled } = await cancelRemainingCadence(
-              lead.id,
-              "inbound_sms_reply"
-            )
-            if (cancelled > 0) {
-              console.log(`[sms-memory] Cancelled ${cancelled} cadence steps for ${name} — inbound SMS reply`)
-            }
-          }
-
-          // Sync inbound reply to GHL conversation thread
-          if (ghlContactId) {
-            void syncSmsToGhl(ghlContactId, "inbound", content).catch((err) =>
-              console.error(`[sms-memory] GHL inbound sync failed (contact=${ghlContactId}):`, err),
-            )
-          } else {
-            console.warn(`[sms-memory] No ghl_contact_id in chat metadata — inbound reply NOT synced to GHL (phone=${leadPhone})`)
-          }
-
-          await slackAlert(
-            `*Inbound SMS Reply*\n` +
-            `From: ${name} (${leadPhone})\n` +
-            `Message: "${content.slice(0, 200)}"\n` +
-            `_Cadence auto-cancelled. Lead is engaged — reply needed._`
-          )
-        }
-      }
-    }
-
-    // Handle chat_ended — capture any missed messages
-    if (event === "chat_ended" || event === "chat_analyzed") {
-      const messages = chat.message_with_tool_calls || body.messages || []
-
-      for (const msg of messages) {
-        if (msg.content && msg.role === "user") {
-          // Check if we already have this message
-          const { count } = await supabase
-            .from("contact_interactions")
-            .select("id", { count: "exact", head: true })
-            .eq("phone", leadPhone)
-            .eq("channel", "sms")
-            .eq("direction", "inbound")
-            .eq("content", msg.content)
-
-          if (!count || count === 0) {
-            await supabase.from("contact_interactions").insert({
-              phone: leadPhone,
-              channel: "sms",
-              direction: "inbound",
-              content: msg.content,
-              metadata: {
-                chat_id: chat.chat_id || body.chat_id,
-                message_id: msg.message_id,
-                source: "retell_sms_chat_ended",
-              },
-            })
+        if (lead?.id) {
+          const { cancelled } = await cancelRemainingCadence(lead.id, "inbound_sms_reply")
+          if (cancelled > 0) {
+            console.log(`[sms-memory] Cancelled ${cancelled} cadence steps for ${name}`)
           }
         }
-      }
+
+        // 3. Slack alert
+        await slackAlert(
+          `*Inbound SMS Reply*\n` +
+          `From: ${name} (${leadPhone})\n` +
+          `Message: "${inboundText.slice(0, 200)}"\n` +
+          `_Lead is engaged — reply needed._`
+        )
+      })()
     }
 
-    return NextResponse.json({ ok: true })
+    // Return dynamic variables to the Retell SMS agent
+    return NextResponse.json({
+      retell_llm_dynamic_variables: {
+        conversation_history: conversationHistory,
+      },
+    })
   } catch (error) {
     console.error("[sms-memory] Webhook error:", error)
-    return NextResponse.json({ error: "Internal error" }, { status: 500 })
+    // Always return valid dynamic variables so Retell can proceed
+    return NextResponse.json({ retell_llm_dynamic_variables: {} })
   }
 }
