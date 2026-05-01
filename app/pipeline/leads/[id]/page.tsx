@@ -987,9 +987,19 @@ export default function LeadDetailPage() {
                               )}
                             </div>
 
-                            {/* Call summary */}
+                            {/* Call summary — collapsed if long */}
                             {msg.summary && (
-                              <p className="text-sm text-gray-700 leading-relaxed">{msg.summary}</p>
+                              msg.summary.length > 120 ? (
+                                <details className="group">
+                                  <summary className="cursor-pointer text-sm text-gray-700 leading-relaxed list-none">
+                                    <span className="line-clamp-1">{msg.summary.slice(0, 120)}…</span>
+                                    <span className="text-xs text-blue-600 group-open:hidden"> Show more</span>
+                                  </summary>
+                                  <p className="mt-1 text-sm text-gray-700 leading-relaxed">{msg.summary}</p>
+                                </details>
+                              ) : (
+                                <p className="text-sm text-gray-700 leading-relaxed">{msg.summary}</p>
+                              )
                             )}
 
                             {/* Audio player for recording — proxy Twilio URLs for auth */}

@@ -631,9 +631,9 @@ export default function LoanApplicationFullClient() {
       </div>
 
       {/* Step Navigation */}
-      <div className="border-b border-gray-200 overflow-x-auto">
-        <div className="container mx-auto px-6">
-          <div className="flex space-x-1">
+      <div className="border-b border-gray-200 relative">
+        <div className="overflow-x-auto scrollbar-none" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div className="flex space-x-1 px-6 min-w-max">
             {currentSteps.map((step, index) => (
               <button
                 key={step.id}
@@ -652,6 +652,8 @@ export default function LoanApplicationFullClient() {
             ))}
           </div>
         </div>
+        {/* Fade gradient — shows more tabs are off-screen on mobile */}
+        <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-white to-transparent md:hidden" />
       </div>
 
       {/* Main Content */}

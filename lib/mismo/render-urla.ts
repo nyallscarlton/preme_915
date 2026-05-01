@@ -444,6 +444,7 @@ function drawWrapped(ctx: RenderCtx, t: string, size: number, lineHeight: number
   for (const w of words) {
     const probe = line.length ? `${line} ${w}` : w
     if (ctx.font.widthOfTextAtSize(probe, size) > width) {
+      ensureSpace(ctx, lineHeight + 4)
       text(ctx, line, { size })
       newLine(ctx, lineHeight)
       line = w
@@ -451,7 +452,11 @@ function drawWrapped(ctx: RenderCtx, t: string, size: number, lineHeight: number
       line = probe
     }
   }
-  if (line) text(ctx, line, { size })
+  if (line) {
+    ensureSpace(ctx, lineHeight + 4)
+    text(ctx, line, { size })
+    newLine(ctx, lineHeight)
+  }
 }
 
 function money(n: number | string | null | undefined): string | null {
