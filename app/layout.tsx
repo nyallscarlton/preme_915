@@ -79,8 +79,10 @@ export default function RootLayout({
     email: "loans@premerealestate.com",
     address: {
       "@type": "PostalAddress",
-      addressLocality: "Atlanta",
+      streetAddress: "300 Colonial Center Pkwy",
+      addressLocality: "Roswell",
       addressRegion: "GA",
+      postalCode: "30076",
       addressCountry: "US",
     },
     sameAs: [],

@@ -160,7 +160,7 @@ function ContactPageInner() {
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold mb-2">Office</h3>
-                      <p className="text-gray-300">Atlanta, GA</p>
+                      <p className="text-gray-300">300 Colonial Center Pkwy, Roswell, GA 30076</p>
                     </div>
                   </div>
 

@@ -249,7 +249,7 @@ export default function TermsOfServicePage() {
                 </p>
                 <div className="bg-gray-900 rounded-lg p-6 space-y-3">
                   <p className="text-gray-300"><strong className="text-white">Preme Home Loans</strong></p>
-                  <p className="text-gray-300">Atlanta, GA</p>
+                  <p className="text-gray-300">300 Colonial Center Pkwy, Roswell, GA 30076</p>
                   <p className="text-gray-300">
                     Phone: <a href="tel:+14709425787" className="text-[#997100] hover:underline">(470) 942-5787</a>
                   </p>

@@ -584,7 +584,7 @@ export default function DSCRLandingPage() {
                       Preme Home Loans provides DSCR, bridge, and private credit products through federally and state licensed channels. This site does not constitute a commitment to lend. All loans subject to credit approval, satisfactory appraisal, and market conditions.
                     </p>
                     <div className="text-sm text-muted-foreground">
-                      <p>Headquarters · 123 Marathon Way, Atlanta, GA</p>
+                      <p>Headquarters · 300 Colonial Center Pkwy, Roswell, GA 30076</p>
                       <p>Licenses available upon request.</p>
                     </div>
                   </div>
