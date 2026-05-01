@@ -150,6 +150,13 @@ export default function RootLayout({
           defer
           src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dQHuMoWEFeXkOI&libraries=places"
         ></script>
+        <script
+          src="https://widgets.leadconnectorhq.com/loader.js"
+          data-resources-url="https://widgets.leadconnectorhq.com/chat-widget/loader.js"
+          data-widget-id="69f41182dfa79f52caf7ca67"
+          data-source="WEB_USER"
+          async
+        ></script>
       </head>
       <body className={inter.className}>
         <AuthProvider>{children}</AuthProvider>
