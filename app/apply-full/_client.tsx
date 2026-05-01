@@ -569,7 +569,7 @@ export default function LoanApplicationFullClient() {
                 <Link href="/start?next=/apply">Create Account & Apply</Link>
               </Button>
               <Button asChild variant="outline" className="w-full border-[#997100] text-[#997100] hover:bg-[#997100]/10">
-                <Link href="/apply?guest=1">Continue as Guest</Link>
+                <Link href="/apply-full?guest=1">Continue as Guest</Link>
               </Button>
               <p className="text-sm text-gray-500">Guest applications don't require an account. You'll receive a secure link to track your progress.</p>
             </div>
