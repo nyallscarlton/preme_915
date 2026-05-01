@@ -566,7 +566,7 @@ export default function LoanApplicationFullClient() {
             <p className="text-xl text-gray-600 mb-8">Choose how you'd like to proceed with your application.</p>
             <div className="space-y-4 max-w-md mx-auto">
               <Button asChild className="w-full bg-[#997100] hover:bg-[#997100]/90 text-white">
-                <Link href="/start?next=/apply">Create Account & Apply</Link>
+                <Link href="/start?next=/apply-full">Create Account & Apply</Link>
               </Button>
               <Button asChild variant="outline" className="w-full border-[#997100] text-[#997100] hover:bg-[#997100]/10">
                 <Link href="/apply-full?guest=1">Continue as Guest</Link>
