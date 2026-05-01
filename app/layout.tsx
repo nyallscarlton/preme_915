@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/hooks/use-auth"
 import { getBaseUrl } from "@/lib/config"
+import { ChatWidget } from "@/components/chat-widget"
 
 const GA_CONVERSION_ID = "AW-18002213129"
 const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_ID || ""
@@ -150,16 +151,10 @@ export default function RootLayout({
           defer
           src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dQHuMoWEFeXkOI&libraries=places"
         ></script>
-        <script
-          src="https://widgets.leadconnectorhq.com/loader.js"
-          data-resources-url="https://widgets.leadconnectorhq.com/chat-widget/loader.js"
-          data-widget-id="69f41182dfa79f52caf7ca67"
-          data-source="WEB_USER"
-          async
-        ></script>
       </head>
       <body className={inter.className}>
         <AuthProvider>{children}</AuthProvider>
+        <ChatWidget />
       </body>
     </html>
   )
