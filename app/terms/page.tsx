@@ -37,7 +37,7 @@ export default function TermsOfServicePage() {
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">Terms of Service</h1>
-            <p className="text-gray-400 mb-12">Last updated: March 23, 2026</p>
+            <p className="text-gray-400 mb-12">Last updated: May 7, 2026</p>
 
             <div className="prose prose-invert prose-lg max-w-none space-y-10">
               {/* Introduction */}
@@ -58,12 +58,15 @@ export default function TermsOfServicePage() {
 
               {/* SMS Program Terms */}
               <section>
-                <h2 className="text-2xl font-bold text-white mb-4">SMS Program Terms</h2>
+                <h2 className="text-2xl font-bold text-white mb-4">Preme Home Loans SMS Terms</h2>
                 <p className="text-gray-300 leading-relaxed mb-4">
-                  Preme Home Loans offers an SMS messaging program (&quot;Preme Home Loans SMS Communications&quot;) to provide you with service updates, loan application status notifications, appointment reminders, and follow-up communications related to your inquiry or loan application.
+                  By providing your phone number via the form at <strong className="text-white">premerealestate.com</strong>, you consent to receive SMS messages from Preme Home Loans LLC. Message frequency varies.
+                </p>
+                <p className="text-gray-300 leading-relaxed mb-2">
+                  <strong className="text-white">Customer Care Messages:</strong> Responses to support requests, loan application status updates, appointment coordination, and follow-ups related to your inquiry or loan application.
                 </p>
                 <p className="text-gray-300 leading-relaxed mb-4">
-                  Message frequency varies. You may receive up to 5 messages per inquiry. The number of messages you receive depends on the nature of your interaction with us and the status of your loan application.
+                  <strong className="text-white">Informational &amp; Service Messages:</strong> Rate alerts, program announcements, document reminders, and communications relevant to your financing process.
                 </p>
                 <p className="text-white font-bold text-lg mb-4">
                   MESSAGE AND DATA RATES MAY APPLY
@@ -94,13 +97,12 @@ export default function TermsOfServicePage() {
                   You may opt out of receiving SMS messages from us at any time. To opt out:
                 </p>
                 <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
-                  <li><strong className="text-white">Reply STOP</strong> to any text message you receive from us to unsubscribe immediately</li>
-                  <li><strong className="text-white">Reply HELP</strong> to any text message for support information</li>
-                  <li><strong className="text-white">Call us</strong> at <a href="tel:+14709425787" className="text-[#997100] hover:underline">(470) 942-5787</a></li>
-                  <li><strong className="text-white">Email us</strong> at <a href="mailto:loans@premerealestate.com" className="text-[#997100] hover:underline">loans@premerealestate.com</a></li>
+                  <li><strong className="text-white">Text STOP</strong> to <a href="tel:+14709425787" className="text-[#997100] hover:underline">(470) 942-5787</a> — you will receive a confirmation SMS and no further messages will be sent</li>
+                  <li><strong className="text-white">Reply HELP</strong> to any text message for assistance, or contact us directly at <a href="mailto:loans@premerealestate.com" className="text-[#997100] hover:underline">loans@premerealestate.com</a> or <a href="tel:+14709425787" className="text-[#997100] hover:underline">(470) 942-5787</a></li>
+                  <li><strong className="text-white">Call or email us</strong> at the contact information in the Contact section below</li>
                 </ul>
                 <p className="text-gray-300 leading-relaxed mt-4">
-                  We honor all standard opt-out keywords, including: STOP, stop, Stop, CANCEL, END, UNSUBSCRIBE, and QUIT. After you send an opt-out keyword, you will receive a final confirmation message and no further SMS messages will be sent unless you re-opt in.
+                  We honor all standard opt-out keywords, including: STOP, stop, Stop, CANCEL, END, UNSUBSCRIBE, and QUIT. After you send an opt-out keyword, you will receive a final confirmation SMS and no further messages will be sent. If you wish to re-enroll, simply submit your information again via our website and we will resume sending messages.
                 </p>
               </section>
 
