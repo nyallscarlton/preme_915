@@ -37,7 +37,7 @@ export default function PrivacyPolicyPage() {
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">Privacy Policy</h1>
-            <p className="text-gray-400 mb-12">Last updated: March 23, 2026</p>
+            <p className="text-gray-400 mb-12">Last updated: May 7, 2026</p>
 
             <div className="prose prose-invert prose-lg max-w-none space-y-10">
               {/* Introduction */}
@@ -144,7 +144,7 @@ export default function PrivacyPolicyPage() {
                   <li><strong className="text-white">Legal and regulatory authorities:</strong> When required by law, regulation, or legal process</li>
                 </ul>
                 <p className="text-gray-300 leading-relaxed mt-4">
-                  We do not sell your personal information to third parties for their own marketing purposes. No mobile information will be shared with third parties/affiliates for marketing/promotional purposes. All the above categories exclude text messaging originator opt-in data and consent; this information will not be shared with any third parties.
+                  We do not sell your personal information to third parties for their own marketing purposes. <strong className="text-white">No mobile information will be shared with third parties/affiliates for marketing/promotional purposes.</strong> Information sharing to subcontractors in support services, such as customer service, is permitted. All other use case categories exclude text messaging originator opt-in data and consent; this information will not be shared with any third parties.
                 </p>
               </section>
 
