@@ -80,6 +80,12 @@ const RULES: FollowUpRule[] = [
 ]
 
 export async function GET(request: NextRequest) {
+  const secret = process.env.CRON_SECRET
+  const auth = request.headers.get("authorization") || request.headers.get("x-internal-auth")
+  if (!secret || (auth !== `Bearer ${secret}` && auth !== secret)) {
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 })
+  }
+
   const supabase = createAdminClient()
   let sent = 0
   let errors = 0
@@ -217,14 +223,17 @@ async function logEvent(supabase: ReturnType<typeof createAdminClient>, leadId: 
       event_data: { phone, sent_at: new Date().toISOString() },
     })
   }
-  // Also log to contact_interactions so phone-based dedup works when lead_id is null
-  await supabase.from("contact_interactions").insert({
-    phone,
-    channel: "sms",
-    direction: "outbound",
-    content: eventType,
-    metadata: { source: "app_followup_cron", sent_at: new Date().toISOString() },
-  }).catch(() => {})
+  try {
+    await supabase.from("contact_interactions").insert({
+      phone,
+      channel: "sms",
+      direction: "outbound",
+      content: eventType,
+      metadata: { source: "app_followup_cron", sent_at: new Date().toISOString() },
+    })
+  } catch {
+    // Non-fatal — primary send already succeeded
+  }
 }
 
 async function sendRetellSms(to: string, message: string) {
