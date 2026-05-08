@@ -162,7 +162,9 @@ export function GuestContactForm({ onNext, onPrevious, onDataChange, initialData
           <div className="flex items-start space-x-3 pt-2">
             <input type="checkbox" id="tcpaConsent" checked={formData.tcpaConsent} onChange={(e) => update("tcpaConsent", e.target.checked)} className="mt-1 h-4 w-4" />
             <label htmlFor="tcpaConsent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-              By checking this box, I consent to receive texts and calls (including automated) from Preme Home Loans about my inquiry. Consent is not a condition of purchase. Reply STOP to opt out. <a href="/privacy" className="underline text-primary">Privacy</a> · <a href="/terms" className="underline text-primary">Terms</a>.
+              By checking this box, I provide my express written consent to receive non-marketing messages including support requests, ticket updates, appointment coordination, or follow-up communications related to an existing inquiry, and phone calls (including via automated dialing systems and artificial intelligence) about my inquiry from Preme Home Loans at the phone number provided. Consent is not a condition of purchase. Message frequency varies. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787. View our{" "}
+              <a href="/privacy" className="underline text-primary">Privacy Policy</a> and{" "}
+              <a href="/terms" className="underline text-primary">Terms of Service</a>.
             </label>
           </div>
 
