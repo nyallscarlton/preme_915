@@ -4,7 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/hooks/use-auth"
 import { getBaseUrl } from "@/lib/config"
-import { ChatWidget } from "@/components/chat-widget"
+
 
 const GA_CONVERSION_ID = "AW-18002213129"
 const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_ID || ""
@@ -156,7 +156,6 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <AuthProvider>{children}</AuthProvider>
-        <ChatWidget />
       </body>
     </html>
   )

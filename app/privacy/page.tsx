@@ -1,8 +1,8 @@
 import Link from "next/link"
 
 export const metadata = {
-  title: "Privacy Policy | Preme Home Loans",
-  description: "Privacy Policy for Preme Home Loans — how we collect, use, and protect your personal information.",
+  title: "Privacy Policy | Preme Home Loans LLC",
+  description: "Privacy Policy for Preme Home Loans LLC — how we collect, use, and protect your personal information.",
 }
 
 export default function PrivacyPolicyPage() {
@@ -44,7 +44,7 @@ export default function PrivacyPolicyPage() {
               <section>
                 <h2 className="text-2xl font-bold text-white mb-4">Introduction</h2>
                 <p className="text-gray-300 leading-relaxed">
-                  Preme Home Loans (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your personal information when you visit our website, use our services, or interact with us in any way. By using our website or services, you consent to the data practices described in this policy.
+                  Preme Home Loans LLC (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your personal information when you visit our website, use our services, or interact with us in any way. By using our website or services, you consent to the data practices described in this policy.
                 </p>
               </section>
 
@@ -73,10 +73,10 @@ export default function PrivacyPolicyPage() {
                 <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
                   <li><strong className="text-white">Phone calls,</strong> including calls made using automated telephone dialing systems, prerecorded or artificial voice messages, and artificial intelligence technology</li>
                   <li><strong className="text-white">SMS/text messages,</strong> including automated text messages regarding your inquiry, application status, or related services</li>
-                  <li><strong className="text-white">Emails</strong> related to your inquiry, application, or services offered by Preme Home Loans</li>
+                  <li><strong className="text-white">Emails</strong> related to your inquiry, application, or services offered by Preme Home Loans LLC</li>
                 </ul>
                 <p className="text-gray-300 leading-relaxed mt-4">
-                  These communications may come from Preme Home Loans or our lending partners and affiliates. Message and data rates may apply. Message frequency varies based on your interaction with us.
+                  These communications may come from Preme Home Loans LLC or our lending partners and affiliates. Message and data rates may apply. Message frequency varies based on your interaction with us.
                 </p>
               </section>
 
@@ -229,7 +229,7 @@ export default function PrivacyPolicyPage() {
                   If you have questions or concerns about this Privacy Policy, your personal information, or wish to exercise any of your rights, please contact us:
                 </p>
                 <div className="bg-gray-900 rounded-lg p-6 space-y-3">
-                  <p className="text-gray-300"><strong className="text-white">Preme Home Loans</strong></p>
+                  <p className="text-gray-300"><strong className="text-white">Preme Home Loans LLC</strong></p>
                   <p className="text-gray-300">300 Colonial Center Pkwy, Roswell, GA 30076</p>
                   <p className="text-gray-300">
                     Phone: <a href="tel:+14709425787" className="text-[#997100] hover:underline">(470) 942-5787</a>

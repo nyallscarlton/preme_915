@@ -1,8 +1,8 @@
 import Link from "next/link"
 
 export const metadata = {
-  title: "Terms of Service | Preme Home Loans",
-  description: "Terms of Service for Preme Home Loans — usage terms, SMS program terms, and legal agreements.",
+  title: "Terms of Service | Preme Home Loans LLC",
+  description: "Terms of Service for Preme Home Loans LLC — usage terms, SMS program terms, and legal agreements.",
 }
 
 export default function TermsOfServicePage() {
@@ -44,7 +44,7 @@ export default function TermsOfServicePage() {
               <section>
                 <h2 className="text-2xl font-bold text-white mb-4">Introduction</h2>
                 <p className="text-gray-300 leading-relaxed">
-                  Welcome to Preme Home Loans (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). These Terms of Service (&quot;Terms&quot;) govern your access to and use of our website at premerealestate.com and all related services, including our SMS messaging program. By accessing or using our website or services, you agree to be bound by these Terms. If you do not agree to these Terms, please do not use our website or services.
+                  Welcome to Preme Home Loans LLC (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). These Terms of Service (&quot;Terms&quot;) govern your access to and use of our website at premerealestate.com and all related services, including our SMS messaging program. By accessing or using our website or services, you agree to be bound by these Terms. If you do not agree to these Terms, please do not use our website or services.
                 </p>
               </section>
 
@@ -58,7 +58,7 @@ export default function TermsOfServicePage() {
 
               {/* SMS Program Terms */}
               <section>
-                <h2 className="text-2xl font-bold text-white mb-4">Preme Home Loans SMS Terms</h2>
+                <h2 className="text-2xl font-bold text-white mb-4">Preme Home Loans LLC SMS Terms</h2>
                 <p className="text-gray-300 leading-relaxed mb-4">
                   By providing your phone number via the form at <strong className="text-white">premerealestate.com</strong>, you consent to receive SMS messages from Preme Home Loans LLC. Message frequency varies.
                 </p>
@@ -80,10 +80,10 @@ export default function TermsOfServicePage() {
               <section>
                 <h2 className="text-2xl font-bold text-white mb-4">Opt-In &amp; Consent</h2>
                 <p className="text-gray-300 leading-relaxed mb-4">
-                  You opt in to our SMS program by submitting a form on our website with your phone number and checking the consent checkbox, or by otherwise providing your express written consent to receive text messages from Preme Home Loans. By opting in, you confirm that you agree to receive SMS messages from Preme Home Loans at the phone number you provided.
+                  You opt in to our SMS program by submitting a form on our website with your phone number and checking the consent checkbox, or by otherwise providing your express written consent to receive text messages from Preme Home Loans LLC. By opting in, you confirm that you agree to receive SMS messages from Preme Home Loans LLC at the phone number you provided.
                 </p>
                 <p className="text-gray-300 leading-relaxed mb-4">
-                  <strong className="text-white">Consent is not a condition of purchase.</strong> You are not required to opt in to SMS messaging in order to purchase any goods, services, or property from Preme Home Loans. You may choose to receive communications by other means, such as phone or email.
+                  <strong className="text-white">Consent is not a condition of purchase.</strong> You are not required to opt in to SMS messaging in order to purchase any goods, services, or property from Preme Home Loans LLC. You may choose to receive communications by other means, such as phone or email.
                 </p>
                 <p className="text-gray-300 leading-relaxed">
                   By opting in, you also confirm that the phone number you provided is your own and that you are authorized to receive text messages at that number. You agree to notify us promptly if you change your phone number.
@@ -116,7 +116,7 @@ export default function TermsOfServicePage() {
                   <div>
                     <p className="text-gray-400 text-sm mb-1">Follow-up message:</p>
                     <p className="text-gray-300 italic">
-                      &quot;Hi [Name], this is Riley from Preme Home Loans following up on your DSCR loan inquiry. Do you have a moment to discuss your financing needs?&quot;
+                      &quot;Hi [Name], this is Riley from Preme Home Loans LLC following up on your DSCR loan inquiry. Do you have a moment to discuss your financing needs?&quot;
                     </p>
                   </div>
                   <div>
@@ -165,7 +165,7 @@ export default function TermsOfServicePage() {
                   <li>Attempt to gain unauthorized access to our systems, servers, or networks</li>
                   <li>Interfere with or disrupt the operation of our website or services</li>
                   <li>Use automated tools, bots, or scrapers to access our website without our written permission</li>
-                  <li>Impersonate or attempt to impersonate Preme Home Loans, a Preme employee, or another user</li>
+                  <li>Impersonate or attempt to impersonate Preme Home Loans LLC, a Preme employee, or another user</li>
                 </ul>
               </section>
 
@@ -173,7 +173,7 @@ export default function TermsOfServicePage() {
               <section>
                 <h2 className="text-2xl font-bold text-white mb-4">Intellectual Property</h2>
                 <p className="text-gray-300 leading-relaxed">
-                  All content on our website, including text, graphics, logos, images, software, and the compilation thereof, is the property of Preme Home Loans or its licensors and is protected by United States and international copyright, trademark, and other intellectual property laws. You may not reproduce, distribute, modify, create derivative works of, publicly display, publicly perform, republish, download, store, or transmit any content on our website without our prior written consent, except as incidental to normal web browsing.
+                  All content on our website, including text, graphics, logos, images, software, and the compilation thereof, is the property of Preme Home Loans LLC or its licensors and is protected by United States and international copyright, trademark, and other intellectual property laws. You may not reproduce, distribute, modify, create derivative works of, publicly display, publicly perform, republish, download, store, or transmit any content on our website without our prior written consent, except as incidental to normal web browsing.
                 </p>
               </section>
 
@@ -181,7 +181,7 @@ export default function TermsOfServicePage() {
               <section>
                 <h2 className="text-2xl font-bold text-white mb-4">Limitation of Liability</h2>
                 <p className="text-gray-300 leading-relaxed mb-4">
-                  To the fullest extent permitted by applicable law, Preme Home Loans, its officers, directors, employees, agents, and affiliates shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, use, goodwill, or other intangible losses, arising out of or in connection with:
+                  To the fullest extent permitted by applicable law, Preme Home Loans LLC, its officers, directors, employees, agents, and affiliates shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, use, goodwill, or other intangible losses, arising out of or in connection with:
                 </p>
                 <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
                   <li>Your access to or use of (or inability to access or use) our website or services</li>
@@ -207,7 +207,7 @@ export default function TermsOfServicePage() {
               <section>
                 <h2 className="text-2xl font-bold text-white mb-4">Indemnification</h2>
                 <p className="text-gray-300 leading-relaxed">
-                  You agree to defend, indemnify, and hold harmless Preme Home Loans, its officers, directors, employees, agents, and affiliates from and against any and all claims, damages, obligations, losses, liabilities, costs, and expenses (including reasonable attorneys&apos; fees) arising from your use of our website or services, your violation of these Terms, or your violation of any rights of a third party.
+                  You agree to defend, indemnify, and hold harmless Preme Home Loans LLC, its officers, directors, employees, agents, and affiliates from and against any and all claims, damages, obligations, losses, liabilities, costs, and expenses (including reasonable attorneys&apos; fees) arising from your use of our website or services, your violation of these Terms, or your violation of any rights of a third party.
                 </p>
               </section>
 
@@ -239,7 +239,7 @@ export default function TermsOfServicePage() {
               <section>
                 <h2 className="text-2xl font-bold text-white mb-4">Entire Agreement</h2>
                 <p className="text-gray-300 leading-relaxed">
-                  These Terms, together with our <Link href="/privacy" className="text-[#997100] hover:underline">Privacy Policy</Link>, constitute the entire agreement between you and Preme Home Loans regarding your use of our website and services, and supersede all prior and contemporaneous understandings, agreements, representations, and warranties.
+                  These Terms, together with our <Link href="/privacy" className="text-[#997100] hover:underline">Privacy Policy</Link>, constitute the entire agreement between you and Preme Home Loans LLC regarding your use of our website and services, and supersede all prior and contemporaneous understandings, agreements, representations, and warranties.
                 </p>
               </section>
 
@@ -250,7 +250,7 @@ export default function TermsOfServicePage() {
                   If you have questions about these Terms of Service, our SMS program, or need assistance, please contact us:
                 </p>
                 <div className="bg-gray-900 rounded-lg p-6 space-y-3">
-                  <p className="text-gray-300"><strong className="text-white">Preme Home Loans</strong></p>
+                  <p className="text-gray-300"><strong className="text-white">Preme Home Loans LLC</strong></p>
                   <p className="text-gray-300">300 Colonial Center Pkwy, Roswell, GA 30076</p>
                   <p className="text-gray-300">
                     Phone: <a href="tel:+14709425787" className="text-[#997100] hover:underline">(470) 942-5787</a>

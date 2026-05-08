@@ -297,15 +297,9 @@ function ContactPageInner() {
                             className="mt-1 h-4 w-4 rounded border-gray-700 text-[#997100] focus:ring-[#997100] accent-[#997100]"
                           />
                           <label htmlFor="tcpa_consent" className="text-xs text-gray-400 leading-relaxed cursor-pointer">
-                            By submitting, you authorize Preme Home Loans LLC to text/call the number above for informational/transactional messages, possibly using automated means. Msg/data rates apply, msg frequency varies. Consent is not a condition of purchase.{" "}
-                            <a href="/terms" className="text-[#997100] underline" target="_blank">See terms</a> and{" "}
-                            <a href="/privacy" className="text-[#997100] underline" target="_blank">privacy policy</a>.
-                            Text HELP for help and STOP to unsubscribe.
-                            <br /><br />
-                            By submitting, you authorize Preme Home Loans LLC to text/call the number above for promotional messages, possibly using automated means. Msg/data rates apply, msg frequency varies. Consent is not a condition of purchase.{" "}
-                            <a href="/terms" className="text-[#997100] underline" target="_blank">See terms</a> and{" "}
-                            <a href="/privacy" className="text-[#997100] underline" target="_blank">privacy policy</a>.
-                            Text HELP for help and STOP to unsubscribe.
+                            By checking this box, I consent to receive transactional messages related to my account, orders, or services I have requested from Preme Home Loans LLC. These messages may include reminders, order confirmations, and account notifications among others. Message frequency may vary. Message &amp; Data rates may apply. Reply HELP for help or STOP to opt out.{" "}
+                            <a href="/privacy" className="text-[#997100] underline" target="_blank">Privacy Policy</a>{" "}·{" "}
+                            <a href="/terms" className="text-[#997100] underline" target="_blank">Terms of Service</a>
                           </label>
                         </div>
 

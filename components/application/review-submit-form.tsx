@@ -143,7 +143,9 @@ export function ReviewSubmitForm({
               className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-[hsl(var(--primary))]"
             />
             <label htmlFor="tcpaConsent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-              By checking this box, I provide my express written consent to receive text messages and phone calls (including via automated dialing systems and artificial intelligence) about my inquiry from Preme Home Loans at the phone number provided. Consent is not a condition of purchase. Message frequency varies. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787.
+              By checking this box, I consent to receive transactional messages related to my account, orders, or services I have requested from Preme Home Loans LLC. These messages may include reminders, order confirmations, and account notifications among others. Message frequency may vary. Message &amp; Data rates may apply. Reply HELP for help or STOP to opt out.{" "}
+              <a href="/privacy" className="underline text-primary" target="_blank">Privacy Policy</a>{" "}·{" "}
+              <a href="/terms" className="underline text-primary" target="_blank">Terms of Service</a>
             </label>
           </div>
 
