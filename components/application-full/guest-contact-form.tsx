@@ -43,7 +43,7 @@ export function GuestContactForm({ onNext, onPrevious, onDataChange, initialData
   }
 
   const isFormValid =
-    formData.firstName && formData.lastName && formData.email && formData.phone &&
+    formData.firstName && formData.lastName && formData.email &&
     formData.dateOfBirth && formData.ssn && formData.citizenshipType
 
   return (
@@ -84,13 +84,6 @@ export function GuestContactForm({ onNext, onPrevious, onDataChange, initialData
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input id="email" type="email" value={formData.email} onChange={(e) => update("email", e.target.value)} className="pl-10" placeholder="you@example.com" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone *</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="phone" type="tel" value={formData.phone} onChange={(e) => update("phone", e.target.value)} className="pl-10" placeholder="(555) 123-4567" />
               </div>
             </div>
           </div>
@@ -162,7 +155,7 @@ export function GuestContactForm({ onNext, onPrevious, onDataChange, initialData
           <div className="flex items-start space-x-3 pt-2">
             <input type="checkbox" id="tcpaConsent" checked={formData.tcpaConsent} onChange={(e) => update("tcpaConsent", e.target.checked)} className="mt-1 h-4 w-4" />
             <label htmlFor="tcpaConsent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-              By checking this box, I provide my express written consent to receive non-marketing messages including support requests, ticket updates, appointment coordination, or follow-up communications related to an existing inquiry, and phone calls (including via automated dialing systems and artificial intelligence) about my inquiry from Preme Home Loans at the phone number provided. Consent is not a condition of purchase. Message frequency varies. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787. View our{" "}
+              By submitting, you authorize Preme Home Loans LLC to text/call you for informational/transactional messages, possibly using automated means. Msg/data rates apply, msg frequency varies. Consent is not a condition of purchase. Text HELP for help and STOP to unsubscribe. View our{" "}
               <a href="/privacy" className="underline text-primary">Privacy Policy</a> and{" "}
               <a href="/terms" className="underline text-primary">Terms of Service</a>.
             </label>

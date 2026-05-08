@@ -32,7 +32,7 @@ export function GuestContactForm({ onNext, onPrevious, onDataChange, initialData
     onDataChange(updatedData)
   }
 
-  const isFormValid = formData.firstName && formData.lastName && formData.email && formData.phone
+  const isFormValid = formData.firstName && formData.lastName && formData.email
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -98,22 +98,6 @@ export function GuestContactForm({ onNext, onPrevious, onDataChange, initialData
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="phone" className="text-foreground">
-              Phone Number *
-            </Label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="(555) 123-4567"
-                value={formData.phone}
-                onChange={(e) => handleInputChange("phone", e.target.value)}
-                className="bg-input border-border text-foreground focus:border-primary pl-10"
-              />
-            </div>
-          </div>
 
           <AddressInput
             id="address"

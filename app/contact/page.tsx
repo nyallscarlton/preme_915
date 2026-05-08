@@ -247,17 +247,6 @@ function ContactPageInner() {
                           />
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">Phone Number</label>
-                          <Input
-                            name="phone"
-                            type="tel"
-                            value={formData.phone}
-                            onChange={handleChange}
-                            placeholder="(555) 123-4567"
-                            className="bg-black border-gray-700 text-white placeholder-gray-500"
-                          />
-                        </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-300 mb-2">Loan Type</label>
@@ -308,7 +297,15 @@ function ContactPageInner() {
                             className="mt-1 h-4 w-4 rounded border-gray-700 text-[#997100] focus:ring-[#997100] accent-[#997100]"
                           />
                           <label htmlFor="tcpa_consent" className="text-xs text-gray-400 leading-relaxed cursor-pointer">
-                            By checking this box, I provide my express written consent to receive text messages and phone calls (including via automated dialing systems and artificial intelligence) about my inquiry from Preme Home Loans at the phone number provided. Consent is not a condition of purchase. Message frequency varies. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787.
+                            By submitting, you authorize Preme Home Loans LLC to text/call the number above for informational/transactional messages, possibly using automated means. Msg/data rates apply, msg frequency varies. Consent is not a condition of purchase.{" "}
+                            <a href="/terms" className="text-[#997100] underline" target="_blank">See terms</a> and{" "}
+                            <a href="/privacy" className="text-[#997100] underline" target="_blank">privacy policy</a>.
+                            Text HELP for help and STOP to unsubscribe.
+                            <br /><br />
+                            By submitting, you authorize Preme Home Loans LLC to text/call the number above for promotional messages, possibly using automated means. Msg/data rates apply, msg frequency varies. Consent is not a condition of purchase.{" "}
+                            <a href="/terms" className="text-[#997100] underline" target="_blank">See terms</a> and{" "}
+                            <a href="/privacy" className="text-[#997100] underline" target="_blank">privacy policy</a>.
+                            Text HELP for help and STOP to unsubscribe.
                           </label>
                         </div>
 

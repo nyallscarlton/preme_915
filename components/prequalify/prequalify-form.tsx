@@ -43,7 +43,7 @@ export function PrequalifyForm({ onApproved }: PrequalifyFormProps) {
   const set = (f: string, v: string | boolean) => setForm({ ...form, [f]: v })
 
   const valid =
-    form.firstName && form.lastName && form.email && form.phone &&
+    form.firstName && form.lastName && form.email &&
     form.loanPurpose && form.loanAmount && form.propertyValue &&
     form.propertyState && form.creditScore && form.tcpaConsent
 
@@ -215,7 +215,7 @@ export function PrequalifyForm({ onApproved }: PrequalifyFormProps) {
           <div className="flex items-start gap-3 pt-2">
             <input type="checkbox" id="tcpa" checked={form.tcpaConsent} onChange={(e) => set("tcpaConsent", e.target.checked)} className="mt-1 h-4 w-4" />
             <label htmlFor="tcpa" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-              I consent to receive texts and calls (including automated) from Preme Home Loans about my inquiry. Reply STOP to opt out.
+              By submitting, you authorize Preme Home Loans LLC to text/call you for informational/transactional messages, possibly using automated means. Msg/data rates apply, msg frequency varies. Consent is not a condition of purchase. Text HELP for help and STOP to unsubscribe. View our <a href="/terms" className="underline text-primary" target="_blank">Terms</a> and <a href="/privacy" className="underline text-primary" target="_blank">Privacy Policy</a>.
             </label>
           </div>
 

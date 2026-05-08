@@ -473,19 +473,6 @@ export function LoanApplicationPortal() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="phone" className="text-foreground">
-                          Phone Number
-                        </Label>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          value={formData.phone}
-                          onChange={(e) => handleInputChange("phone", e.target.value)}
-                          className="bg-input border-border text-foreground focus:border-primary"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
                         <Label htmlFor="creditScore" className="text-foreground">
                           Estimated Credit Score
                         </Label>
@@ -905,7 +892,7 @@ export function LoanApplicationPortal() {
                       required
                     />
                     <label htmlFor="tcpaConsent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-                      By checking this box, I provide my express written consent to receive calls (including via automated dialing systems, prerecorded messages, and artificial intelligence), texts, and emails about my inquiry from Preme Home Loans and its partners at the phone number provided. Consent is not a condition of purchase. Message and data rates may apply. I can revoke consent at any time by replying STOP or calling (470) 942-5787.
+                      By submitting, you authorize Preme Home Loans LLC to text/call you for informational/transactional messages, possibly using automated means. Msg/data rates apply, msg frequency varies. Consent is not a condition of purchase. Text HELP for help and STOP to unsubscribe. View our <a href="/terms" className="underline text-primary" target="_blank">Terms</a> and <a href="/privacy" className="underline text-primary" target="_blank">Privacy Policy</a>.
                     </label>
                   </div>
 

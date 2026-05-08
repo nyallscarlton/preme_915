@@ -1,17 +1,9 @@
 "use client"
 
-import { usePathname } from "next/navigation"
 import { useEffect } from "react"
 
-// Pages with phone/SMS opt-in forms — widget excluded per A2P compliance.
-const EXCLUDED_PATHS = ["/contact", "/apply", "/apply-full", "/prequalify"]
-
 export function ChatWidget() {
-  const pathname = usePathname()
-  const excluded = EXCLUDED_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))
-
   useEffect(() => {
-    if (excluded) return
     if (document.querySelector('script[data-widget-id="69f41182dfa79f52caf7ca67"]')) return
 
     const script = document.createElement("script")
@@ -21,7 +13,7 @@ export function ChatWidget() {
     script.setAttribute("data-source", "WEB_USER")
     script.async = true
     document.head.appendChild(script)
-  }, [excluded])
+  }, [])
 
   return null
 }
