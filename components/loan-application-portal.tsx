@@ -473,6 +473,10 @@ export function LoanApplicationPortal() {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label htmlFor="phone" className="text-foreground">Phone Number *</Label>
+                        <Input id="phone" type="tel" value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} className="bg-input border-border text-foreground focus:border-primary" placeholder="(555) 123-4567" required />
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="creditScore" className="text-foreground">
                           Estimated Credit Score
                         </Label>

@@ -247,6 +247,19 @@ function ContactPageInner() {
                           />
                         </div>
 
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">Phone Number *</label>
+                          <Input
+                            name="phone"
+                            type="tel"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            placeholder="(555) 123-4567"
+                            required
+                            className="bg-black border-gray-700 text-white placeholder-gray-500"
+                          />
+                        </div>
+
 
                         <div>
                           <label className="block text-sm font-medium text-gray-300 mb-2">Loan Type</label>

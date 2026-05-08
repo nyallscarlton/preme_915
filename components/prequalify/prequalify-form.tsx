@@ -43,7 +43,7 @@ export function PrequalifyForm({ onApproved }: PrequalifyFormProps) {
   const set = (f: string, v: string | boolean) => setForm({ ...form, [f]: v })
 
   const valid =
-    form.firstName && form.lastName && form.email &&
+    form.firstName && form.lastName && form.email && form.phone &&
     form.loanPurpose && form.loanAmount && form.propertyValue &&
     form.propertyState && form.creditScore && form.tcpaConsent
 

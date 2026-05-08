@@ -43,7 +43,7 @@ export function GuestContactForm({ onNext, onPrevious, onDataChange, initialData
   }
 
   const isFormValid =
-    formData.firstName && formData.lastName && formData.email &&
+    formData.firstName && formData.lastName && formData.email && formData.phone &&
     formData.dateOfBirth && formData.ssn && formData.citizenshipType
 
   return (
@@ -84,6 +84,13 @@ export function GuestContactForm({ onNext, onPrevious, onDataChange, initialData
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input id="email" type="email" value={formData.email} onChange={(e) => update("email", e.target.value)} className="pl-10" placeholder="you@example.com" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone *</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input id="phone" type="tel" value={formData.phone} onChange={(e) => update("phone", e.target.value)} className="pl-10" placeholder="(555) 123-4567" />
               </div>
             </div>
           </div>
