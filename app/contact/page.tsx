@@ -311,10 +311,7 @@ function ContactPageInner() {
                             required
                           />
                           <label htmlFor="tcpa_consent" className="text-xs text-gray-400 leading-relaxed cursor-pointer">
-                            By checking this box, I agree to receive SMS text messages from Preme Home Loans at the phone number provided, including loan status updates, document requests, and appointment reminders. Consent is not a condition of purchase. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out or HELP for help.{" "}
-                            <a href="/sms-consent" className="text-[#997100] underline" target="_blank">SMS Terms</a>{" "}·{" "}
-                            <a href="/privacy" className="text-[#997100] underline" target="_blank">Privacy Policy</a>{" "}·{" "}
-                            <a href="/terms" className="text-[#997100] underline" target="_blank">Terms of Service</a>
+                            By checking this box, I agree to receive SMS text messages from Preme Home Loans at the phone number provided, including loan status updates, document requests, and appointment reminders. Consent is not a condition of purchase. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out or HELP for help.
                           </label>
                         </div>
 
@@ -336,6 +333,12 @@ function ContactPageInner() {
                             "Send Message"
                           )}
                         </Button>
+
+                        <p className="text-center text-xs text-gray-500">
+                          <a href="/sms-consent" className="text-[#997100] underline" target="_blank">SMS Terms</a>{" "}·{" "}
+                          <a href="/privacy" className="text-[#997100] underline" target="_blank">Privacy Policy</a>{" "}·{" "}
+                          <a href="/terms" className="text-[#997100] underline" target="_blank">Terms of Service</a>
+                        </p>
                       </form>
                     )}
                   </CardContent>
