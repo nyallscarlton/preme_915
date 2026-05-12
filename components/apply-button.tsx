@@ -1,8 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import Link from "next/link"
 import { Button, type ButtonProps } from "@/components/ui/button"
-import { StartChoice } from "@/components/StartChoice"
 
 export function ApplyButton({
   children,
@@ -15,24 +14,9 @@ export function ApplyButton({
   size?: ButtonProps["size"]
   variant?: ButtonProps["variant"]
 }) {
-  const [open, setOpen] = useState(false)
   return (
-    <>
-      <Button
-        size={size}
-        variant={variant}
-        className={className}
-        onClick={() => setOpen(true)}
-      >
-        {children}
-      </Button>
-      {open && (
-        <StartChoice
-          isOpen={open}
-          onClose={() => setOpen(false)}
-          nextUrl="/apply"
-        />
-      )}
-    </>
+    <Button size={size} variant={variant} className={className} asChild>
+      <Link href="/contact">{children}</Link>
+    </Button>
   )
 }
