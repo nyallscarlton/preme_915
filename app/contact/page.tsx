@@ -101,7 +101,7 @@ function ContactPageInner() {
                 Login
               </Link>
               <Button className="bg-[#997100] hover:bg-[#b8850a] text-black font-semibold px-6" asChild>
-                <Link href="/start?next=/apply">Start Application</Link>
+                <Link href="/contact">Get Started</Link>
               </Button>
             </div>
           </div>

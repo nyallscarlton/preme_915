@@ -45,9 +45,9 @@ const personas = [
     bullets: ["DSCR using market comps", "Coastal + resort friendly", "Escrowed reserves optional"],
   },
   {
-    title: "Mortgage Brokers",
-    description: "White-label DSCR lending with broker protection, dedicated underwriters, and same-day term sheets.",
-    bullets: ["TPO portal access", "Broker fee protection", "Custom marketing kits"],
+    title: "Referral Partners",
+    description: "Partner with Preme to give your clients access to DSCR programs, dedicated underwriters, and same-day term sheets.",
+    bullets: ["Dedicated account manager", "Real-time status updates", "Fast pre-qualification"],
   },
 ]
 
@@ -102,11 +102,6 @@ const faqs = [
       "Yes. Provide proof of trailing 12-month bookings or we can underwrite using market comps from AirDNA, PriceLabs, or our internal STR index.",
   },
   {
-    question: "Can brokers submit directly?",
-    answer:
-      "Absolutely. Register through our TPO portal, upload your borrower package, and track status in real time. Broker fees are protected on every file.",
-  },
-  {
     question: "Is there a prepayment penalty?",
     answer:
       "Most DSCR loans include a step-down or yield maintenance structure. We tailor it to your exit horizon and can offer no-prepay options on higher rates.",
@@ -127,7 +122,7 @@ const testimonials = [
   {
     quote: "I refer all my investor clients to Preme. Fast pre-quals, competitive rates, and they actually close on time. My clients love them.",
     name: "Robert Chen",
-    type: "Mortgage Broker, Charlotte",
+    type: "Real Estate Professional, Charlotte",
   },
   {
     quote: "Other lenders wanted 6 months of bank statements and tax returns. Preme qualified me based on the property's rental potential. Closed in under 2 weeks.",
@@ -162,14 +157,6 @@ const homepageSchemas = [
         acceptedAnswer: {
           "@type": "Answer",
           text: "Yes. Provide proof of trailing 12-month bookings or we can underwrite using market comps from AirDNA, PriceLabs, or our internal STR index.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Can brokers submit directly?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Absolutely. Register through our TPO portal, upload your borrower package, and track status in real time. Broker fees are protected on every file.",
         },
       },
       {
@@ -279,7 +266,7 @@ export default function DSCRLandingPage() {
                   Investment lending that moves at <span className="text-[#f5c770]">your speed</span>.
                 </h1>
                 <p className="mt-6 text-lg md:text-xl text-gray-200 max-w-2xl">
-                  Qualify based on property cash flow, not tax returns. Same-day pre-qualifications, 7–14 day closings, and a team that understands investors, brokers, and short-term rental operators.
+                  Qualify based on property cash flow, not tax returns. Same-day pre-qualifications, 7–14 day closings, and a team built for real estate investors and short-term rental operators.
                 </p>
                 <div className="mt-8 flex flex-col sm:flex-row gap-4">
                   <ApplyButton size="lg" className="bg-[#997100] hover:bg-[#b8850a] text-white">
@@ -379,7 +366,7 @@ export default function DSCRLandingPage() {
                 <Badge className="bg-black text-white mb-4">Who we serve</Badge>
                 <h2 className="text-3xl md:text-4xl font-semibold">Lending lanes for every investor profile</h2>
                 <p className="mt-4 text-muted-foreground text-lg">
-                  Whether you're optimizing STR yield, expanding long-term rentals, or brokering on behalf of clients, Preme keeps capital moving with dedicated pods for each persona.
+                  Whether you're optimizing STR yield, expanding long-term rentals, Preme keeps capital moving with dedicated pods for each investor profile.
                 </p>
               </div>
               <div className="grid gap-6 lg:grid-cols-3">
@@ -412,7 +399,7 @@ export default function DSCRLandingPage() {
             <div className="container mx-auto px-6">
               <div className="mb-12 text-center max-w-3xl mx-auto">
                 <Badge className="bg-[#fff5e1] text-[#7a4a00] mb-4">What investors say</Badge>
-                <h2 className="text-3xl md:text-4xl font-semibold">Trusted by investors and brokers across the Southeast</h2>
+                <h2 className="text-3xl md:text-4xl font-semibold">Trusted by investors across the Southeast</h2>
               </div>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 {testimonials.map((t) => (
@@ -465,7 +452,7 @@ export default function DSCRLandingPage() {
               <div className="grid gap-10 lg:grid-cols-2">
                 <div className="space-y-6">
                   <Badge className="bg-white/10">Proof in execution</Badge>
-                  <h2 className="text-3xl md:text-4xl font-semibold">Investors and brokers stay because the math works</h2>
+                  <h2 className="text-3xl md:text-4xl font-semibold">Investors stay because the math works</h2>
                   <p className="text-white/70">
                     We publish rate matrices weekly, reprice when markets shift, and proactively alert you when your DSCR drifts toward covenants. No surprises, just funded deals.
                   </p>
@@ -487,7 +474,7 @@ export default function DSCRLandingPage() {
                 <div className="space-y-6">
                   {[
                     { quote: "Preme funded my STR portfolio in under 12 days — no bank could touch that timeline.", attribution: "DSCR Investor, Atlanta GA" },
-                    { quote: "Brokered two DSCR deals last month; Preme's pricing matrix and status updates kept my clients calm the whole way.", attribution: "Fix & Flip Operator, Dallas TX" },
+                    { quote: "Closed two DSCR deals last month — Preme's pricing matrix and status updates made the whole process seamless.", attribution: "Fix & Flip Operator, Dallas TX" },
                     { quote: "Their ecosystem is unmatched. I refinanced, renovated with KB2, and listed with Hurry Homes without changing teams.", attribution: "STR Portfolio Owner, Nashville TN" },
                   ].map((testimonial) => (
                     <Card key={testimonial.quote} className="bg-white text-black">

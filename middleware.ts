@@ -26,7 +26,6 @@ export async function middleware(request: NextRequest) {
       url.pathname.startsWith("/pipeline/")
 
     if (isPipelineUi) {
-      // HTTP Basic auth — same pattern as zentryx admin
       const sessionCookie = request.cookies.get("zx_admin_session")
       const authedViaCookie = sessionCookie?.value === "authenticated"
 
@@ -70,7 +69,6 @@ export async function middleware(request: NextRequest) {
       return res
     }
 
-    // /pipeline/* — set the cookie and pass through
     if (url.pathname.startsWith("/pipeline")) {
       const res = NextResponse.next()
       res.cookies.set("zx_admin_session", "authenticated", { httpOnly: true, sameSite: "lax", path: "/" })
@@ -135,16 +133,6 @@ export async function middleware(request: NextRequest) {
     }
     if (profile?.role === "lender") {
       return NextResponse.redirect(new URL("/lender", request.url))
-    }
-  }
-
-  // /apply route: allow guest mode or authenticated users
-  if (url.pathname === "/apply") {
-    const isGuestMode = url.searchParams.get("guest") === "1"
-    if (!isGuestMode && !user) {
-      const redirectUrl = new URL("/auth", request.url)
-      redirectUrl.searchParams.set("next", "/apply")
-      return NextResponse.redirect(redirectUrl)
     }
   }
 

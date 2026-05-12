@@ -108,7 +108,7 @@ export default function AboutClient() {
                 <div className="space-y-6 text-lg md:text-xl text-muted-foreground leading-relaxed">
                   <p>
                     A licensed investor and builder of investor teams, Nyalls launched PREME to break the broken
-                    brokerage model. His mission? Help others grow through real estate by mixing culture, community, and
+                    lending model. His mission? Help others grow through real estate by mixing culture, community, and
                     capital.
                   </p>
                   <p>No fluff. No gatekeeping.</p>
