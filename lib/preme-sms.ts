@@ -1,17 +1,15 @@
 /**
  * Canonical Preme SMS sender.
  *
- * ONE path for all Preme outbound SMS. Routes through Twilio directly from
- * +14703159898 (our own Twilio account — full webhook control for real-time
- * GHL visibility). Twilio fires /api/webhooks/preme-sms on every inbound
- * reply, which generates Riley's response via Retell LLM and syncs both
- * sides to GHL in real time.
+ * All Preme outbound SMS routes through Retell chat.createSMSChat from
+ * +14709425787. Retell manages 10DLC/A2P registration. Outbound syncs to
+ * GHL via syncSmsToGhl(); inbound replies sync via the sms-memory webhook
+ * on app.premerealestate.com/api/webhooks/retell/sms-memory.
  *
- * Previous architecture (Retell createSMSChat from +14709425787) had no
- * per-message webhooks — GHL only synced on chat_ended. Switched 2026-04-30.
+ * Twilio (+14703159898) is NOT used — A2P campaign is in FAILED state.
  */
 
-import Twilio from "twilio"
+import Retell from "retell-sdk"
 
 import { patchContactCustomFields, syncSmsToGhl } from "./ghl-client"
 import {
@@ -22,9 +20,9 @@ import {
   validatePayload,
 } from "./preme-sms-objectives"
 
-// Preme SMS number — in our own Twilio account for full per-message webhook control.
-// Riley voice calls still use +14709425787 (Retell). This number handles SMS only.
-export const PREME_SMS_FROM = "+14703159898"
+export const PREME_SMS_FROM = "+14709425787"
+// Chat agent that handles SMS conversations (get-chat-agent endpoint, not get-agent)
+const PREME_SMS_AGENT_ID = "agent_ce0308f227491edfd0606f0aef"
 
 export interface PremeSmsArgs {
   toPhone: string
@@ -45,30 +43,34 @@ export interface PremeSmsResult {
 }
 
 /**
- * Send a Preme SMS via Retell. Single canonical entrypoint.
+ * Send a Preme SMS via Retell chat.createSMSChat. Single canonical entrypoint.
  *
- * Returns ok:false on any failure — callers must handle the error path and
- * surface it. Never assume success. HTTP 200 from Retell does NOT guarantee
- * carrier delivery; async monitoring via sms_delivery_audit.py is the source
- * of truth for actual delivery.
+ * Returns ok:false on any failure — never assume success.
  */
 export async function sendPremeSms(args: PremeSmsArgs): Promise<PremeSmsResult> {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken  = process.env.TWILIO_AUTH_TOKEN
-  if (!accountSid || !authToken) {
-    return { ok: false, error: "TWILIO credentials not configured", from: PREME_SMS_FROM }
+  const apiKey = process.env.RETELL_API_KEY
+  if (!apiKey) {
+    return { ok: false, error: "RETELL_API_KEY not configured", from: PREME_SMS_FROM }
   }
 
   try {
-    const client = new Twilio.Twilio(accountSid, authToken)
-    const msg = await client.messages.create({
-      from: PREME_SMS_FROM,
-      to: args.toPhone,
-      body: args.message,
-      statusCallback: "https://app.premerealestate.com/api/webhooks/preme-sms-status",
+    const retell = new Retell({ apiKey })
+    const chat = await retell.chat.createSMSChat({
+      from_number: PREME_SMS_FROM,
+      to_number: args.toPhone,
+      override_agent_id: PREME_SMS_AGENT_ID,
+      retell_llm_dynamic_variables: {
+        initial_message: args.message,
+        opening_message: args.message,
+        first_name: args.firstName || "there",
+        lead_id: args.leadId || "",
+        source: args.source,
+        ...(args.dynamicVariables || {}),
+      },
     })
-    console.log(`[preme-sms] ${args.source} → ${args.toPhone}: sid=${msg.sid}`)
-    return { ok: true, chatId: msg.sid, from: PREME_SMS_FROM }
+    const chatId = (chat as any).chat_id || (chat as any).id || null
+    console.log(`[preme-sms] ${args.source} → ${args.toPhone}: chat_id=${chatId}`)
+    return { ok: true, chatId, from: PREME_SMS_FROM }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`[preme-sms] ${args.source} → ${args.toPhone} FAILED: ${msg}`)
