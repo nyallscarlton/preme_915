@@ -49,6 +49,10 @@ function isAuthorized(request: NextRequest): boolean {
   if (bearer === `Bearer ${secret}`) return true
   const internal = request.headers.get("x-internal-auth")
   if (internal === secret) return true
+  // GHL webhooks can't set custom headers in all workflow step types.
+  // Accept ?token= in the URL so the secret can be embedded in the webhook URL.
+  const token = request.nextUrl.searchParams.get("token")
+  if (token === secret) return true
   return false
 }
 
