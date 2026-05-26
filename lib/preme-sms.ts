@@ -55,6 +55,13 @@ export async function sendPremeSms(args: PremeSmsArgs): Promise<PremeSmsResult> 
 
   try {
     const retell = new Retell({ apiKey })
+    // Build metadata — contact_id lets the sms-memory webhook skip GHL phone lookup
+    const retellMetadata: Record<string, string> = {}
+    if (args.metadata) {
+      for (const [k, v] of Object.entries(args.metadata)) {
+        if (v !== undefined) retellMetadata[k] = v
+      }
+    }
     const chat = await retell.chat.createSMSChat({
       from_number: PREME_SMS_FROM,
       to_number: args.toPhone,
@@ -67,6 +74,7 @@ export async function sendPremeSms(args: PremeSmsArgs): Promise<PremeSmsResult> 
         source: args.source,
         ...(args.dynamicVariables || {}),
       },
+      ...(Object.keys(retellMetadata).length ? { metadata: retellMetadata } : {}),
     })
     const chatId = (chat as any).chat_id || (chat as any).id || null
     console.log(`[preme-sms] ${args.source} → ${args.toPhone}: chat_id=${chatId}`)
