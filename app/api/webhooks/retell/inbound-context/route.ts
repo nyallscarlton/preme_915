@@ -111,7 +111,6 @@ export async function POST(request: NextRequest) {
         .from("contact_interactions")
         .select("channel, direction, summary, created_at")
         .ilike("phone", `%${digits}%`)
-        .eq("entity", "preme")
         .order("created_at", { ascending: false })
         .limit(5)
 

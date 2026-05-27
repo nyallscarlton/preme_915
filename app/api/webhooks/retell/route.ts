@@ -602,31 +602,33 @@ export async function POST(request: NextRequest) {
         }
 
         // --- Memory system: store interaction ---
+        // Phone key: for outbound calls FROM Preme, the lead is to_number; for inbound, the lead is from_number.
+        // Preme schema is used — createClient defaults to public which has no contact_interactions table.
         try {
-          if (callerPhone) {
+          const leadPhone = call.direction === "outbound"
+            ? (call.to_number || callerPhone)
+            : (call.from_number || callerPhone)
+          if (leadPhone && !TRAINING_PHONES.has(leadPhone)) {
             const { createClient } = await import("@supabase/supabase-js")
             const url = process.env.NEXT_PUBLIC_SUPABASE_URL
             const key = process.env.SUPABASE_SERVICE_ROLE_KEY
             if (url && key) {
-              const supabase = createClient(url, key)
-              // Store in shared contact interactions table if it exists
+              const supabase = createClient(url, key, { db: { schema: "preme" } })
               await supabase.from("contact_interactions").insert({
-                phone: callerPhone,
+                phone: leadPhone,
                 channel: "voice",
                 direction: call.direction || "inbound",
-                entity: "preme",
-                content: call.transcript || null,
-                summary: call.call_analysis?.call_summary || null,
+                content: call.transcript?.slice(0, 2000) || null,
+                summary: call.call_analysis?.call_summary?.slice(0, 500) || null,
                 metadata: {
                   call_id: call.call_id,
                   duration_ms: call.duration_ms,
                   temperature: leadTemperature?.toLowerCase(),
                   score,
                   loan_type: loanType,
-                  recording_url: call.recording_url,
                   is_training: isTraining,
                 },
-              }) // Silently fail if table doesn't exist
+              })
             }
           }
         } catch {
@@ -791,7 +793,8 @@ async function persistRecording(callId: string, recordingUrl: string) {
     return
   }
 
-  const supabase = createClient(url, key)
+  // Storage and contact_interactions are in the preme schema
+  const supabase = createClient(url, key, { db: { schema: "preme" } })
 
   // 1. Fetch the recording audio from Retell
   const res = await fetch(recordingUrl)

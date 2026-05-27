@@ -17,9 +17,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import Twilio from "twilio"
 import Retell from "retell-sdk"
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { createClient } from "@supabase/supabase-js"
 import { syncSmsToGhl } from "@/lib/ghl-client"
 import { cancelRemainingCadence } from "@/lib/preme-cadence"
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SbClient = any
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -59,12 +63,44 @@ async function resolveGhlContact(phone: string): Promise<{ id: string; firstName
   } catch { return null }
 }
 
-async function getOrCreateRileyChat(leadPhone: string, contactId: string): Promise<string | null> {
+// Builds a cross-channel history string from contact_interactions.
+// Uses the same format as inbound-context so voice and SMS see identical history strings.
+async function buildContactHistory(sb: SbClient, digits: string): Promise<string> {
+  try {
+    const { data: interactions } = await sb
+      .from("contact_interactions")
+      .select("channel, direction, summary, content, created_at")
+      .ilike("phone", `%${digits}%`)
+      .order("created_at", { ascending: false })
+      .limit(8)
+
+    if (!interactions || interactions.length === 0) return ""
+
+    const lines = interactions.reverse().map((i: { channel: string; direction: string; summary: string | null; content: string | null; created_at: string }) => {
+      const date = new Date(i.created_at).toLocaleDateString()
+      const dir = i.direction === "inbound" ? "Caller" : "Riley"
+      const text = (i.summary || i.content || "").slice(0, 200)
+      return `[${date}] ${i.channel} (${dir}): ${text}`
+    })
+    return lines.join("\n")
+  } catch {
+    return ""
+  }
+}
+
+async function getOrCreateRileyChat(
+  leadPhone: string,
+  contactId: string,
+  firstName: string,
+  sb: SbClient,
+): Promise<string | null> {
+  const e164 = leadPhone.startsWith("+") ? leadPhone : `+1${leadPhone.replace(/\D/g, "")}`
+  const digits = leadPhone.replace(/\D/g, "").slice(-10)
+
   // Look up active chat_id from Supabase
-  const sb = premeClient()
   const { data } = await sb.from("contact_interactions")
     .select("metadata")
-    .eq("phone", leadPhone.startsWith("+") ? leadPhone : `+1${leadPhone.replace(/\D/g,"")}`)
+    .eq("phone", e164)
     .eq("channel", "sms")
     .not("metadata->retell_chat_id", "is", null)
     .order("created_at", { ascending: false })
@@ -74,13 +110,21 @@ async function getOrCreateRileyChat(leadPhone: string, contactId: string): Promi
   const existingChatId = (data?.metadata as Record<string,string> | null)?.retell_chat_id
   if (existingChatId) return existingChatId
 
-  // Create a new Retell API chat with Riley's LLM
+  // New chat — fetch cross-channel history and inject so SMS Riley knows about prior calls/texts
+  const history = await buildContactHistory(sb, digits)
+  const conversationHistory = history || "No prior interactions."
+
+  console.log(`[preme-sms] new chat for ${e164} | history lines: ${history.split("\n").filter(Boolean).length}`)
+
   const retell = new Retell({ apiKey: process.env.RETELL_API_KEY! })
   try {
     const chat = await retell.chat.create({
       agent_id: "agent_ce0308f227491edfd0606f0aef", // Riley SMS agent (chat type)
       metadata: { contact_id: contactId, lead_phone: leadPhone, source: "preme_twilio_sms" },
-      retell_llm_dynamic_variables: { first_name: "there" },
+      retell_llm_dynamic_variables: {
+        first_name: firstName || "there",
+        conversation_history: conversationHistory,
+      },
     })
     return chat.chat_id
   } catch (err) {
@@ -146,12 +190,18 @@ export async function POST(request: NextRequest) {
       console.error("[preme-sms] GHL inbound sync failed:", err)
     )
 
-    // 3. Log to Supabase
+    // 3. Log to Supabase — no entity column in contact_interactions, preme schema provides isolation
     const sb = premeClient()
-    await sb.from("contact_interactions").insert({
-      phone: e164, channel: "sms", direction: "inbound", content: body,
-      metadata: { twilio_sid: msgSid, source: "preme_twilio_sms", ghl_contact_id: contact.id },
-    }).catch(() => {})
+    try {
+      await sb.from("contact_interactions").insert({
+        phone: e164,
+        channel: "sms",
+        direction: "inbound",
+        content: body,
+        summary: body.slice(0, 200),
+        metadata: { twilio_sid: msgSid, source: "preme_twilio_sms", ghl_contact_id: contact.id },
+      })
+    } catch {}
 
     // 4. Opt-out handling
     if (OPT_OUT_KEYWORDS.some(kw => bodyLow === kw || bodyLow.includes(kw))) {
@@ -163,16 +213,18 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Get or create Riley's Retell chat session for this lead
-    const chatId = await getOrCreateRileyChat(e164, contact.id)
+    const chatId = await getOrCreateRileyChat(e164, contact.id, contact.firstName || "", sb)
     if (!chatId) {
       console.error("[preme-sms] could not get Riley chat — no response sent")
       return twiml()
     }
 
-    // Store chat_id for future lookups
-    await sb.from("contact_interactions").update({
-      metadata: { twilio_sid: msgSid, source: "preme_twilio_sms", ghl_contact_id: contact.id, retell_chat_id: chatId }
-    }).eq("phone", e164).eq("channel", "sms").eq("direction", "inbound").eq("content", body).catch(() => {})
+    // Store chat_id back on the inbound row for future session lookups
+    try {
+      await sb.from("contact_interactions").update({
+        metadata: { twilio_sid: msgSid, source: "preme_twilio_sms", ghl_contact_id: contact.id, retell_chat_id: chatId }
+      }).eq("phone", e164).eq("channel", "sms").eq("direction", "inbound").eq("content", body)
+    } catch {}
 
     // 6. Generate Riley's response
     const rileyResponse = await generateRileyResponse(chatId, body)
@@ -183,6 +235,18 @@ export async function POST(request: NextRequest) {
 
     // 7. Send Riley's response via Twilio + sync to GHL
     await sendViaTwilio(from, rileyResponse, contact.id)
+
+    // 8. Persist Riley's outbound reply to contact_interactions so voice agent can read it
+    try {
+      await sb.from("contact_interactions").insert({
+        phone: e164,
+        channel: "sms",
+        direction: "outbound",
+        content: rileyResponse,
+        summary: rileyResponse.slice(0, 200),
+        metadata: { source: "preme_twilio_sms", ghl_contact_id: contact.id, retell_chat_id: chatId },
+      })
+    } catch {}
 
     return twiml()
   } catch (err) {
