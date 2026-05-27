@@ -31,7 +31,6 @@ const ALLOWED_FIELDS = new Set([
   "estimated_monthly_rent",
   "loan_amount",
   "purchase_price",
-  "credit_range",
   "entity_type",
   "timeline",
   "timeline_notes",

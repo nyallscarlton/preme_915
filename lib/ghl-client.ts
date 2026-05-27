@@ -127,6 +127,35 @@ export async function addContactNote(
 }
 
 /**
+ * Look up a GHL contact by phone number.
+ * Returns the first matching contact (id + firstName) or null if none found.
+ */
+export async function findContactByPhone(
+  phone: string,
+): Promise<{ id: string; firstName?: string } | null> {
+  const creds = getCreds()
+  if ("error" in creds) return null
+  const digits = phone.replace(/\D/g, "").slice(-10)
+  if (digits.length < 10) return null
+  try {
+    const res = await ghlFetch<{
+      contacts?: Array<{ id: string; phone?: string; firstName?: string }>
+    }>(
+      "GET",
+      `/contacts/?locationId=${creds.locationId}&query=${digits}&limit=3`,
+    )
+    if (!res.ok || !res.data?.contacts) return null
+    return (
+      res.data.contacts.find((c) =>
+        (c.phone || "").replace(/\D/g, "").endsWith(digits),
+      ) ?? null
+    )
+  } catch {
+    return null
+  }
+}
+
+/**
  * Find the first existing conversation for a contact, or create an SMS one.
  * Returns the conversationId.
  */

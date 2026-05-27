@@ -11,6 +11,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin"
+import { findContactByPhone, patchContactCustomFields } from "@/lib/ghl-client"
 
 export type ContactStateChannel = "sms" | "voice" | "application"
 
@@ -59,6 +60,12 @@ export async function upsertCreditRange(
         .from("loan_applications")
         .update({ credit_score_range: creditRange })
         .ilike("applicant_phone", `%${digits}`)
+    }
+
+    // 3. GHL mirror — contact.credit_range_from_riley (read-only from GHL; sourced here only)
+    const ghlContact = await findContactByPhone(phone).catch(() => null)
+    if (ghlContact?.id) {
+      patchContactCustomFields(ghlContact.id, { credit_range_from_riley: creditRange }).catch(() => {})
     }
   } catch {
     // Non-fatal
