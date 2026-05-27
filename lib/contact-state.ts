@@ -23,7 +23,14 @@ export interface ContactState {
 
 /**
  * Upsert credit_range for a phone number.
- * Never throws — contact_state write failure must never block the caller.
+ *
+ * Single write gateway for credit range across all channels.
+ * Writes to contact_state (canonical memory) AND mirrors to
+ * loan_applications.credit_score_range so pipeline readers
+ * (URLA PDF, lender match, pre-fill) always see the same value.
+ * One source of truth — contact_state — no drift possible.
+ *
+ * Never throws — write failures must never block the caller.
  */
 export async function upsertCreditRange(
   phone: string,
@@ -33,6 +40,9 @@ export async function upsertCreditRange(
   if (!phone || !creditRange) return
   try {
     const sb = createAdminClient()
+    const digits = phone.replace(/\D/g, "").slice(-10)
+
+    // 1. contact_state — canonical source
     await sb.from("contact_state").upsert(
       {
         phone,
@@ -42,6 +52,14 @@ export async function upsertCreditRange(
       },
       { onConflict: "phone" },
     )
+
+    // 2. loan_applications mirror — keeps URLA, lender match, and pre-fill in sync
+    if (digits.length === 10) {
+      await sb
+        .from("loan_applications")
+        .update({ credit_score_range: creditRange })
+        .ilike("applicant_phone", `%${digits}`)
+    }
   } catch {
     // Non-fatal
   }
