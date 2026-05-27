@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getBaseUrl } from "@/lib/config"
 import { sendPremeSms } from "@/lib/preme-sms"
+import { upsertCreditRange } from "@/lib/contact-state"
 
 // Internal team numbers used for role-play training — never create leads for these
 const TRAINING_PHONES = new Set([
@@ -163,6 +164,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         result: "I created a note for the team but had trouble generating the application link. A loan officer will follow up directly.",
       })
+    }
+
+    // Write credit_range to contact_state (canonical fact store, M1)
+    if (credit_score && phone) {
+      const e164 = phone.startsWith("+") ? phone : `+1${phone.replace(/\D/g, "")}`
+      upsertCreditRange(e164, credit_score, "voice").catch(() => {})
     }
 
     const applyUrl = `${getBaseUrl()}/apply?guest=1&token=${guestToken}`

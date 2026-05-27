@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { readContactState } from "@/lib/contact-state"
 
 const DEFAULTS = {
   first_name: "there",
@@ -104,6 +105,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Read canonical contact_state facts (M1: credit_range)
+    const contactState = await readContactState(
+      digits.length === 10 ? `+1${digits}` : `+${digits}`
+    )
+
     // Build conversation history from contact_interactions
     let conversationHistory = "No prior interactions."
     try {
@@ -160,6 +166,12 @@ export async function POST(request: NextRequest) {
           lead_source: leadSource,
           conversation_history: conversationHistory,
           opening_message: openingMessage,
+          // contact_state facts (M1: credit_range)
+          credit_range: contactState?.credit_range || "",
+          credit_range_updated_channel: contactState?.credit_range_updated_channel || "",
+          credit_range_updated_at: contactState?.credit_range_updated_at
+            ? new Date(contactState.credit_range_updated_at).toLocaleDateString()
+            : "",
         },
       },
     })

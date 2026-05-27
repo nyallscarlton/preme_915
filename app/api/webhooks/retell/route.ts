@@ -12,6 +12,7 @@ import { createAdminClient, createZentrxClient } from "@/lib/supabase/admin"
 import { triggerEmailOnlyFollowUp, triggerLeadFollowUp, type LeadForFollowUp } from "@/lib/lead-followup"
 // New 13-step Preme cadence — auto-cancel hook
 import { cancelRemainingCadence } from "@/lib/preme-cadence"
+import { upsertCreditRange } from "@/lib/contact-state"
 
 // Allow up to 120s — recording downloads from Retell can be slow
 export const maxDuration = 120
@@ -599,6 +600,18 @@ export async function POST(request: NextRequest) {
             recordingUrl: call.recording_url || null,
             callSummary: call.call_analysis?.call_summary || null,
           })
+        }
+
+        // --- contact_state: write credit_range (canonical fact, M1) ---
+        {
+          const leadPhone = call.direction === "outbound"
+            ? (call.to_number || callerPhone)
+            : (call.from_number || callerPhone)
+          if (creditScoreRange && leadPhone && !isTraining) {
+            const digits = leadPhone.replace(/\D/g, "")
+            const e164 = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
+            upsertCreditRange(e164, creditScoreRange, "voice").catch(() => {})
+          }
         }
 
         // --- Memory system: store interaction ---

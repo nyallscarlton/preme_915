@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { upsertCreditRange } from "@/lib/contact-state"
 
 export async function POST(request: NextRequest) {
   try {
@@ -85,6 +86,13 @@ export async function POST(request: NextRequest) {
         await supabase.from("loan_applications").update(appUpdates).eq("id", app.id)
         updated.push(`application: ${Object.keys(appUpdates).join(", ")}`)
       }
+    }
+
+    // Write credit_range to contact_state if provided (canonical fact store, M1)
+    if (args.credit_range && digits.length === 10) {
+      const e164 = `+1${digits}`
+      upsertCreditRange(e164, args.credit_range, "voice").catch(() => {})
+      updated.push("contact_state: credit_range")
     }
 
     if (updated.length === 0) {

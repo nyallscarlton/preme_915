@@ -21,6 +21,7 @@ import Retell from "retell-sdk"
 import { createClient } from "@supabase/supabase-js"
 import { syncSmsToGhl } from "@/lib/ghl-client"
 import { cancelRemainingCadence } from "@/lib/preme-cadence"
+import { readContactState } from "@/lib/contact-state"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SbClient = any
@@ -114,6 +115,9 @@ async function getOrCreateRileyChat(
   const history = await buildContactHistory(sb, digits)
   const conversationHistory = history || "No prior interactions."
 
+  // Read canonical contact_state facts (M1: credit_range)
+  const contactState = await readContactState(e164)
+
   console.log(`[preme-sms] new chat for ${e164} | history lines: ${history.split("\n").filter(Boolean).length}`)
 
   const retell = new Retell({ apiKey: process.env.RETELL_API_KEY! })
@@ -123,7 +127,14 @@ async function getOrCreateRileyChat(
       metadata: { contact_id: contactId, lead_phone: leadPhone, source: "preme_twilio_sms" },
       retell_llm_dynamic_variables: {
         first_name: firstName || "there",
+        lead_phone: e164,
         conversation_history: conversationHistory,
+        // contact_state facts (M1: credit_range)
+        credit_range: contactState?.credit_range || "",
+        credit_range_updated_channel: contactState?.credit_range_updated_channel || "",
+        credit_range_updated_at: contactState?.credit_range_updated_at
+          ? new Date(contactState.credit_range_updated_at).toLocaleDateString()
+          : "",
       },
     })
     return chat.chat_id
