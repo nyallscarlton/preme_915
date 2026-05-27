@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 
@@ -10,7 +10,7 @@ interface SentMessage {
   chatId?: string
 }
 
-export default function PremeSmsComposePage() {
+function PremeSmsComposeInner() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const params = useSearchParams()
@@ -145,5 +145,13 @@ export default function PremeSmsComposePage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function PremeSmsComposePage() {
+  return (
+    <Suspense>
+      <PremeSmsComposeInner />
+    </Suspense>
   )
 }
