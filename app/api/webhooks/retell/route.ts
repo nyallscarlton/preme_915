@@ -420,7 +420,8 @@ export async function POST(request: NextRequest) {
                   applicant_email: analysis.email || `${callerPhone.replace(/\D/g, "").slice(-10)}@placeholder.preme`,
                   application_number: appNumber,
                   status: "submitted",
-                  loan_type: propertyType || loanType || null,
+                  loan_type: loanType || null,
+                  property_type: propertyType || null,
                   loan_amount: loanAmount ? parseFloat(loanAmount.replace(/[^0-9.]/g, "")) : null,
                   property_address: propertyAddress || null,
                   property_value: propertyValue ? parseFloat(propertyValue.replace(/[^0-9.]/g, "")) : null,
@@ -458,7 +459,7 @@ export async function POST(request: NextRequest) {
                   last_name: lastName,
                   phone: e164,
                   email: callerEmail || `${digits}@placeholder.preme`,
-                  loan_type: loanType || propertyType || null,
+                  loan_type: loanType || null,
                   source: "retell_voice",
                   status: "qualified",
                 })
@@ -473,7 +474,7 @@ export async function POST(request: NextRequest) {
                   last_name: lastName,
                   phone: e164,
                   email: callerEmail,
-                  loan_type: loanType || propertyType || null,
+                  loan_type: loanType || null,
                   source: "retell_voice",
                   status: "qualified",
                 }).catch((err) =>
@@ -498,7 +499,7 @@ export async function POST(request: NextRequest) {
                   last_name: lastName,
                   phone: callerPhone,
                   email: callerEmail,
-                  loan_type: loanType || propertyType || null,
+                  loan_type: loanType || null,
                   source: "retell_voice",
                   status: "qualified",
                 }).catch((err) =>

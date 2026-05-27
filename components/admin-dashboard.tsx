@@ -119,7 +119,7 @@ export function AdminDashboard() {
           loanAmount: app.loan_amount || 0,
           status: app.status || "submitted",
           submittedAt: app.submitted_at || app.created_at || new Date().toISOString(),
-          loanType: app.loan_type || app.property_type || "N/A",
+          loanType: app.loan_type || "N/A",
           creditScoreRange: app.credit_score_range || "N/A",
           propertyValue: app.property_value || 0,
           progress: app.status === "approved" ? 100 : app.status === "under_review" ? 65 : 25,

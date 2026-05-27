@@ -114,7 +114,7 @@ export function CustomerDashboard() {
     loanAmount: app.loan_amount || 0,
     status: app.status,
     submittedAt: app.submitted_at || app.created_at || new Date().toISOString(),
-    loanType: app.loan_type || app.property_type || "Loan",
+    loanType: app.loan_type || "Loan",
     progress:
       app.status === "approved"
         ? 100
