@@ -19,7 +19,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { addContactTags, patchContactCustomFields, getContact } from "@/lib/ghl-client"
 import { isAuthorized } from "../_lib"
-import { upsertCreditRange } from "@/lib/contact-state"
+import { upsertCreditRange, upsertPropertyType } from "@/lib/contact-state"
 
 export const dynamic = "force-dynamic"
 
@@ -27,7 +27,6 @@ export const dynamic = "force-dynamic"
 const ALLOWED_FIELDS = new Set([
   "property_address",
   "property_state",
-  "property_type",
   "estimated_monthly_rent",
   "loan_amount",
   "purchase_price",
@@ -97,16 +96,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // Write credit_range to contact_state (canonical fact store, M1)
-  // Look up the contact's phone so contact_state can be keyed on E.164
+  // Write qualifying facts to contact_state (M2 gateway)
+  // Look up contact phone once — both upserts key on E.164
   const creditRangeValue = body.form_data?.credit_range
-  if (creditRangeValue && typeof creditRangeValue === "string") {
+  const propertyTypeValue = body.form_data?.property_type
+  if ((creditRangeValue || propertyTypeValue)) {
     const contactRes = await getContact(contactId)
     const contactPhone = contactRes.data?.contact?.phone
     if (contactPhone) {
       const digits = contactPhone.replace(/\D/g, "")
       const e164 = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
-      upsertCreditRange(e164, creditRangeValue, "application").catch(() => {})
+      if (creditRangeValue && typeof creditRangeValue === "string") {
+        upsertCreditRange(e164, creditRangeValue, "application").catch(() => {})
+      }
+      if (propertyTypeValue && typeof propertyTypeValue === "string") {
+        upsertPropertyType(e164, propertyTypeValue, "application").catch(() => {})
+      }
     }
   }
 

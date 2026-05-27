@@ -166,11 +166,16 @@ export async function POST(request: NextRequest) {
           lead_source: leadSource,
           conversation_history: conversationHistory,
           opening_message: openingMessage,
-          // contact_state facts (M1: credit_range)
+          // contact_state facts (M2: credit_range + property_type)
           credit_range: contactState?.credit_range || "",
           credit_range_updated_channel: contactState?.credit_range_updated_channel || "",
           credit_range_updated_at: contactState?.credit_range_updated_at
             ? new Date(contactState.credit_range_updated_at).toLocaleDateString()
+            : "",
+          property_type: contactState?.property_type || "",
+          property_type_updated_channel: contactState?.property_type_updated_channel || "",
+          property_type_updated_at: contactState?.property_type_updated_at
+            ? new Date(contactState.property_type_updated_at).toLocaleDateString()
             : "",
         },
       },

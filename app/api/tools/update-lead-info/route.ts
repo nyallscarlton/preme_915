@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { upsertCreditRange } from "@/lib/contact-state"
+import { upsertCreditRange, upsertPropertyType } from "@/lib/contact-state"
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       if (args.last_name) leadUpdates.last_name = args.last_name
       if (args.email) leadUpdates.email = args.email.toLowerCase()
       if (args.loan_type) leadUpdates.loan_type = args.loan_type
+      if (args.property_type) leadUpdates.property_type = args.property_type
       if (args.loan_amount) leadUpdates.loan_amount = args.loan_amount
       if (args.property_address) leadUpdates.property_address = args.property_address
       if (args.new_phone) leadUpdates.phone = args.new_phone
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
       }
       if (args.email) appUpdates.applicant_email = args.email.toLowerCase()
       if (args.loan_type) appUpdates.loan_type = args.loan_type
+      if (args.property_type) appUpdates.property_type = args.property_type
       if (args.property_address) appUpdates.property_address = args.property_address
       if (args.loan_amount) {
         const parsed = parseFloat(String(args.loan_amount).replace(/[^0-9.]/g, ""))
@@ -88,11 +90,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Write credit_range to contact_state if provided (canonical fact store, M1)
-    if (args.credit_range && digits.length === 10) {
+    // Write qualifying facts to contact_state (M2 gateway)
+    if (digits.length === 10) {
       const e164 = `+1${digits}`
-      upsertCreditRange(e164, args.credit_range, "voice").catch(() => {})
-      updated.push("contact_state: credit_range")
+      if (args.credit_range) {
+        upsertCreditRange(e164, args.credit_range, "voice").catch(() => {})
+        updated.push("contact_state: credit_range")
+      }
+      if (args.property_type) {
+        upsertPropertyType(e164, args.property_type, "voice").catch(() => {})
+        updated.push("contact_state: property_type")
+      }
     }
 
     if (updated.length === 0) {

@@ -20,6 +20,9 @@ export interface ContactState {
   credit_range: string | null
   credit_range_updated_at: string | null
   credit_range_updated_channel: ContactStateChannel | null
+  property_type: string | null
+  property_type_updated_at: string | null
+  property_type_updated_channel: ContactStateChannel | null
 }
 
 /**
@@ -82,11 +85,53 @@ export async function readContactState(phone: string): Promise<ContactState | nu
     const sb = createAdminClient()
     const { data } = await sb
       .from("contact_state")
-      .select("phone, credit_range, credit_range_updated_at, credit_range_updated_channel")
+      .select("phone, credit_range, credit_range_updated_at, credit_range_updated_channel, property_type, property_type_updated_at, property_type_updated_channel")
       .eq("phone", phone)
       .maybeSingle()
     return (data as ContactState) || null
   } catch {
     return null
+  }
+}
+
+/**
+ * Upsert property_type for a phone number.
+ *
+ * Single write gateway for property type across all channels.
+ * Writes to contact_state (canonical memory) AND mirrors to
+ * loan_applications.property_type so pipeline readers always see the same value.
+ *
+ * Never throws — write failures must never block the caller.
+ */
+export async function upsertPropertyType(
+  phone: string,
+  propertyType: string,
+  channel: ContactStateChannel,
+): Promise<void> {
+  if (!phone || !propertyType) return
+  try {
+    const sb = createAdminClient()
+    const digits = phone.replace(/\D/g, "").slice(-10)
+
+    // 1. contact_state — canonical source
+    await sb.from("contact_state").upsert(
+      {
+        phone,
+        property_type: propertyType,
+        property_type_updated_at: new Date().toISOString(),
+        property_type_updated_channel: channel,
+      },
+      { onConflict: "phone" },
+    )
+
+    // 2. loan_applications mirror — keeps notifications, lender match, and admin display in sync
+    if (digits.length === 10) {
+      await sb
+        .from("loan_applications")
+        .update({ property_type: propertyType })
+        .ilike("applicant_phone", `%${digits}`)
+    }
+  } catch {
+    // Non-fatal
   }
 }

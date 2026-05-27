@@ -80,7 +80,6 @@ export async function POST(request: NextRequest) {
     // Map custom fields
     const customFields: Record<string, string> = {}
     if (propertyState) customFields.property_state = propertyState
-    if (body.property_type) customFields.property_type = body.property_type
     if (body.loan_amount) customFields.loan_amount = body.loan_amount
     if (body.timeline) customFields.timeline = body.timeline
     if (body.entity_type) customFields.entity_type = body.entity_type

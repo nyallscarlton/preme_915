@@ -12,7 +12,7 @@ import { createAdminClient, createZentrxClient } from "@/lib/supabase/admin"
 import { triggerEmailOnlyFollowUp, triggerLeadFollowUp, type LeadForFollowUp } from "@/lib/lead-followup"
 // New 13-step Preme cadence — auto-cancel hook
 import { cancelRemainingCadence } from "@/lib/preme-cadence"
-import { upsertCreditRange } from "@/lib/contact-state"
+import { upsertCreditRange, upsertPropertyType } from "@/lib/contact-state"
 
 // Allow up to 120s — recording downloads from Retell can be slow
 export const maxDuration = 120
@@ -603,15 +603,16 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // --- contact_state: write credit_range (canonical fact, M1) ---
+        // --- contact_state: write qualifying facts (M2 gateway) ---
         {
           const leadPhone = call.direction === "outbound"
             ? (call.to_number || callerPhone)
             : (call.from_number || callerPhone)
-          if (creditScoreRange && leadPhone && !isTraining) {
+          if (leadPhone && !isTraining) {
             const digits = leadPhone.replace(/\D/g, "")
             const e164 = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
-            upsertCreditRange(e164, creditScoreRange, "voice").catch(() => {})
+            if (creditScoreRange) upsertCreditRange(e164, creditScoreRange, "voice").catch(() => {})
+            if (propertyType) upsertPropertyType(e164, propertyType, "voice").catch(() => {})
           }
         }
 
