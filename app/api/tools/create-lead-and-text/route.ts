@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
       application_number: appNumber,
       status: "sent",
       loan_type: loan_type || null,
-      loan_purpose: loan_type || null,
+      loan_purpose: null,
       property_address: property_address || null,
       property_type: property_type || null,
       loan_amount: estimated_amount ? parseFloat(String(estimated_amount).replace(/[^0-9.]/g, "")) : null,

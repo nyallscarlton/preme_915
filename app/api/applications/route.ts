@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     const firstName = applicantName.split(" ")[0] || "there"
     const applicantPhone = application.applicant_phone || ""
     const applicantEmail = application.applicant_email || ""
-    const loanPurpose = application.loan_purpose || application.loan_type || null
+    const loanPurpose = application.loan_purpose || null
 
     // --- PRE-QUAL SHORT-CIRCUIT ---
     // Pre-qual submissions: run DSCR matcher, cache result, and leave the

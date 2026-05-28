@@ -385,7 +385,7 @@ export async function notifyPremeAppSubmission(app: {
     const dscrApp = {
       state: app.property_state || "",
       propertyType: app.property_type || "residential",
-      loanPurpose: app.loan_purpose || app.loan_type || "purchase",
+      loanPurpose: app.loan_purpose || "purchase",
       loanAmount: app.loan_amount || 0,
       fico: parseFicoRange(app.credit_score_range),
       ltv: 75,

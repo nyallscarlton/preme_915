@@ -88,7 +88,7 @@ export async function POST(
       application_number: appNumber,
       status: "sent",
       loan_type: loanType,
-      loan_purpose: loanType,
+      loan_purpose: null,
       property_address: propertyAddress,
       property_type: propertyType,
       loan_amount: estimatedAmount ? parseFloat(String(estimatedAmount).replace(/[^0-9.]/g, "")) : null,
