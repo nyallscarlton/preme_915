@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createZentrxClient } from "@/lib/supabase/admin"
-import { sendTelegram } from "@/lib/telegram"
 
 // GET /api/pipeline/disputes — List all disputes (filterable by status)
 export async function GET(request: NextRequest) {
@@ -106,23 +105,6 @@ export async function POST(request: NextRequest) {
         },
       })
     }
-
-    // Send Telegram notification for QA review
-    const buyerName = (call as any).zx_buyers?.name || "Unknown"
-    const message = [
-      `⚠️ *Call Dispute — QA Review Needed*`,
-      ``,
-      `Buyer: ${buyerName}`,
-      `Call ID: ${call.id}`,
-      `Amount: $${call.amount_charged}`,
-      `Duration: ${Math.floor(call.duration_seconds / 60)}m ${call.duration_seconds % 60}s`,
-      ``,
-      `Reason: ${reason.trim()}`,
-      ``,
-      `Recording: ${call.recording_url || "N/A"}`,
-    ].join("\n")
-
-    await sendTelegram(message).catch(console.error)
 
     return NextResponse.json({ dispute: updated })
   } catch (error) {

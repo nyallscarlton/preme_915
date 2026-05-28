@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { notifyMCNewApplication } from "@/lib/mc-webhook"
 import { sendApplicationConfirmationEmail } from "@/lib/follow-up"
-import { sendNewApplicationTelegram, notifyPremeAppSubmission } from "@/lib/notifications"
+import { notifyPremeAppSubmission } from "@/lib/notifications"
 import { triggerApplicationFollowUp, cancelPendingFollowUps } from "@/lib/lead-followup"
 import { generateMISMO } from "@/lib/mismo"
 
@@ -161,20 +161,7 @@ export async function POST(request: NextRequest) {
       }).catch((err) => console.error("[applications] Confirmation email error:", err))
     }
 
-    // 3. Telegram alert (immediate)
-    sendNewApplicationTelegram({
-      applicantName,
-      applicantPhone,
-      applicantEmail,
-      loanAmount: application.loan_amount,
-      propertyType: application.property_type,
-      propertyAddress: application.property_address,
-      creditScore: application.credit_score_range,
-      loanPurpose,
-      applicationNumber,
-    }).catch((err) => console.error("[applications] Telegram alert error:", err))
-
-    // 4. Create lead record + queue follow-up cadence (if phone provided)
+    // 3. Create lead record + queue follow-up cadence (if phone provided)
     if (applicantPhone) {
       createLeadAndQueueFollowUp(adminClient, {
         firstName,

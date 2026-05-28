@@ -266,6 +266,11 @@ export async function syncRetellChatToGhl(
   }
 }
 
+/** PUT /contacts/{id} — update the native email field on a GHL contact. */
+export async function updateContactEmail(contactId: string, email: string): Promise<GhlResult> {
+  return ghlFetch("PUT", `/contacts/${contactId}`, { email })
+}
+
 /** Convenience: state field + tag in one call. Sequenced — field PATCH first, then tag. */
 export async function patchStateAndTag(
   contactId: string,

@@ -129,22 +129,34 @@ async function getOrCreateRileyChat(
         first_name: firstName || "there",
         lead_phone: e164,
         conversation_history: conversationHistory,
-        // contact_state facts (M2: credit_range + property_type + loan_purpose)
+        // contact_state facts (M1-M4: all 10 qualifying facts)
         credit_range: contactState?.credit_range || "",
         credit_range_updated_channel: contactState?.credit_range_updated_channel || "",
-        credit_range_updated_at: contactState?.credit_range_updated_at
-          ? new Date(contactState.credit_range_updated_at).toLocaleDateString()
-          : "",
+        credit_range_updated_at: contactState?.credit_range_updated_at ? new Date(contactState.credit_range_updated_at).toLocaleDateString() : "",
         property_type: contactState?.property_type || "",
         property_type_updated_channel: contactState?.property_type_updated_channel || "",
-        property_type_updated_at: contactState?.property_type_updated_at
-          ? new Date(contactState.property_type_updated_at).toLocaleDateString()
-          : "",
+        property_type_updated_at: contactState?.property_type_updated_at ? new Date(contactState.property_type_updated_at).toLocaleDateString() : "",
         loan_purpose: contactState?.loan_purpose || "",
         loan_purpose_updated_channel: contactState?.loan_purpose_updated_channel || "",
-        loan_purpose_updated_at: contactState?.loan_purpose_updated_at
-          ? new Date(contactState.loan_purpose_updated_at).toLocaleDateString()
-          : "",
+        loan_purpose_updated_at: contactState?.loan_purpose_updated_at ? new Date(contactState.loan_purpose_updated_at).toLocaleDateString() : "",
+        loan_type: contactState?.loan_type || "",
+        loan_type_updated_channel: contactState?.loan_type_updated_channel || "",
+        loan_type_updated_at: contactState?.loan_type_updated_at ? new Date(contactState.loan_type_updated_at).toLocaleDateString() : "",
+        property_address: contactState?.property_address || "",
+        property_address_updated_channel: contactState?.property_address_updated_channel || "",
+        property_address_updated_at: contactState?.property_address_updated_at ? new Date(contactState.property_address_updated_at).toLocaleDateString() : "",
+        loan_amount: contactState?.loan_amount ? String(contactState.loan_amount) : "",
+        loan_amount_updated_channel: contactState?.loan_amount_updated_channel || "",
+        loan_amount_updated_at: contactState?.loan_amount_updated_at ? new Date(contactState.loan_amount_updated_at).toLocaleDateString() : "",
+        timeline: contactState?.timeline || "",
+        timeline_updated_channel: contactState?.timeline_updated_channel || "",
+        timeline_updated_at: contactState?.timeline_updated_at ? new Date(contactState.timeline_updated_at).toLocaleDateString() : "",
+        contact_first_name: contactState?.first_name || "",
+        contact_first_name_updated_channel: contactState?.first_name_updated_channel || "",
+        contact_last_name: contactState?.last_name || "",
+        contact_last_name_updated_channel: contactState?.last_name_updated_channel || "",
+        contact_email: contactState?.email || "",
+        contact_email_updated_channel: contactState?.email_updated_channel || "",
       },
     })
     return chat.chat_id

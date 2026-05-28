@@ -19,7 +19,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { addContactTags, patchContactCustomFields, getContact } from "@/lib/ghl-client"
 import { isAuthorized } from "../_lib"
-import { upsertCreditRange, upsertPropertyType, upsertLoanPurpose } from "@/lib/contact-state"
+import {
+  upsertCreditRange, upsertPropertyType, upsertLoanPurpose,
+  upsertLoanType, upsertPropertyAddress, upsertLoanAmount,
+  upsertTimeline, upsertName, upsertEmail,
+} from "@/lib/contact-state"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export const dynamic = "force-dynamic"
 
@@ -96,25 +101,54 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // Write qualifying facts to contact_state (M2 gateway)
+  // Write qualifying facts to contact_state (M1-M4 gateways)
   // Look up contact phone once — all upserts key on E.164
-  const creditRangeValue = body.form_data?.credit_range
-  const propertyTypeValue = body.form_data?.property_type
-  const loanPurposeValue = body.form_data?.loan_purpose
-  if ((creditRangeValue || propertyTypeValue || loanPurposeValue)) {
+  const fd = body.form_data || {}
+  const creditRangeValue = fd.credit_range
+  const propertyTypeValue = fd.property_type
+  const loanPurposeValue = fd.loan_purpose
+  const loanTypeValue = fd.loan_type
+  const propertyAddressValue = fd.property_address
+  const loanAmountValue = fd.loan_amount
+  const timelineValue = fd.timeline
+  const firstNameValue = fd.first_name
+  const lastNameValue = fd.last_name
+  const emailValue = fd.email
+  const rentValue = fd.estimated_monthly_rent
+
+  const hasAnyFact = creditRangeValue || propertyTypeValue || loanPurposeValue || loanTypeValue ||
+    propertyAddressValue || loanAmountValue || timelineValue || firstNameValue || lastNameValue || emailValue
+
+  if (hasAnyFact) {
     const contactRes = await getContact(contactId)
     const contactPhone = contactRes.data?.contact?.phone
     if (contactPhone) {
       const digits = contactPhone.replace(/\D/g, "")
       const e164 = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
-      if (creditRangeValue && typeof creditRangeValue === "string") {
-        upsertCreditRange(e164, creditRangeValue, "application").catch(() => {})
+      if (creditRangeValue && typeof creditRangeValue === "string") upsertCreditRange(e164, creditRangeValue, "application").catch(() => {})
+      if (propertyTypeValue && typeof propertyTypeValue === "string") upsertPropertyType(e164, propertyTypeValue, "application").catch(() => {})
+      if (loanPurposeValue && typeof loanPurposeValue === "string") upsertLoanPurpose(e164, loanPurposeValue, "application").catch(() => {})
+      if (loanTypeValue && typeof loanTypeValue === "string") upsertLoanType(e164, loanTypeValue, "application").catch(() => {})
+      if (propertyAddressValue && typeof propertyAddressValue === "string") upsertPropertyAddress(e164, propertyAddressValue, "application").catch(() => {})
+      if (loanAmountValue) { const amt = parseFloat(String(loanAmountValue).replace(/[^0-9.]/g, "")); if (!isNaN(amt)) upsertLoanAmount(e164, amt, "application").catch(() => {}) }
+      if (timelineValue && typeof timelineValue === "string") upsertTimeline(e164, timelineValue, "application").catch(() => {})
+      if ((firstNameValue || lastNameValue) && (typeof firstNameValue === "string" || typeof lastNameValue === "string")) {
+        upsertName(e164, String(firstNameValue || ""), String(lastNameValue || ""), "application").catch(() => {})
       }
-      if (propertyTypeValue && typeof propertyTypeValue === "string") {
-        upsertPropertyType(e164, propertyTypeValue, "application").catch(() => {})
+      if (emailValue && typeof emailValue === "string" && !emailValue.includes("@placeholder.preme")) {
+        upsertEmail(e164, emailValue, "application").catch(() => {})
       }
-      if (loanPurposeValue && typeof loanPurposeValue === "string") {
-        upsertLoanPurpose(e164, loanPurposeValue, "application").catch(() => {})
+
+      // Rent gap: estimated_monthly_rent → loan_applications.rental_gross_monthly
+      if (rentValue) {
+        const rentAmt = parseFloat(String(rentValue).replace(/[^0-9.]/g, ""))
+        if (!isNaN(rentAmt) && rentAmt > 0) {
+          const sb = createAdminClient()
+          const d = digits.slice(-10)
+          if (d.length === 10) {
+            sb.from("loan_applications").update({ rental_gross_monthly: rentAmt }).ilike("applicant_phone", `%${d}`).then(() => {}, () => {})
+          }
+        }
       }
     }
   }

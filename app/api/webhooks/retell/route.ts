@@ -12,15 +12,17 @@ import { createAdminClient, createZentrxClient } from "@/lib/supabase/admin"
 import { triggerEmailOnlyFollowUp, triggerLeadFollowUp, type LeadForFollowUp } from "@/lib/lead-followup"
 // New 13-step Preme cadence — auto-cancel hook
 import { cancelRemainingCadence } from "@/lib/preme-cadence"
-import { upsertCreditRange, upsertPropertyType, upsertLoanPurpose } from "@/lib/contact-state"
+import {
+  upsertCreditRange, upsertPropertyType, upsertLoanPurpose,
+  upsertLoanType, upsertPropertyAddress, upsertLoanAmount,
+  upsertTimeline, upsertName, upsertEmail,
+} from "@/lib/contact-state"
 
 // Allow up to 120s — recording downloads from Retell can be slow
 export const maxDuration = 120
 
 const MC_URL = process.env.MC_WEBHOOK_URL || "http://localhost:3000"
 const MC_AUTH = "Basic YWRtaW46Mll1bmdueWFsbHMh"
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID
 
 // Internal team numbers used for role-play training — skip lead creation & alerts
 const TRAINING_PHONES = new Set([
@@ -581,31 +583,7 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // --- Telegram notification for qualified leads ---
-        if (isQualified) {
-          sendLeadAlert({
-            callerName,
-            callerPhone,
-            temperature: leadTemperature,
-            score,
-            loanType,
-            propertyType,
-            propertyAddress,
-            loanAmount,
-            propertyValue,
-            creditScoreRange,
-            timeline,
-            hasEntity,
-            experienceLevel,
-            wantsCallback,
-            objections,
-            callerIntent,
-            recordingUrl: call.recording_url || null,
-            callSummary: call.call_analysis?.call_summary || null,
-          })
-        }
-
-        // --- contact_state: write qualifying facts (M2 gateway) ---
+        // --- contact_state: write qualifying facts (M1-M4 gateways) ---
         {
           const leadPhone = call.direction === "outbound"
             ? (call.to_number || callerPhone)
@@ -616,6 +594,16 @@ export async function POST(request: NextRequest) {
             if (creditScoreRange) upsertCreditRange(e164, creditScoreRange, "voice").catch(() => {})
             if (propertyType) upsertPropertyType(e164, propertyType, "voice").catch(() => {})
             if (loanPurpose) upsertLoanPurpose(e164, loanPurpose, "voice").catch(() => {})
+            if (loanType) upsertLoanType(e164, loanType, "voice").catch(() => {})
+            if (propertyAddress) upsertPropertyAddress(e164, propertyAddress, "voice").catch(() => {})
+            if (loanAmount) { const amt = parseFloat(loanAmount.replace(/[^0-9.]/g, "")); if (!isNaN(amt)) upsertLoanAmount(e164, amt, "voice").catch(() => {}) }
+            if (timeline) upsertTimeline(e164, timeline, "voice").catch(() => {})
+            const firstName = analysis.first_name || callerName.split(" ")[0] || ""
+            const lastName = analysis.last_name || callerName.split(" ").slice(1).join(" ") || ""
+            if (firstName || lastName) upsertName(e164, firstName, lastName, "voice").catch(() => {})
+            if (analysis.email && !String(analysis.email).includes("@placeholder.preme")) {
+              upsertEmail(e164, String(analysis.email), "voice").catch(() => {})
+            }
           }
         }
 
@@ -719,82 +707,6 @@ function logToMC(eventType: string, data: Record<string, unknown>) {
       ...data,
     }),
   }).catch(() => {})
-}
-
-/** Send iMessage alert for qualified leads via AppleScript on Mac mini */
-function sendLeadAlert(data: {
-  callerName: string
-  callerPhone: string
-  temperature: string | null
-  score: number | null
-  loanType: string | null
-  propertyType: string | null
-  propertyAddress: string | null
-  loanAmount: string | null
-  propertyValue: string | null
-  creditScoreRange: string | null
-  timeline: string | null
-  hasEntity: boolean
-  experienceLevel: string | null
-  wantsCallback: boolean
-  objections: string | null
-  callerIntent: string | null
-  recordingUrl: string | null
-  callSummary: string | null
-}) {
-  const lines = [
-    `PREME — New Qualified Lead`,
-    ``,
-    `${data.callerName}`,
-    `Phone: ${data.callerPhone}`,
-    `Temp: ${data.temperature || "Unknown"}${data.score ? ` (${data.score}/100)` : ""}`,
-    ``,
-    data.loanType ? `Loan: ${data.loanType}` : null,
-    data.propertyType ? `Property: ${data.propertyType}` : null,
-    data.loanAmount ? `Amount: ${data.loanAmount}` : null,
-    data.propertyValue ? `Value: ${data.propertyValue}` : null,
-    data.creditScoreRange ? `Credit: ${data.creditScoreRange}` : null,
-    data.timeline ? `Timeline: ${data.timeline}` : null,
-    data.wantsCallback ? `WANTS CALLBACK` : null,
-    ``,
-    data.callSummary ? data.callSummary : null,
-  ].filter(Boolean).join("\n")
-
-  const OWNER_PHONE = "9453088322"
-
-  // Send via iMessage (AppleScript on local Mac)
-  const escaped = lines.replace(/"/g, '\\"').replace(/\n/g, "\\n")
-  const script = `
-    tell application "Messages"
-      set targetService to 1st account whose service type = iMessage
-      set targetBuddy to participant "+1${OWNER_PHONE}" of targetService
-      send "${escaped}" to targetBuddy
-    end tell
-  `
-
-  import("child_process").then(({ exec }) => {
-    exec(`osascript -e '${script.replace(/'/g, "'\\''")}'`, (err) => {
-      if (err) {
-        console.error("[retell-preme] iMessage failed, falling back to Telegram:", err.message)
-        // Fallback to Telegram if iMessage fails (e.g. running on Vercel not Mac)
-        if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
-          fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              chat_id: TELEGRAM_CHAT_ID,
-              text: lines,
-              disable_web_page_preview: true,
-            }),
-          }).catch(() => {})
-        }
-      } else {
-        console.log("[retell-preme] iMessage sent to owner")
-      }
-    })
-  }).catch((err) => {
-    console.error("[retell-preme] Failed to import child_process:", err)
-  })
 }
 
 /**

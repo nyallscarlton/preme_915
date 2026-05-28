@@ -180,112 +180,13 @@ async function sendStatusEmail(params: StatusNotificationParams): Promise<boolea
 }
 
 /**
- * Send a Telegram alert for high-priority status changes (approved/funded).
- */
-async function sendStatusTelegram(params: StatusNotificationParams): Promise<void> {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN
-  const chatId = process.env.TELEGRAM_CHAT_ID
-  if (!botToken || !chatId) return
-
-  const emoji = params.newStatus === "approved" ? "\u2705" : params.newStatus === "funded" ? "\uD83D\uDCB0" : "\uD83D\uDCCB"
-
-  const lines = [
-    `${emoji} *LOAN STATUS UPDATE*`,
-    ``,
-    `*${params.applicationNumber}*`,
-    `Borrower: ${params.name || "Unknown"}`,
-    `Status: ${params.oldStatus.replace(/_/g, " ")} → *${params.newStatus.replace(/_/g, " ")}*`,
-  ]
-
-  try {
-    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: lines.join("\n"),
-        parse_mode: "Markdown",
-        disable_web_page_preview: true,
-      }),
-    })
-  } catch (err) {
-    console.error("[notifications] Telegram error:", err)
-  }
-}
-
-/**
- * Main entry point — sends email notification (always) and Telegram (for approved/funded).
+ * Main entry point — sends email notification.
  * Designed to be called fire-and-forget from the PATCH handler.
  */
 export async function sendStatusNotification(params: StatusNotificationParams): Promise<void> {
-  const promises: Promise<unknown>[] = [sendStatusEmail(params)]
-
-  if (["approved", "funded"].includes(params.newStatus)) {
-    promises.push(sendStatusTelegram(params))
-  }
-
-  await Promise.allSettled(promises)
+  await sendStatusEmail(params)
 }
 
-// ---------------------------------------------------------------------------
-// New Application Telegram Alert
-// ---------------------------------------------------------------------------
-
-interface NewApplicationAlert {
-  applicantName: string
-  applicantPhone: string
-  applicantEmail: string
-  loanAmount: string | number | null
-  propertyType: string | null
-  propertyAddress: string | null
-  creditScore: string | null
-  loanPurpose: string | null
-  applicationNumber: string
-}
-
-export async function sendNewApplicationTelegram(app: NewApplicationAlert): Promise<void> {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN
-  const chatId = process.env.TELEGRAM_CHAT_ID
-  if (!botToken || !chatId) return
-
-  const amount = app.loanAmount
-    ? `$${Number(app.loanAmount).toLocaleString("en-US")}`
-    : "Not specified"
-  const property = app.propertyAddress || "Address pending"
-  const propType = app.propertyType || "Not specified"
-  const credit = app.creditScore || "Not provided"
-  const purpose = app.loanPurpose || "Not specified"
-
-  const lines = [
-    `\u{1F3E6} *NEW APPLICATION*`,
-    ``,
-    `${app.applicantName}`,
-    `\u{1F4DE} ${app.applicantPhone}`,
-    `\u{1F4E7} ${app.applicantEmail}`,
-    ``,
-    `\u{1F4B0} Loan: ${amount}`,
-    `\u{1F3E0} ${propType} — ${property}`,
-    `\u{1F4CA} Credit: ${credit}`,
-    `\u{1F3AF} Purpose: ${purpose}`,
-    ``,
-    `Ref: ${app.applicationNumber}`,
-  ]
-
-  try {
-    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: lines.join("\n"),
-        parse_mode: "Markdown",
-        disable_web_page_preview: true,
-      }),
-    })
-  } catch (err) {
-    console.error("[notifications] New application Telegram error:", err)
-  }
-}
 
 const PREME_CHANNEL_ID = "C0APBULDQS1"
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || "xoxb-10810278616865-10793966886901-IkgPJuagaGNceBA2WFIysKbC"

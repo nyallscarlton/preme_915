@@ -10,7 +10,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getBaseUrl } from "@/lib/config"
 import { sendPremeSms } from "@/lib/preme-sms"
-import { upsertCreditRange, upsertPropertyType, upsertLoanPurpose } from "@/lib/contact-state"
+import {
+  upsertCreditRange, upsertPropertyType, upsertLoanPurpose,
+  upsertLoanType, upsertPropertyAddress, upsertLoanAmount,
+  upsertTimeline, upsertName, upsertEmail,
+} from "@/lib/contact-state"
 
 // Internal team numbers used for role-play training — never create leads for these
 const TRAINING_PHONES = new Set([
@@ -167,12 +171,18 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Write qualifying facts to contact_state (M2 gateway)
+    // Write qualifying facts to contact_state (M1-M4 gateways)
     if (phone) {
       const e164 = phone.startsWith("+") ? phone : `+1${phone.replace(/\D/g, "")}`
       if (credit_score) upsertCreditRange(e164, credit_score, "voice").catch(() => {})
       if (property_type) upsertPropertyType(e164, property_type, "voice").catch(() => {})
       if (loan_purpose) upsertLoanPurpose(e164, loan_purpose, "voice").catch(() => {})
+      if (loan_type) upsertLoanType(e164, loan_type, "voice").catch(() => {})
+      if (property_address) upsertPropertyAddress(e164, property_address, "voice").catch(() => {})
+      if (estimated_amount) { const amt = parseFloat(String(estimated_amount).replace(/[^0-9.]/g, "")); if (!isNaN(amt)) upsertLoanAmount(e164, amt, "voice").catch(() => {}) }
+      if (timeline) upsertTimeline(e164, timeline, "voice").catch(() => {})
+      if (first_name || last_name) upsertName(e164, first_name || "", last_name || "", "voice").catch(() => {})
+      if (email && !email.includes("@placeholder.preme")) upsertEmail(e164, email, "voice").catch(() => {})
     }
 
     const applyUrl = `${getBaseUrl()}/apply?guest=1&token=${guestToken}`

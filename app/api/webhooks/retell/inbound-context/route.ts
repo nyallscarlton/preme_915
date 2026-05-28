@@ -153,35 +153,45 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       call_inbound: {
         dynamic_variables: {
-          first_name: firstName || "there",
-          last_name: lastName,
+          first_name: firstName || contactState?.first_name || "there",
+          last_name: lastName || contactState?.last_name || "",
           lead_context: leadContext,
-          loan_type: loanType || "real estate financing",
-          loan_amount: loanAmount,
-          property_address: propertyAddress,
+          // app-level facts merged with contact_state fallback
+          loan_type: loanType || contactState?.loan_type || "real estate financing",
+          loan_amount: loanAmount || (contactState?.loan_amount ? String(contactState.loan_amount) : ""),
+          property_address: propertyAddress || contactState?.property_address || "",
           application_status: applicationStatus,
-          lead_email: leadEmail,
+          lead_email: leadEmail || contactState?.email || "",
           lead_phone: leadPhone,
           lead_message: leadMessage,
           lead_source: leadSource,
           conversation_history: conversationHistory,
           opening_message: openingMessage,
-          // contact_state facts (M2: credit_range + property_type + loan_purpose)
+          // contact_state facts (M1-M4: all 10 qualifying facts with metadata)
           credit_range: contactState?.credit_range || "",
           credit_range_updated_channel: contactState?.credit_range_updated_channel || "",
-          credit_range_updated_at: contactState?.credit_range_updated_at
-            ? new Date(contactState.credit_range_updated_at).toLocaleDateString()
-            : "",
+          credit_range_updated_at: contactState?.credit_range_updated_at ? new Date(contactState.credit_range_updated_at).toLocaleDateString() : "",
           property_type: contactState?.property_type || "",
           property_type_updated_channel: contactState?.property_type_updated_channel || "",
-          property_type_updated_at: contactState?.property_type_updated_at
-            ? new Date(contactState.property_type_updated_at).toLocaleDateString()
-            : "",
+          property_type_updated_at: contactState?.property_type_updated_at ? new Date(contactState.property_type_updated_at).toLocaleDateString() : "",
           loan_purpose: contactState?.loan_purpose || "",
           loan_purpose_updated_channel: contactState?.loan_purpose_updated_channel || "",
-          loan_purpose_updated_at: contactState?.loan_purpose_updated_at
-            ? new Date(contactState.loan_purpose_updated_at).toLocaleDateString()
-            : "",
+          loan_purpose_updated_at: contactState?.loan_purpose_updated_at ? new Date(contactState.loan_purpose_updated_at).toLocaleDateString() : "",
+          loan_type_updated_channel: contactState?.loan_type_updated_channel || "",
+          loan_type_updated_at: contactState?.loan_type_updated_at ? new Date(contactState.loan_type_updated_at).toLocaleDateString() : "",
+          property_address_updated_channel: contactState?.property_address_updated_channel || "",
+          property_address_updated_at: contactState?.property_address_updated_at ? new Date(contactState.property_address_updated_at).toLocaleDateString() : "",
+          loan_amount_updated_channel: contactState?.loan_amount_updated_channel || "",
+          loan_amount_updated_at: contactState?.loan_amount_updated_at ? new Date(contactState.loan_amount_updated_at).toLocaleDateString() : "",
+          timeline: contactState?.timeline || "",
+          timeline_updated_channel: contactState?.timeline_updated_channel || "",
+          timeline_updated_at: contactState?.timeline_updated_at ? new Date(contactState.timeline_updated_at).toLocaleDateString() : "",
+          contact_first_name: contactState?.first_name || "",
+          contact_first_name_updated_channel: contactState?.first_name_updated_channel || "",
+          contact_last_name: contactState?.last_name || "",
+          contact_last_name_updated_channel: contactState?.last_name_updated_channel || "",
+          contact_email: contactState?.email || "",
+          contact_email_updated_channel: contactState?.email_updated_channel || "",
         },
       },
     })

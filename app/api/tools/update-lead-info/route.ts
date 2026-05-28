@@ -8,7 +8,11 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { upsertCreditRange, upsertPropertyType, upsertLoanPurpose } from "@/lib/contact-state"
+import {
+  upsertCreditRange, upsertPropertyType, upsertLoanPurpose,
+  upsertLoanType, upsertPropertyAddress, upsertLoanAmount,
+  upsertTimeline, upsertName, upsertEmail,
+} from "@/lib/contact-state"
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,12 +48,8 @@ export async function POST(request: NextRequest) {
       if (args.first_name) leadUpdates.first_name = args.first_name
       if (args.last_name) leadUpdates.last_name = args.last_name
       if (args.email) leadUpdates.email = args.email.toLowerCase()
-      if (args.loan_type) leadUpdates.loan_type = args.loan_type
-      if (args.loan_purpose) leadUpdates.loan_purpose = args.loan_purpose
-      if (args.property_type) leadUpdates.property_type = args.property_type
-      if (args.loan_amount) leadUpdates.loan_amount = args.loan_amount
-      if (args.property_address) leadUpdates.property_address = args.property_address
       if (args.new_phone) leadUpdates.phone = args.new_phone
+      // loan_type, loan_amount, property_address columns do not exist on leads — routed through gateways below
 
       if (Object.keys(leadUpdates).length > 0) {
         leadUpdates.updated_at = new Date().toISOString()
@@ -70,21 +70,10 @@ export async function POST(request: NextRequest) {
     if (app) {
       const appUpdates: Record<string, unknown> = {}
 
-      if (args.first_name || args.last_name) {
-        const newFirst = args.first_name || app.applicant_name?.split(" ")[0] || ""
-        const newLast = args.last_name || app.applicant_name?.split(" ").slice(1).join(" ") || ""
-        appUpdates.applicant_name = `${newFirst} ${newLast}`.trim()
-      }
-      if (args.email) appUpdates.applicant_email = args.email.toLowerCase()
-      if (args.loan_type) appUpdates.loan_type = args.loan_type
       if (args.loan_purpose) appUpdates.loan_purpose = args.loan_purpose
       if (args.property_type) appUpdates.property_type = args.property_type
-      if (args.property_address) appUpdates.property_address = args.property_address
-      if (args.loan_amount) {
-        const parsed = parseFloat(String(args.loan_amount).replace(/[^0-9.]/g, ""))
-        if (!isNaN(parsed)) appUpdates.loan_amount = parsed
-      }
       if (args.new_phone) appUpdates.applicant_phone = args.new_phone
+      // name, email, loan_type, loan_amount, property_address are handled by gateways below
 
       if (Object.keys(appUpdates).length > 0) {
         await supabase.from("loan_applications").update(appUpdates).eq("id", app.id)
@@ -92,21 +81,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Write qualifying facts to contact_state (M2 gateway)
+    // Write qualifying facts to contact_state (M1-M4 gateways)
     if (digits.length === 10) {
       const e164 = `+1${digits}`
-      if (args.credit_range) {
-        upsertCreditRange(e164, args.credit_range, "voice").catch(() => {})
-        updated.push("contact_state: credit_range")
-      }
-      if (args.property_type) {
-        upsertPropertyType(e164, args.property_type, "voice").catch(() => {})
-        updated.push("contact_state: property_type")
-      }
-      if (args.loan_purpose) {
-        upsertLoanPurpose(e164, args.loan_purpose, "voice").catch(() => {})
-        updated.push("contact_state: loan_purpose")
-      }
+      if (args.credit_range) { upsertCreditRange(e164, args.credit_range, "voice").catch(() => {}); updated.push("contact_state: credit_range") }
+      if (args.property_type) { upsertPropertyType(e164, args.property_type, "voice").catch(() => {}); updated.push("contact_state: property_type") }
+      if (args.loan_purpose) { upsertLoanPurpose(e164, args.loan_purpose, "voice").catch(() => {}); updated.push("contact_state: loan_purpose") }
+      if (args.loan_type) { upsertLoanType(e164, args.loan_type, "voice").catch(() => {}); updated.push("contact_state: loan_type") }
+      if (args.property_address) { upsertPropertyAddress(e164, args.property_address, "voice").catch(() => {}); updated.push("contact_state: property_address") }
+      if (args.loan_amount) { const amt = parseFloat(String(args.loan_amount).replace(/[^0-9.]/g, "")); if (!isNaN(amt)) { upsertLoanAmount(e164, amt, "voice").catch(() => {}); updated.push("contact_state: loan_amount") } }
+      if (args.timeline) { upsertTimeline(e164, args.timeline, "voice").catch(() => {}); updated.push("contact_state: timeline") }
+      if (args.first_name || args.last_name) { upsertName(e164, args.first_name || "", args.last_name || "", "voice").catch(() => {}); updated.push("contact_state: name") }
+      if (args.email && !String(args.email).includes("@placeholder.preme")) { upsertEmail(e164, args.email, "voice").catch(() => {}); updated.push("contact_state: email") }
     }
 
     if (updated.length === 0) {
