@@ -19,7 +19,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { addContactTags, patchContactCustomFields, getContact } from "@/lib/ghl-client"
 import { isAuthorized } from "../_lib"
-import { upsertCreditRange, upsertPropertyType } from "@/lib/contact-state"
+import { upsertCreditRange, upsertPropertyType, upsertLoanPurpose } from "@/lib/contact-state"
 
 export const dynamic = "force-dynamic"
 
@@ -97,10 +97,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   // Write qualifying facts to contact_state (M2 gateway)
-  // Look up contact phone once — both upserts key on E.164
+  // Look up contact phone once — all upserts key on E.164
   const creditRangeValue = body.form_data?.credit_range
   const propertyTypeValue = body.form_data?.property_type
-  if ((creditRangeValue || propertyTypeValue)) {
+  const loanPurposeValue = body.form_data?.loan_purpose
+  if ((creditRangeValue || propertyTypeValue || loanPurposeValue)) {
     const contactRes = await getContact(contactId)
     const contactPhone = contactRes.data?.contact?.phone
     if (contactPhone) {
@@ -111,6 +112,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
       if (propertyTypeValue && typeof propertyTypeValue === "string") {
         upsertPropertyType(e164, propertyTypeValue, "application").catch(() => {})
+      }
+      if (loanPurposeValue && typeof loanPurposeValue === "string") {
+        upsertLoanPurpose(e164, loanPurposeValue, "application").catch(() => {})
       }
     }
   }

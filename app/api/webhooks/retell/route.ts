@@ -12,7 +12,7 @@ import { createAdminClient, createZentrxClient } from "@/lib/supabase/admin"
 import { triggerEmailOnlyFollowUp, triggerLeadFollowUp, type LeadForFollowUp } from "@/lib/lead-followup"
 // New 13-step Preme cadence — auto-cancel hook
 import { cancelRemainingCadence } from "@/lib/preme-cadence"
-import { upsertCreditRange, upsertPropertyType } from "@/lib/contact-state"
+import { upsertCreditRange, upsertPropertyType, upsertLoanPurpose } from "@/lib/contact-state"
 
 // Allow up to 120s — recording downloads from Retell can be slow
 export const maxDuration = 120
@@ -367,6 +367,7 @@ export async function POST(request: NextRequest) {
         const propertyType: string | null = analysis.property_type || null
         const propertyAddress: string | null = analysis.property_address || null
         const loanType: string | null = analysis.loan_type_confirmed || null
+        const loanPurpose: string | null = analysis.loan_purpose || null
         const loanAmount: string | null = analysis.estimated_loan_amount || null
         const propertyValue: string | null = analysis.estimated_value || null
         const timeline: string | null = analysis.timeline || null
@@ -421,6 +422,7 @@ export async function POST(request: NextRequest) {
                   application_number: appNumber,
                   status: "submitted",
                   loan_type: loanType || null,
+                  loan_purpose: loanPurpose || null,
                   property_type: propertyType || null,
                   loan_amount: loanAmount ? parseFloat(loanAmount.replace(/[^0-9.]/g, "")) : null,
                   property_address: propertyAddress || null,
@@ -613,6 +615,7 @@ export async function POST(request: NextRequest) {
             const e164 = digits.startsWith("1") ? `+${digits}` : `+1${digits}`
             if (creditScoreRange) upsertCreditRange(e164, creditScoreRange, "voice").catch(() => {})
             if (propertyType) upsertPropertyType(e164, propertyType, "voice").catch(() => {})
+            if (loanPurpose) upsertLoanPurpose(e164, loanPurpose, "voice").catch(() => {})
           }
         }
 

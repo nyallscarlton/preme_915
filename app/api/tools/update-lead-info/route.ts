@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { upsertCreditRange, upsertPropertyType } from "@/lib/contact-state"
+import { upsertCreditRange, upsertPropertyType, upsertLoanPurpose } from "@/lib/contact-state"
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       if (args.last_name) leadUpdates.last_name = args.last_name
       if (args.email) leadUpdates.email = args.email.toLowerCase()
       if (args.loan_type) leadUpdates.loan_type = args.loan_type
+      if (args.loan_purpose) leadUpdates.loan_purpose = args.loan_purpose
       if (args.property_type) leadUpdates.property_type = args.property_type
       if (args.loan_amount) leadUpdates.loan_amount = args.loan_amount
       if (args.property_address) leadUpdates.property_address = args.property_address
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
       }
       if (args.email) appUpdates.applicant_email = args.email.toLowerCase()
       if (args.loan_type) appUpdates.loan_type = args.loan_type
+      if (args.loan_purpose) appUpdates.loan_purpose = args.loan_purpose
       if (args.property_type) appUpdates.property_type = args.property_type
       if (args.property_address) appUpdates.property_address = args.property_address
       if (args.loan_amount) {
@@ -100,6 +102,10 @@ export async function POST(request: NextRequest) {
       if (args.property_type) {
         upsertPropertyType(e164, args.property_type, "voice").catch(() => {})
         updated.push("contact_state: property_type")
+      }
+      if (args.loan_purpose) {
+        upsertLoanPurpose(e164, args.loan_purpose, "voice").catch(() => {})
+        updated.push("contact_state: loan_purpose")
       }
     }
 

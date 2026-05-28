@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getBaseUrl } from "@/lib/config"
 import { sendPremeSms } from "@/lib/preme-sms"
-import { upsertCreditRange, upsertPropertyType } from "@/lib/contact-state"
+import { upsertCreditRange, upsertPropertyType, upsertLoanPurpose } from "@/lib/contact-state"
 
 // Internal team numbers used for role-play training — never create leads for these
 const TRAINING_PHONES = new Set([
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
       last_name: rawLastName,
       email: rawEmail,
       loan_type,
+      loan_purpose,
       property_address,
       estimated_amount,
       credit_score,
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
       application_number: appNumber,
       status: "sent",
       loan_type: loan_type || null,
-      loan_purpose: null,
+      loan_purpose: loan_purpose || null,
       property_address: property_address || null,
       property_type: property_type || null,
       loan_amount: estimated_amount ? parseFloat(String(estimated_amount).replace(/[^0-9.]/g, "")) : null,
@@ -171,6 +172,7 @@ export async function POST(request: NextRequest) {
       const e164 = phone.startsWith("+") ? phone : `+1${phone.replace(/\D/g, "")}`
       if (credit_score) upsertCreditRange(e164, credit_score, "voice").catch(() => {})
       if (property_type) upsertPropertyType(e164, property_type, "voice").catch(() => {})
+      if (loan_purpose) upsertLoanPurpose(e164, loan_purpose, "voice").catch(() => {})
     }
 
     const applyUrl = `${getBaseUrl()}/apply?guest=1&token=${guestToken}`

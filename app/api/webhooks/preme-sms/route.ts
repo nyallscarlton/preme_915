@@ -129,7 +129,7 @@ async function getOrCreateRileyChat(
         first_name: firstName || "there",
         lead_phone: e164,
         conversation_history: conversationHistory,
-        // contact_state facts (M2: credit_range + property_type)
+        // contact_state facts (M2: credit_range + property_type + loan_purpose)
         credit_range: contactState?.credit_range || "",
         credit_range_updated_channel: contactState?.credit_range_updated_channel || "",
         credit_range_updated_at: contactState?.credit_range_updated_at
@@ -139,6 +139,11 @@ async function getOrCreateRileyChat(
         property_type_updated_channel: contactState?.property_type_updated_channel || "",
         property_type_updated_at: contactState?.property_type_updated_at
           ? new Date(contactState.property_type_updated_at).toLocaleDateString()
+          : "",
+        loan_purpose: contactState?.loan_purpose || "",
+        loan_purpose_updated_channel: contactState?.loan_purpose_updated_channel || "",
+        loan_purpose_updated_at: contactState?.loan_purpose_updated_at
+          ? new Date(contactState.loan_purpose_updated_at).toLocaleDateString()
           : "",
       },
     })
