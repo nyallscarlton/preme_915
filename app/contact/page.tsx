@@ -305,12 +305,16 @@ function ContactPageInner() {
                           <input
                             type="checkbox"
                             id="tcpa_consent"
+                            name="tcpa_consent"
                             checked={formData.tcpa_consent}
                             onChange={(e) => setFormData((prev) => ({ ...prev, tcpa_consent: e.target.checked }))}
                             className="mt-1 h-4 w-4 rounded border-gray-700 text-[#997100] focus:ring-[#997100] accent-[#997100]"
                           />
                           <label htmlFor="tcpa_consent" className="text-xs text-gray-400 leading-relaxed cursor-pointer">
-                            By checking this box, I agree to receive SMS text messages from Preme Home Loans at the phone number provided, including loan status updates, document requests, and appointment reminders. Consent is not a condition of purchase. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out or HELP for help.
+                            By checking this box, I agree to receive SMS text messages from Preme Home Loans LLC at the phone number provided, including loan status updates, document requests, and appointment reminders. This is optional and is not required to submit this form. Consent is not a condition of purchase. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out or HELP for help. View our{" "}
+                            <a href="/privacy" className="text-[#997100] underline" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                            {" "}and{" "}
+                            <a href="/terms" className="text-[#997100] underline" target="_blank" rel="noopener noreferrer">Terms of Service</a>.
                           </label>
                         </div>
 
