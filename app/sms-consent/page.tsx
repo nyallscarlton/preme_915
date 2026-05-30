@@ -38,9 +38,10 @@ export default function SmsConsentPage() {
             <h2 className="text-2xl font-semibold text-black mb-4">Consent Disclosure</h2>
             <p>
               By checking the opt-in box on any Preme form, you agree to receive SMS text messages from
-              Preme Home Loans at the phone number provided, including loan status updates, document requests,
-              and appointment reminders. Consent is not a condition of purchase. Message frequency varies.
-              Msg &amp; data rates may apply. Reply STOP to opt out or HELP for help.
+              Preme Home Loans LLC at the phone number provided, including loan status updates, document requests,
+              and appointment reminders. This is optional and is not required to submit this form. Consent is not
+              a condition of purchase. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to
+              opt out or HELP for help.
             </p>
           </section>
 
@@ -55,10 +56,11 @@ export default function SmsConsentPage() {
                   className="mt-1 h-4 w-4 rounded border-gray-300 accent-[#997100]"
                 />
                 <span className="text-xs text-gray-500 leading-relaxed">
-                  By checking this box, I agree to receive SMS text messages from Preme Home Loans at the phone
-                  number provided, including loan status updates, document requests, and appointment reminders.
-                  Consent is not a condition of purchase. Message frequency varies. Msg &amp; data rates may apply.
-                  Reply STOP to opt out or HELP for help.{" "}
+                  By checking this box, I agree to receive SMS text messages from Preme Home Loans LLC at the
+                  phone number provided, including loan status updates, document requests, and appointment
+                  reminders. This is optional and is not required to submit this form. Consent is not a condition
+                  of purchase. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out
+                  or HELP for help.{" "}
                   <span className="text-[#997100] underline">SMS Terms</span>{" "}·{" "}
                   <span className="text-[#997100] underline">Privacy Policy</span>{" "}·{" "}
                   <span className="text-[#997100] underline">Terms of Service</span>
