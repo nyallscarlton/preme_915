@@ -10,50 +10,14 @@ function getRetellClient(): Retell | null {
 }
 
 /**
- * Pick an outbound from-number from the rotation pool.
- *
- * Reads RETELL_OUTBOUND_POOL (comma-separated). Random selection across the
- * pool spreads call volume so no single number gets carrier-flagged as
- * "Spam Likely" — rotation is the main reason healthy pools get 2-3x better
- * connect rates than single-number setups.
- *
- * On 2026-04-07 the previous fallback to RETELL_PREME_PHONE_NUMBER
- * (+14709425787) was removed because that number was confirmed Spam-Likely
- * by carriers — Nyalls saw the label on his own phone. The fallback was
- * silently using the burned number whenever the pool was misconfigured.
- * Now we throw instead of falling back.
- *
- * .map(trim) defends against stray whitespace/newlines in env values
- * (Vercel env values have had literal "\n" appended in the past).
- *
- * TODO(reliability): build smarter rotation that auto-evicts a number from
- * the pool after 3 consecutive Retell 404s ("Item +1xxx not found from
- * phone-number"). On 2026-03-31 a single retired number caused 460 sequence
- * call failures in one day because the rotator kept retrying it.
- *
- * TODO(stickiness): for callback continuity, consider remembering the
- * from_number used per lead so a returning callback hits the same caller ID.
- * Requires a per-lead lookup against the call history table.
+ * Return the pinned Preme outbound number (+14709425787).
+ * Previously used a rotating pool (RETELL_OUTBOUND_POOL). Pool removed 2026-06-01:
+ * +5787 is brand-registered and clean; single-number identity simplifies routing,
+ * eliminates caller-ID fragmentation, and avoids pool-retirement failures (460
+ * sequence failures on 2026-03-31 from one retired pool number).
  */
-// Exported variant used by ported zentryx/lib/sequences.ts. Takes a leadId
-// arg for compatibility but currently just rotates randomly — sticky-number
-// assignment per lead is a future enhancement.
 export async function pickOutboundNumber(_leadId?: string): Promise<string> {
-  return pickOutboundNumberSync()
-}
-
-function pickOutboundNumberSync(): string {
-  const pool = (process.env.RETELL_OUTBOUND_POOL || "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-  if (pool.length === 0) {
-    throw new Error(
-      "RETELL_OUTBOUND_POOL is empty — cannot place outbound call. " +
-      "Refusing to fall back to RETELL_PREME_PHONE_NUMBER (+14709425787, confirmed Spam-Likely 2026-04-07)."
-    )
-  }
-  return pool[Math.floor(Math.random() * pool.length)]
+  return process.env.RETELL_PHONE_NUMBER || "+14709425787"
 }
 
 /**
@@ -98,17 +62,7 @@ export async function triggerOutboundCall(lead: {
     return { error: "RETELL_PREME_AGENT_ID not configured", code: "no_agent_id" }
   }
 
-  // Use the rotation pool (RETELL_OUTBOUND_POOL) — never the burned +14709425787.
-  // pickOutboundNumber() throws if the pool is empty rather than falling back.
-  let fromNumber: string
-  try {
-    fromNumber = pickOutboundNumberSync()
-  } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : String(err),
-      code: "no_pool",
-    }
-  }
+  const fromNumber = process.env.RETELL_PHONE_NUMBER || "+14709425787"
 
   const phone = lead.phone.replace(/\D/g, "")
   const e164 = phone.startsWith("1") ? `+${phone}` : `+1${phone}`

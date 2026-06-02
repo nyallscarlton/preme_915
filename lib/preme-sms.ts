@@ -22,7 +22,7 @@ import {
 
 export const PREME_SMS_FROM = "+14709425787"
 // Chat agent that handles SMS conversations (get-chat-agent endpoint, not get-agent)
-const PREME_SMS_AGENT_ID = "agent_ce0308f227491edfd0606f0aef"
+const PREME_SMS_AGENT_ID = "agent_568e41041d8d76ee34b4f28d14"
 
 export interface PremeSmsArgs {
   toPhone: string

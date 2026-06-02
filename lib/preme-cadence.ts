@@ -137,23 +137,11 @@ export function shouldSkipLead(lead: { phone?: string | null; status?: string | 
 /**
  * Pick a healthy outbound number from the rotation pool.
  *
- * The fallback `RETELL_PREME_PHONE_NUMBER` (+14709425787) is the main Preme
- * INBOUND number, which was confirmed Spam-Likely by carriers on 2026-04-07.
- * It must NEVER be returned for outbound use. If the pool is empty, throw
- * rather than silently fall back to the burned number.
+ * +14709425787 is the single Preme outbound number (brand-registered, CNAM clean
+ * as of 2026-06-01). Pool rotation removed — single-number identity per company.
  */
 export function pickPremeOutboundNumber(): string {
-  const pool = (process.env.RETELL_OUTBOUND_POOL || "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-  if (pool.length === 0) {
-    throw new Error(
-      "RETELL_OUTBOUND_POOL is empty — cannot place outbound call. " +
-      "Refusing to fall back to +14709425787 (confirmed Spam-Likely)."
-    )
-  }
-  return pool[Math.floor(Math.random() * pool.length)]
+  return process.env.RETELL_PHONE_NUMBER || "+14709425787"
 }
 
 function renderTemplate(body: string, lead: { first_name?: string; last_name?: string; loan_type?: string | null; email?: string }) {

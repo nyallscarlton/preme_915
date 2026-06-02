@@ -241,7 +241,7 @@ async function sendRetellSms(to: string, message: string) {
   await client.chat.createSMSChat({
     from_number: "+14709425787", // Preme's Retell number — hardcoded per policy
     to_number: to,
-    retell_llm_dynamic_variables: { initial_message: message },
+    retell_llm_dynamic_variables: { initial_message: message, opening_message: message },
     metadata: { source: "app_followup_cron" },
   })
 }

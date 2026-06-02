@@ -25,6 +25,7 @@ export async function sendRetellSms(to: string, body: string): Promise<string> {
     to_number: to,
     retell_llm_dynamic_variables: {
       initial_message: body,
+      opening_message: body,
     },
     metadata: { source: "sequence_automation" },
   })
@@ -50,10 +51,7 @@ export async function triggerDoubleDialCall(
   metadata?: Record<string, string>,
   overrideFromNumber?: string
 ): Promise<string> {
-  // .map(trim) defends against stray whitespace/newlines in the env var value
-  // (a literal "\n" in RETELL_OUTBOUND_POOL on Vercel poisoned the last entry on 2026-03-31)
-  const pool = (process.env.RETELL_OUTBOUND_POOL || process.env.RETELL_OUTBOUND_PHONE_NUMBER || "").split(",").map(s => s.trim()).filter(Boolean)
-  const fromNumber = overrideFromNumber || (pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : process.env.RETELL_PHONE_NUMBER || "")
+  const fromNumber = overrideFromNumber || process.env.RETELL_PHONE_NUMBER || "+14709425787"
   const client = getClient()
 
   // Build conversation context from prior interactions
