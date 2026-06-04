@@ -143,7 +143,8 @@ export function ReviewSubmitForm({
               className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-[hsl(var(--primary))]"
             />
             <label htmlFor="tcpaConsent" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-              By checking this box, I consent to receive transactional messages related to my account, orders, or services I have requested from Preme Home Loans LLC. These messages may include reminders, order confirmations, and account notifications among others. Message frequency may vary. Message &amp; Data rates may apply. Reply HELP for help or STOP to opt out.{" "}
+              By checking this box, I agree to receive SMS text messages from Preme Home Loans LLC at the phone number provided, including loan status updates, document requests, and appointment reminders. This is optional and is not required to submit this form. Consent is not a condition of purchase. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out or HELP for help.{" "}
+              <a href="/sms-consent" className="underline text-primary" target="_blank">SMS Terms</a>{" "}·{" "}
               <a href="/privacy" className="underline text-primary" target="_blank">Privacy Policy</a>{" "}·{" "}
               <a href="/terms" className="underline text-primary" target="_blank">Terms of Service</a>
             </label>
