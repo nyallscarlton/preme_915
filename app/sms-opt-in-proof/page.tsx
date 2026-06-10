@@ -55,10 +55,8 @@ export default function SmsOptInProofPage() {
               />
               <p className="text-sm text-gray-700 leading-relaxed">
                 By checking this box, I agree to receive SMS text messages from Preme Home Loans LLC at the phone number provided, including loan status updates, document requests, and appointment reminders. This is optional and is not required to submit this form. Consent is not a condition of purchase. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out or HELP for help. View our{" "}
-                <Link href="/sms-consent" className="text-blue-600 hover:underline">SMS Terms</Link>
-                {" "}·{" "}
                 <Link href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>
-                {" "}·{" "}
+                {" "}and{" "}
                 <Link href="/terms" className="text-blue-600 hover:underline">Terms of Service</Link>.
               </p>
             </div>
