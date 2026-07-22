@@ -16,7 +16,9 @@ import {
   Clock,
   AlertCircle,
   Eye,
+  Building2,
 } from "lucide-react"
+import { LlcManager } from "@/components/portal/llc-manager"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
 import { PortalToggle } from "@/components/portal-toggle"
@@ -178,7 +180,7 @@ export function CustomerDashboard() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-muted border border-border">
+          <TabsList className="grid w-full grid-cols-6 bg-muted border border-border">
             <TabsTrigger
               value="dashboard"
               className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground"
@@ -199,6 +201,13 @@ export function CustomerDashboard() {
             >
               <Upload className="w-4 h-4 mr-2" />
               Documents
+            </TabsTrigger>
+            <TabsTrigger
+              value="llcs"
+              className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground"
+            >
+              <Building2 className="w-4 h-4 mr-2" />
+              My LLCs
             </TabsTrigger>
             <TabsTrigger
               value="messages"
@@ -388,6 +397,11 @@ export function CustomerDashboard() {
           {/* Applications Tab */}
           <TabsContent value="applications" className="mt-6">
             <ApplicationsList applications={mappedApplications} />
+          </TabsContent>
+
+          {/* My LLCs Tab */}
+          <TabsContent value="llcs" className="mt-6">
+            <LlcManager />
           </TabsContent>
 
           {/* Documents Tab */}

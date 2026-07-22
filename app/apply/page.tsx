@@ -130,6 +130,13 @@ export default function LoanApplicationPage() {
         investment_accounts: Number.parseFloat(formData.investmentAccounts) || 0,
         retirement_accounts: Number.parseFloat(formData.retirementAccounts) || 0,
 
+        // Vesting entity (LLC) — from the ownership selector in Loan Details
+        vesting_type: formData.entityType === "entity" ? "Entity" : "Individual",
+        entity_legal_name: formData.entityType === "entity" ? formData.entityLegalName || "" : null,
+        entity_org_type: formData.entityType === "entity" ? formData.entityOrgType || "LLC" : null,
+        entity_state_of_formation: formData.entityType === "entity" ? formData.entityStateOfFormation || null : null,
+        entity_ein: formData.entityType === "entity" ? formData.entityEin || null : null,
+
         // Guest flag
         is_guest: authChoice === "guest",
       }
@@ -374,6 +381,29 @@ export default function LoanApplicationPage() {
         if (user) {
           setAuthChoice("account")
           setCurrentStep(1)
+
+          // Prefill static info + saved LLCs for returning borrowers
+          try {
+            const res = await fetch("/api/profile/prefill")
+            if (res.ok) {
+              const { prefill, llcs } = await res.json()
+              setFormData((prev: Record<string, unknown>) => ({
+                firstName: prefill.firstName,
+                lastName: prefill.lastName,
+                email: prefill.email,
+                phone: prefill.phone,
+                address: prefill.address,
+                city: prefill.city,
+                state: prefill.state,
+                zipCode: prefill.zip,
+                creditScore: prefill.creditScoreRange,
+                _savedLlcs: llcs,
+                ...prev, // anything the user already typed wins
+              }))
+            }
+          } catch {
+            // prefill is best-effort
+          }
         }
       } catch (error) {
         console.error("Error checking auth:", error)

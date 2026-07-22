@@ -136,6 +136,33 @@ export async function POST(request: NextRequest) {
         if (error) console.error("[applications] profile upsert error:", error.message)
       })
 
+    // 0c. LLC registry — a new entity used on this deal becomes reusable on
+    //     the next one. Fire-and-forget; tolerates the table not existing yet.
+    if (application.entity_legal_name && applicantEmail) {
+      ;(async () => {
+        try {
+          const { data: existing } = await adminClient
+            .from("borrower_llcs")
+            .select("id")
+            .eq("email", applicantEmail)
+            .eq("legal_name", application.entity_legal_name)
+            .maybeSingle()
+          if (!existing) {
+            await adminClient.from("borrower_llcs").insert([{
+              user_id: application.user_id || null,
+              email: applicantEmail,
+              legal_name: application.entity_legal_name,
+              org_type: application.entity_org_type || "LLC",
+              state_of_formation: application.entity_state_of_formation || null,
+              ein_encrypted: application.entity_ein_encrypted || null,
+            }])
+          }
+        } catch (err) {
+          console.error("[applications] LLC registry upsert skipped:", err)
+        }
+      })()
+    }
+
     // 1. MC notification
     notifyMCNewApplication(application).catch(() => {})
 

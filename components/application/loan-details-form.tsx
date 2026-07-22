@@ -33,7 +33,12 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
     onNext()
   }
 
-  const isFormValid = formData.loanAmount && formData.loanPurpose && formData.propertyType
+  const isFormValid =
+    formData.loanAmount &&
+    formData.loanPurpose &&
+    formData.propertyType &&
+    (formData.entityType === "individual" ||
+      (formData.entityType === "entity" && (formData.entityLlcId || formData.entityLegalName)))
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -97,6 +102,98 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Ownership / vesting — personal name or an LLC (saved or new) */}
+          <div className="space-y-2">
+            <Label className="text-foreground">How will you hold title? *</Label>
+            <Select
+              value={
+                formData.entityType === "entity"
+                  ? (formData.entityLlcId ? `llc:${formData.entityLlcId}` : formData.entityLegalName ? "llc:new" : "")
+                  : formData.entityType === "individual" ? "individual" : ""
+              }
+              onValueChange={(value) => {
+                if (value === "individual") {
+                  const updated = { ...formData, entityType: "individual", entityLlcId: "", entityLegalName: "", entityEin: "", entityStateOfFormation: "", entityOrgType: "" }
+                  setFormData(updated)
+                  onDataChange(updated)
+                } else if (value === "llc:new") {
+                  const updated = { ...formData, entityType: "entity", entityLlcId: "", entityLegalName: "", entityEin: "", entityStateOfFormation: "", entityOrgType: "LLC" }
+                  setFormData(updated)
+                  onDataChange(updated)
+                } else {
+                  const llcId = value.slice(4)
+                  const llc = (formData._savedLlcs || []).find((l: any) => String(l.id) === llcId)
+                  const updated = {
+                    ...formData,
+                    entityType: "entity",
+                    entityLlcId: llcId,
+                    entityLegalName: llc?.legal_name || "",
+                    entityOrgType: llc?.org_type || "LLC",
+                    entityStateOfFormation: llc?.state_of_formation || "",
+                    entityEin: "",
+                  }
+                  setFormData(updated)
+                  onDataChange(updated)
+                }
+              }}
+            >
+              <SelectTrigger className="bg-input border-border text-foreground focus:border-primary">
+                <SelectValue placeholder="Personal name or LLC" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="individual">My personal name</SelectItem>
+                {(formData._savedLlcs || []).filter((l: any) => l.id).map((l: any) => (
+                  <SelectItem key={l.id} value={`llc:${l.id}`}>
+                    {l.legal_name}
+                  </SelectItem>
+                ))}
+                <SelectItem value="llc:new">+ New LLC / entity</SelectItem>
+              </SelectContent>
+            </Select>
+            {formData.entityType === "entity" && !formData.entityLlcId && (
+              <div className="mt-3 space-y-3 rounded-md border border-border p-3">
+                <div className="space-y-2">
+                  <Label className="text-foreground">LLC legal name *</Label>
+                  <Input
+                    placeholder="Sunrise Holdings LLC"
+                    value={formData.entityLegalName || ""}
+                    onChange={(e) => handleInputChange("entityLegalName", e.target.value)}
+                    className="bg-input border-border text-foreground focus:border-primary"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-foreground">EIN</Label>
+                    <Input
+                      placeholder="12-3456789"
+                      value={formData.entityEin || ""}
+                      onChange={(e) => handleInputChange("entityEin", e.target.value)}
+                      className="bg-input border-border text-foreground focus:border-primary"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-foreground">State of formation</Label>
+                    <Input
+                      placeholder="GA"
+                      maxLength={2}
+                      value={formData.entityStateOfFormation || ""}
+                      onChange={(e) => handleInputChange("entityStateOfFormation", e.target.value.toUpperCase())}
+                      className="bg-input border-border text-foreground focus:border-primary"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Saved to your account — next deal it's one click in the dropdown.
+                </p>
+              </div>
+            )}
+            {formData.entityType === "entity" && formData.entityLlcId && (
+              <p className="text-xs text-muted-foreground">
+                Using {formData.entityLegalName} — manage your LLCs and their docs from your dashboard.
+              </p>
+            )}
           </div>
 
           <div className="flex justify-between pt-6">
