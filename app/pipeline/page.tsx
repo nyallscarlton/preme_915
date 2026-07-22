@@ -92,6 +92,8 @@ export default async function ApplicationsBoard() {
                   <Link
                     key={app.id}
                     href={`https://www.premerealestate.com/admin?app=${app.id}`}
+                    target="_blank"
+                    rel="noopener"
                     className="block rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition hover:border-[#997100] hover:shadow"
                   >
                     <div className="flex items-start justify-between gap-2">
