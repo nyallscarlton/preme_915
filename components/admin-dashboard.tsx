@@ -22,12 +22,14 @@ import {
   BarChart3,
   Bell,
   X,
+  PhoneCall,
+  Headphones,
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
 import { PortalToggle } from "@/components/portal-toggle"
 import { ApplicationsManagement } from "@/components/admin/applications-management"
-import { ConditionsManagement } from "@/components/admin/conditions-management"
+import { ApplicationsBoard } from "@/components/admin/applications-board"
 import { UsersManagement } from "@/components/admin/users-management"
 import { AdminMessaging } from "@/components/admin/admin-messaging"
 import { SystemSettings } from "@/components/admin/system-settings"
@@ -81,7 +83,7 @@ interface Application {
 
 export function AdminDashboard() {
   const { user, signOut } = useAuth()
-  const [activeTab, setActiveTab] = useState("dashboard")
+  const [activeTab, setActiveTab] = useState("board")
   const [applications, setApplications] = useState<Application[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -319,20 +321,13 @@ export function AdminDashboard() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 bg-muted border border-border">
+          <TabsList className="grid w-full grid-cols-8 bg-muted border border-border">
             <TabsTrigger
-              value="dashboard"
-              className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground"
-            >
-              <LayoutDashboard className="w-4 h-4 mr-2" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger
-              value="applications"
+              value="board"
               className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground relative"
             >
-              <FileText className="w-4 h-4 mr-2" />
-              Applications
+              <LayoutDashboard className="w-4 h-4 mr-2" />
+              Pipeline
               {stats.pendingReview > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-red-500 text-white">
                   {stats.pendingReview}
@@ -340,12 +335,26 @@ export function AdminDashboard() {
               )}
             </TabsTrigger>
             <TabsTrigger
-              value="conditions"
-              className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground"
+              value="applications"
+              className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground relative"
             >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Conditions
+              <FileText className="w-4 h-4 mr-2" />
+              Applications
             </TabsTrigger>
+            <Link
+              href="/admin/calls"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium text-muted-foreground transition-all hover:text-foreground"
+            >
+              <PhoneCall className="w-4 h-4 mr-2" />
+              Calls
+            </Link>
+            <Link
+              href="/admin/voice-lab"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium text-muted-foreground transition-all hover:text-foreground"
+            >
+              <Headphones className="w-4 h-4 mr-2" />
+              Voice Lab
+            </Link>
             <TabsTrigger
               value="users"
               className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground"
@@ -376,200 +385,20 @@ export function AdminDashboard() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Dashboard Tab */}
-          <TabsContent value="dashboard" className="mt-6">
-            {/* Key Metrics */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-              <Card className="bg-card border-border">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Applications</CardTitle>
-                  <FileText className="h-4 w-4 text-[#997100]" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-foreground">
-                    {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats.totalApplications}
-                  </div>
-                  <p className="text-xs text-muted-foreground">All time applications</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
-                  <Clock className="h-4 w-4 text-yellow-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-foreground">
-                    {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats.pendingReview}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Awaiting review</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Loan Volume</CardTitle>
-                  <DollarSign className="h-4 w-4 text-[#997100]" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-foreground">
-                    {isLoading ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : stats.totalLoanVolume >= 1000000 ? (
-                      `$${(stats.totalLoanVolume / 1000000).toFixed(1)}M`
-                    ) : (
-                      `$${stats.totalLoanVolume.toLocaleString()}`
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Total processed</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Approval Rate</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-foreground">
-                    {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : `${stats.approvalRate}%`}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Overall rate</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Recent Applications */}
-            <Card className="bg-card border-border mb-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-foreground">Recent Applications</CardTitle>
-                    <CardDescription className="text-muted-foreground">
-                      Latest loan applications requiring attention
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="border-border text-foreground hover:bg-muted bg-transparent"
-                    onClick={() => setActiveTab("applications")}
-                  >
-                    View All
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                ) : applications.length === 0 ? (
-                  <div className="text-center py-8">
-                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No applications yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {applications.slice(0, 5).map((app) => (
-                      <div
-                        key={app.id}
-                        className="flex items-center justify-between p-4 bg-muted rounded-lg cursor-pointer hover:bg-accent transition-colors"
-                        onClick={() => { setPendingAppId(app.id); setActiveTab("applications") }}
-                      >
-                        <div className="flex items-center space-x-4">
-                          {getStatusIcon(app.status)}
-                          <div>
-                            <p className="font-medium text-foreground">{app.applicantName}</p>
-                            <p className="text-sm text-muted-foreground">{app.propertyAddress}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            <p className="font-medium text-foreground">${app.loanAmount.toLocaleString()}</p>
-                            <Badge className={getStatusColor(app.status)}>{formatStatus(app.status)}</Badge>
-                          </div>
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Quick Actions</CardTitle>
-                  <CardDescription className="text-muted-foreground">Common administrative tasks</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <Button
-                      className="w-full justify-start bg-[#997100] hover:bg-[#b8850a] text-black font-semibold"
-                      onClick={() => setActiveTab("applications")}
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      Review Pending Applications
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start border-border text-foreground hover:bg-muted bg-transparent"
-                      onClick={() => setActiveTab("users")}
-                    >
-                      <Users className="mr-2 h-4 w-4" />
-                      Manage Users
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start border-border text-foreground hover:bg-muted bg-transparent"
-                      onClick={() => setActiveTab("messages")}
-                    >
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      Send Messages
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground">System Status</CardTitle>
-                  <CardDescription className="text-muted-foreground">Current system performance</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Database</span>
-                      <Badge className="bg-green-600 text-white">Online</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Document Storage</span>
-                      <Badge className="bg-green-600 text-white">Online</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Email Service</span>
-                      <Badge className="bg-green-600 text-white">Online</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Avg Processing Time</span>
-                      <span className="text-foreground font-medium">{stats.avgProcessingTime} days</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+          {/* Pipeline Board Tab */}
+          <TabsContent value="board" className="mt-6">
+            <ApplicationsBoard
+              applications={applications}
+              onOpen={(dbId) => {
+                setPendingAppId(dbId)
+                setActiveTab("applications")
+              }}
+            />
           </TabsContent>
 
           {/* Applications Tab - Pass real applications and refresh callback */}
           <TabsContent value="applications" className="mt-6">
             <ApplicationsManagement applications={applications} onRefresh={fetchApplications} initialSelectedId={pendingAppId} onSelectedCleared={() => setPendingAppId(null)} />
-          </TabsContent>
-
-          {/* Conditions Tab */}
-          <TabsContent value="conditions" className="mt-6">
-            <ConditionsManagement applications={applications} />
           </TabsContent>
 
           {/* Users Tab */}
