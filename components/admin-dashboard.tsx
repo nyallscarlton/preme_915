@@ -90,6 +90,7 @@ export function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pendingAppId, setPendingAppId] = useState<string | null>(null)
+  const [showArchive, setShowArchive] = useState(false)
   const [newApps, setNewApps] = useState<Application[]>([])
   const knownAppIds = useRef<Set<string>>(new Set())
   const isFirstLoad = useRef(true)
@@ -323,7 +324,7 @@ export function AdminDashboard() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-9 bg-muted border border-border">
+          <TabsList className="grid w-full grid-cols-8 bg-muted border border-border">
             <TabsTrigger
               value="board"
               className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground relative"
@@ -342,13 +343,6 @@ export function AdminDashboard() {
             >
               <FileText className="w-4 h-4 mr-2" />
               Applications
-            </TabsTrigger>
-            <TabsTrigger
-              value="archive"
-              className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground"
-            >
-              <ArchiveIcon className="w-4 h-4 mr-2" />
-              Archive
             </TabsTrigger>
             <Link
               href="/admin/calls"
@@ -403,18 +397,30 @@ export function AdminDashboard() {
                 setActiveTab("applications")
               }}
             />
-          </TabsContent>
 
-          {/* Archive Tab — archived + rejected files, restorable */}
-          <TabsContent value="archive" className="mt-6">
-            <ArchiveList
-              applications={applications}
-              onOpen={(dbId) => {
-                setPendingAppId(dbId)
-                setActiveTab("applications")
-              }}
-              onRefresh={fetchApplications}
-            />
+            {/* Archive — tucked under the board, collapsed by default */}
+            <div className="mt-8 border-t border-border pt-4">
+              <button
+                onClick={() => setShowArchive((v) => !v)}
+                className="flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
+              >
+                <ArchiveIcon className="h-4 w-4" />
+                Archive ({applications.filter((a) => ["archived", "rejected"].includes(a.status)).length})
+                <span className="text-xs">{showArchive ? "▲" : "▼"}</span>
+              </button>
+              {showArchive && (
+                <div className="mt-4">
+                  <ArchiveList
+                    applications={applications}
+                    onOpen={(dbId) => {
+                      setPendingAppId(dbId)
+                      setActiveTab("applications")
+                    }}
+                    onRefresh={fetchApplications}
+                  />
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           {/* Applications Tab - Pass real applications and refresh callback */}
