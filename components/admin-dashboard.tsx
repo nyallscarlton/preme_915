@@ -24,12 +24,14 @@ import {
   X,
   PhoneCall,
   Headphones,
+  Archive as ArchiveIcon,
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
 import { PortalToggle } from "@/components/portal-toggle"
 import { ApplicationsManagement } from "@/components/admin/applications-management"
 import { ApplicationsBoard } from "@/components/admin/applications-board"
+import { ArchiveList } from "@/components/admin/archive-list"
 import { UsersManagement } from "@/components/admin/users-management"
 import { AdminMessaging } from "@/components/admin/admin-messaging"
 import { SystemSettings } from "@/components/admin/system-settings"
@@ -321,7 +323,7 @@ export function AdminDashboard() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-8 bg-muted border border-border">
+          <TabsList className="grid w-full grid-cols-9 bg-muted border border-border">
             <TabsTrigger
               value="board"
               className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground relative"
@@ -340,6 +342,13 @@ export function AdminDashboard() {
             >
               <FileText className="w-4 h-4 mr-2" />
               Applications
+            </TabsTrigger>
+            <TabsTrigger
+              value="archive"
+              className="data-[state=active]:bg-[#997100] data-[state=active]:text-black text-muted-foreground"
+            >
+              <ArchiveIcon className="w-4 h-4 mr-2" />
+              Archive
             </TabsTrigger>
             <Link
               href="/admin/calls"
@@ -393,6 +402,18 @@ export function AdminDashboard() {
                 setPendingAppId(dbId)
                 setActiveTab("applications")
               }}
+            />
+          </TabsContent>
+
+          {/* Archive Tab — archived + rejected files, restorable */}
+          <TabsContent value="archive" className="mt-6">
+            <ArchiveList
+              applications={applications}
+              onOpen={(dbId) => {
+                setPendingAppId(dbId)
+                setActiveTab("applications")
+              }}
+              onRefresh={fetchApplications}
             />
           </TabsContent>
 
