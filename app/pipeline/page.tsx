@@ -1,9 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, Phone, CheckCircle, ArrowRight, TrendingUp, DollarSign, Shield, AlertTriangle } from "lucide-react"
+import { FileText } from "lucide-react"
 import Link from "next/link"
-import { PhoneHealthPanel } from "@/components/pipeline/phone-health"
 
 export const dynamic = "force-dynamic"
 
@@ -13,142 +11,123 @@ const supabase = createClient(
   { db: { schema: "preme" } }
 )
 
-async function getStats() {
-  const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
-  const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+// Kanban columns in loan-lifecycle order. Applications land in the column
+// matching their status; archived/rejected stay off the board.
+const COLUMNS: { key: string; title: string; statuses: string[]; accent: string }[] = [
+  { key: "pre_qual", title: "Pre-Qual Review", statuses: ["pre_qualified"], accent: "border-t-amber-500" },
+  { key: "sent", title: "1003 Out", statuses: ["sent"], accent: "border-t-blue-500" },
+  { key: "submitted", title: "1003 Submitted", statuses: ["submitted"], accent: "border-t-purple-500" },
+  { key: "under_review", title: "With Lender", statuses: ["under_review"], accent: "border-t-orange-500" },
+  { key: "approved", title: "Approved / CTC", statuses: ["approved"], accent: "border-t-green-500" },
+  { key: "funded", title: "Funded", statuses: ["funded"], accent: "border-t-emerald-600" },
+]
 
-  const [total, today, qualified, handedOff, recent] = await Promise.all([
-    supabase.from("leads").select("id", { count: "exact", head: true }),
-    supabase.from("leads").select("id", { count: "exact", head: true }).gte("created_at", todayStart),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("status", "qualified"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("status", "handed_off"),
-    supabase.from("leads").select("*, zx_verticals(name)").order("created_at", { ascending: false }).limit(10),
-  ])
-
-  return {
-    totalLeads: total.count || 0,
-    todayLeads: today.count || 0,
-    qualifiedLeads: qualified.count || 0,
-    handedOffLeads: handedOff.count || 0,
-    recentLeads: recent.data || [],
-  }
+type AppRow = {
+  id: string
+  application_number: string | null
+  applicant_name: string | null
+  loan_amount: number | null
+  loan_purpose: string | null
+  property_city: string | null
+  property_state: string | null
+  property_address: string | null
+  status: string
+  is_pre_qual: boolean
+  updated_at: string
+  created_at: string
 }
 
-const statusColors: Record<string, string> = {
-  new: "bg-blue-100 text-blue-800",
-  calling: "bg-yellow-100 text-yellow-800",
-  contacted: "bg-purple-100 text-purple-800",
-  qualified: "bg-green-100 text-green-800",
-  handed_off: "bg-emerald-100 text-emerald-800",
-  converted: "bg-teal-100 text-teal-800",
-  dead: "bg-gray-100 text-gray-800",
+async function getApplications(): Promise<AppRow[]> {
+  const { data } = await supabase
+    .from("loan_applications")
+    .select(
+      "id, application_number, applicant_name, loan_amount, loan_purpose, property_city, property_state, property_address, status, is_pre_qual, updated_at, created_at"
+    )
+    .not("status", "in", "(archived,rejected)")
+    .order("updated_at", { ascending: false })
+  return (data as AppRow[]) || []
 }
 
-export default async function AdminOverview() {
-  const stats = await getStats()
+function daysAgo(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
+  if (days === 0) return "today"
+  if (days === 1) return "1 day"
+  return `${days} days`
+}
+
+function money(n: number | null): string {
+  return n ? `$${Number(n).toLocaleString("en-US")}` : "—"
+}
+
+export default async function ApplicationsBoard() {
+  const apps = await getApplications()
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-sm text-gray-500">Lead arbitrage overview</p>
-      </div>
-
-      {/* Stats grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={<Users className="h-5 w-5 text-blue-600" />} label="Total Leads" value={stats.totalLeads} />
-        <StatCard icon={<TrendingUp className="h-5 w-5 text-green-600" />} label="Today" value={stats.todayLeads} />
-        <StatCard icon={<Phone className="h-5 w-5 text-purple-600" />} label="Qualified" value={stats.qualifiedLeads} />
-        <StatCard icon={<DollarSign className="h-5 w-5 text-emerald-600" />} label="Handed Off" value={stats.handedOffLeads} />
-      </div>
-
-      {/* Phone Health */}
-      <PhoneHealthPanel />
-
-      {/* Conversion funnel */}
-      {stats.totalLeads > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Conversion Funnel</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4 text-sm">
-              <FunnelStep label="Captured" count={stats.totalLeads} />
-              <ArrowRight className="h-4 w-4 text-gray-300" />
-              <FunnelStep label="Qualified" count={stats.qualifiedLeads} pct={stats.totalLeads > 0 ? Math.round((stats.qualifiedLeads / stats.totalLeads) * 100) : 0} />
-              <ArrowRight className="h-4 w-4 text-gray-300" />
-              <FunnelStep label="Handed Off" count={stats.handedOffLeads} pct={stats.qualifiedLeads > 0 ? Math.round((stats.handedOffLeads / stats.qualifiedLeads) * 100) : 0} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Recent leads */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Recent Leads</CardTitle>
-          <Link href="/pipeline/leads" className="text-sm text-blue-600 hover:underline">View all</Link>
-        </CardHeader>
-        <CardContent>
-          {stats.recentLeads.length === 0 ? (
-            <p className="text-sm text-gray-400 py-8 text-center">No leads yet. Share your landing pages to start capturing leads.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-gray-500">
-                    <th className="pb-2 font-medium">Name</th>
-                    <th className="pb-2 font-medium">Contact</th>
-                    <th className="pb-2 font-medium">Source</th>
-                    <th className="pb-2 font-medium">Status</th>
-                    <th className="pb-2 font-medium">Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.recentLeads.map((lead: any) => (
-                    <tr key={lead.id} className="border-b last:border-0">
-                      <td className="py-3 font-medium">{lead.first_name} {lead.last_name}</td>
-                      <td className="py-3 text-gray-500">{lead.email}</td>
-                      <td className="py-3 text-gray-500">{lead.source || "direct"}</td>
-                      <td className="py-3">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[lead.status] || "bg-gray-100"}`}>
-                          {lead.status}
-                        </span>
-                      </td>
-                      <td className="py-3 text-gray-400">{new Date(lead.created_at).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-4 p-6">
-        <div className="rounded-lg bg-gray-50 p-3">{icon}</div>
+    <div className="space-y-6">
+      <div className="flex items-end justify-between">
         <div>
-          <p className="text-2xl font-bold">{value}</p>
-          <p className="text-sm text-gray-500">{label}</p>
+          <h1 className="text-2xl font-bold">Applications</h1>
+          <p className="text-sm text-gray-500">
+            {apps.length} active file{apps.length === 1 ? "" : "s"} — click a card to open the full workspace (docs, conditions, lender, messages)
+          </p>
         </div>
-      </CardContent>
-    </Card>
-  )
-}
+      </div>
 
-function FunnelStep({ label, count, pct }: { label: string; count: number; pct?: number }) {
-  return (
-    <div className="text-center">
-      <p className="text-lg font-bold">{count}</p>
-      <p className="text-gray-500">{label}</p>
-      {pct !== undefined && <p className="text-xs text-gray-400">{pct}%</p>}
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {COLUMNS.map((col) => {
+          const colApps = apps.filter((a) => col.statuses.includes(a.status))
+          return (
+            <div key={col.key} className="w-72 shrink-0">
+              <div className={`rounded-t-lg border border-b-0 border-t-4 ${col.accent} bg-gray-50 px-3 py-2`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-700">{col.title}</span>
+                  <Badge variant="secondary" className="text-xs">{colApps.length}</Badge>
+                </div>
+              </div>
+              <div className="min-h-[200px] space-y-2 rounded-b-lg border border-gray-200 bg-gray-50/50 p-2">
+                {colApps.length === 0 && (
+                  <p className="px-2 py-6 text-center text-xs text-gray-400">No files</p>
+                )}
+                {colApps.map((app) => (
+                  <Link
+                    key={app.id}
+                    href={`https://www.premerealestate.com/admin?app=${app.id}`}
+                    className="block rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition hover:border-[#997100] hover:shadow"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-sm font-semibold text-gray-900">
+                        {app.applicant_name || "Unknown"}
+                      </span>
+                      {app.is_pre_qual && (
+                        <Badge className="shrink-0 bg-amber-100 text-amber-800 hover:bg-amber-100">quick</Badge>
+                      )}
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500">
+                      {app.property_city || app.property_address || "No address"}
+                      {app.property_state ? `, ${app.property_state}` : ""}
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-900">{money(app.loan_amount)}</span>
+                      <span className="text-[11px] capitalize text-gray-400">{(app.loan_purpose || "").replace(/-/g, " ")}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
+                      <span className="font-mono text-[10px] text-gray-400">{app.application_number}</span>
+                      <span className="text-[10px] text-gray-400">{daysAgo(app.updated_at)} in stage</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {apps.length === 0 && (
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-gray-300 py-16 text-gray-400">
+          <FileText className="h-8 w-8" />
+          <p className="text-sm">No active applications yet</p>
+        </div>
+      )}
     </div>
   )
 }

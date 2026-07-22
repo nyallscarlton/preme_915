@@ -205,7 +205,8 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
   // Auto-select application when navigating from dashboard
   useEffect(() => {
     if (initialSelectedId && applications.length > 0) {
-      const found = applications.find((a) => a.id === initialSelectedId)
+      // Match display id (application number) or database uuid — deep links use the uuid
+      const found = applications.find((a) => a.id === initialSelectedId || a.dbId === initialSelectedId)
       if (found) {
         setSelectedApp(found)
         onSelectedCleared?.()

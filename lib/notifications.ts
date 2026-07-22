@@ -265,7 +265,7 @@ export async function notifyPremePreQual(
     `• ${app.applicant_name || "Unknown"} · ${app.applicant_phone || "no phone"} · ${app.applicant_email || "no email"}`,
     `• ${app.property_state || "N/A"}, ${app.property_type || "N/A"} · ${amount}`,
     `• ${matchLine}`,
-    `• Review + approve: https://app.premerealestate.com/admin/preme-review`,
+    `• Review + approve: https://www.premerealestate.com/admin?app=${app.id || ""}`,
   ].join("\n")
 
   try {
@@ -305,7 +305,8 @@ export async function notifyPremeAppSubmission(app: {
   const state = app.property_state || "N/A"
   const propType = app.property_type || "N/A"
   const amount = app.loan_amount ? `$${Number(app.loan_amount).toLocaleString("en-US")}` : "N/A"
-  const portalLink = `https://app.premerealestate.com/admin/applications/${app.id || ""}`
+  // www, not app subdomain — app.* rewrites /admin/* into the pipeline UI (404)
+  const portalLink = `https://www.premerealestate.com/admin?app=${app.id || ""}`
 
   const textLines = [
     `\u{1F4CB} *New application submitted*`,

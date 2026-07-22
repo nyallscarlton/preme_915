@@ -90,6 +90,16 @@ export function AdminDashboard() {
   const knownAppIds = useRef<Set<string>>(new Set())
   const isFirstLoad = useRef(true)
 
+  // Deep link: /admin?app=<id> opens that application's detail directly
+  // (used by the kanban board on app.premerealestate.com)
+  useEffect(() => {
+    const appId = new URLSearchParams(window.location.search).get("app")
+    if (appId) {
+      setPendingAppId(appId)
+      setActiveTab("applications")
+    }
+  }, [])
+
   const fetchApplications = useCallback(async () => {
     setIsLoading(true)
     setError(null)

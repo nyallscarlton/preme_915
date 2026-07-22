@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BarChart3, Users, Zap, Settings, Home, Kanban, CheckSquare, Phone, Headphones, ListOrdered } from "lucide-react"
+import { BarChart3, Zap, Settings, Kanban, CheckSquare, Phone, Headphones, Activity } from "lucide-react"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,20 +12,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               Preme Admin
             </Link>
             <nav className="hidden md:flex items-center gap-1">
-              <NavLink href="/pipeline" icon={<Home className="h-4 w-4" />} label="Overview" />
-              <NavLink href="/pipeline/leads" icon={<Users className="h-4 w-4" />} label="Leads" />
+              <NavLink href="/pipeline" icon={<Kanban className="h-4 w-4" />} label="Applications" />
               <NavLink href="/pipeline/calls" icon={<Phone className="h-4 w-4" />} label="Calls" />
               <NavLink href="/pipeline/voice-lab" icon={<Headphones className="h-4 w-4" />} label="Voice Lab" />
-              <NavLink href="/pipeline/pipeline" icon={<Kanban className="h-4 w-4" />} label="Pipeline" />
               <NavLink href="/pipeline/tasks" icon={<CheckSquare className="h-4 w-4" />} label="Tasks" />
-              <NavLink href="/pipeline/sequences" icon={<ListOrdered className="h-4 w-4" />} label="Sequences" />
+              <NavLink href="/pipeline/phone-health" icon={<Activity className="h-4 w-4" />} label="Phone Health" />
               <NavLink href="/pipeline/analytics" icon={<BarChart3 className="h-4 w-4" />} label="Analytics" />
               <NavLink href="/pipeline/settings" icon={<Settings className="h-4 w-4" />} label="Settings" />
             </nav>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Zap className="h-4 w-4 text-yellow-500" />
-            Lead Engine
+            Loan Ops
           </div>
         </div>
       </header>
