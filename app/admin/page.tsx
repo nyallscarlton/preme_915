@@ -17,7 +17,8 @@ export default function AdminPage() {
   useEffect(() => {
     if (!loading && isClient) {
       if (!user) {
-        router.push("/login")
+        // /auth honors ?next= — keep the deep link (?app=<id>) through login
+        router.push(`/auth?next=${encodeURIComponent(window.location.pathname + window.location.search)}`)
       } else if (user.role !== "admin") {
         router.push("/portal")
       }

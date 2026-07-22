@@ -101,7 +101,8 @@ export async function middleware(request: NextRequest) {
   // Redirect unauthenticated users from protected routes
   if ((isProtected || isLenderRoute || isAdminRoute) && !user) {
     const redirectUrl = new URL("/auth", request.url)
-    redirectUrl.searchParams.set("next", url.pathname)
+    // Keep the query string so deep links (/admin?app=<id>) survive the login round-trip
+    redirectUrl.searchParams.set("next", url.pathname + url.search)
     return NextResponse.redirect(redirectUrl)
   }
 

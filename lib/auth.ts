@@ -106,11 +106,25 @@ export async function signIn(
     data.user.user_metadata?.role
   ).catch(() => {})
 
+  // profiles table is the source of truth for role — user_metadata can lag
+  // behind (admin role lives in preme.profiles, set via the admin UI)
+  let role: UserRole = (data.user.user_metadata?.role as UserRole) || "applicant"
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .single()
+    if (profile?.role) role = profile.role as UserRole
+  } catch {
+    // fall back to metadata role
+  }
+
   return {
     user: {
       id: data.user.id,
       email: data.user.email!,
-      role: (data.user.user_metadata?.role as UserRole) || "applicant",
+      role,
       firstName: data.user.user_metadata?.first_name,
       lastName: data.user.user_metadata?.last_name,
     },
