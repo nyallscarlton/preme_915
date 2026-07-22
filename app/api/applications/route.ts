@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { notifyMCNewApplication } from "@/lib/mc-webhook"
 import { sendApplicationConfirmationEmail } from "@/lib/follow-up"
-import { notifyPremeAppSubmission } from "@/lib/notifications"
+import { notifyPremeAppSubmission, notifyPremePreQual } from "@/lib/notifications"
+import { toDscrApplication } from "@/lib/dscr-form-map"
 import { triggerApplicationFollowUp, cancelPendingFollowUps } from "@/lib/lead-followup"
 import { generateMISMO } from "@/lib/mismo"
 
@@ -111,6 +112,8 @@ export async function POST(request: NextRequest) {
     // dashboard — never automatically.
     if (isPreQual) {
       const matchRes = await runDscrMatch(adminClient, application)
+      // Slack alert so a quick-apply never sits unseen in the review queue
+      notifyPremePreQual(application, matchRes).catch(() => {})
       return NextResponse.json({
         success: true,
         application,
@@ -197,36 +200,9 @@ async function runDscrMatch(
   reason: string | null
 }> {
   try {
-    // Form option values → matcher enums (lib/dscr-matcher.ts LTV_KEY_MAP).
-    // Unmapped types (commercial, land, bridge, etc.) aren't DSCR products —
-    // skip the matcher and leave the row for manual review.
-    const PROPERTY_TYPE_MAP: Record<string, string> = {
-      "single-family": "singleFamily",
-      townhouse: "singleFamily",
-      condo: "nwCondo",
-      "multi-family": "34unit",
-      duplex: "duplex",
-    }
-    const LOAN_PURPOSE_MAP: Record<string, string> = {
-      purchase: "purchase",
-      refinance: "rt",
-      "cash-out-refinance": "cashout",
-    }
-    const propertyType = PROPERTY_TYPE_MAP[String(app.property_type ?? "").toLowerCase()]
-    const loanPurpose = LOAN_PURPOSE_MAP[String(app.loan_purpose ?? "").toLowerCase()]
-    if (!propertyType || !loanPurpose) {
+    const dscrApp = toDscrApplication(app)
+    if (!dscrApp) {
       return { qualifiedCount: 0, topLender: null, reason: "Outside standard DSCR products — we'll review manually." }
-    }
-
-    const ficoMatch = /(\d+)/.exec(app.credit_score_range ?? "")
-    const dscrApp = {
-      state: app.property_state || "",
-      propertyType,
-      loanPurpose,
-      loanAmount: Number(app.loan_amount) || 0,
-      fico: ficoMatch ? parseInt(ficoMatch[1], 10) : 0,
-      // Matcher compares LTV as a fraction (0.80), not a percent
-      ltv: Math.min(0.8, (Number(app.loan_amount) || 0) / (Number(app.property_value) || 1)),
     }
     const base = process.env.NEXT_PUBLIC_APP_URL || "https://app.premerealestate.com"
     const res = await fetch(`${base}/api/dscr/match`, {

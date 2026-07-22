@@ -6,6 +6,7 @@
  */
 
 import { getBaseUrl } from "@/lib/config"
+import { toDscrApplication } from "@/lib/dscr-form-map"
 
 interface StatusNotificationParams {
   email: string
@@ -189,7 +190,94 @@ export async function sendStatusNotification(params: StatusNotificationParams): 
 
 
 const PREME_CHANNEL_ID = "C0APBULDQS1"
-const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || "xoxb-10810278616865-10793966886901-IkgPJuagaGNceBA2WFIysKbC"
+// .trim() guards against trailing-newline corruption in Vercel env values.
+// No hardcoded fallback — GitHub push protection rejects tokens in source,
+// and the previous hardcoded token got invalidated exactly that way.
+const SLACK_BOT_TOKEN = (process.env.SLACK_BOT_TOKEN || "").trim()
+
+/**
+ * Upload a PDF to #preme as an actual Slack file attachment.
+ * Requires the files:write scope on the bot token — until that scope is
+ * granted this fails fast and the caller falls back to a download button.
+ * Returns true when the file landed in the channel.
+ */
+export async function uploadPdfToPremeChannel(
+  pdfUrl: string,
+  filename: string,
+  title: string
+): Promise<boolean> {
+  try {
+    const pdfRes = await fetch(pdfUrl)
+    if (!pdfRes.ok) return false
+    const pdfBuf = Buffer.from(await pdfRes.arrayBuffer())
+
+    const ticketRes = await fetch("https://slack.com/api/files.getUploadURLExternal", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${SLACK_BOT_TOKEN}`, "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ filename, length: String(pdfBuf.length) }),
+    })
+    const ticket = await ticketRes.json()
+    if (!ticket.ok) return false
+
+    const putRes = await fetch(ticket.upload_url, { method: "POST", body: pdfBuf })
+    if (!putRes.ok) return false
+
+    const completeRes = await fetch("https://slack.com/api/files.completeUploadExternal", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${SLACK_BOT_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        files: [{ id: ticket.file_id, title }],
+        channel_id: PREME_CHANNEL_ID,
+      }),
+    })
+    const complete = await completeRes.json()
+    return !!complete.ok
+  } catch (err) {
+    console.error("[notifications] Slack PDF upload error:", err)
+    return false
+  }
+}
+
+/**
+ * Post a quick-apply (pre-qual) alert to #preme with the lender-match result
+ * and a link to the review queue. Fires on every pre-qual submission.
+ */
+export async function notifyPremePreQual(
+  app: {
+    applicant_name?: string | null
+    applicant_phone?: string | null
+    applicant_email?: string | null
+    property_state?: string | null
+    property_type?: string | null
+    loan_amount?: number | null
+    application_number?: string | null
+    id?: string
+  },
+  match: { qualifiedCount: number; topLender: { name: string | null } | null; reason: string | null }
+): Promise<void> {
+  const amount = app.loan_amount ? `$${Number(app.loan_amount).toLocaleString("en-US")}` : "N/A"
+  const matchLine =
+    match.qualifiedCount > 0
+      ? `\u{1F3E6} ${match.qualifiedCount} lenders qualified — top: ${match.topLender?.name || "n/a"}`
+      : `⚠️ No lender match${match.reason ? ` — ${match.reason}` : ""}`
+  const text = [
+    `⚡ *New quick apply (pre-qual) — ${app.application_number || "?"}*`,
+    `• ${app.applicant_name || "Unknown"} · ${app.applicant_phone || "no phone"} · ${app.applicant_email || "no email"}`,
+    `• ${app.property_state || "N/A"}, ${app.property_type || "N/A"} · ${amount}`,
+    `• ${matchLine}`,
+    `• Review + approve: https://app.premerealestate.com/admin/preme-review`,
+  ].join("\n")
+
+  try {
+    await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${SLACK_BOT_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ channel: PREME_CHANNEL_ID, text }),
+    })
+  } catch (err) {
+    console.error("[notifications] Preme pre-qual Slack error:", err)
+  }
+}
 
 /**
  * Post application submission notification to #preme Slack channel.
@@ -281,16 +369,20 @@ export async function notifyPremeAppSubmission(app: {
     console.error("[notifications] Preme Slack notification error:", err)
   }
 
+  // Deliver the completed 1003 as an actual file in-channel (needs files:write
+  // on the bot token; until granted, the download button above still covers it)
+  if (app.urla_pdf_url) {
+    await uploadPdfToPremeChannel(
+      app.urla_pdf_url,
+      `1003-${app.application_number || app.id || "application"}.pdf`,
+      `1003 — ${app.applicant_name || "Unknown"} (${app.application_number || ""})`
+    )
+  }
+
   // Run DSCR matcher and post result
   try {
-    const dscrApp = {
-      state: app.property_state || "",
-      propertyType: app.property_type || "residential",
-      loanPurpose: app.loan_purpose || "purchase",
-      loanAmount: app.loan_amount || 0,
-      fico: parseFicoRange(app.credit_score_range),
-      ltv: 75,
-    }
+    const dscrApp = toDscrApplication(app)
+    if (!dscrApp) return
 
     const matchRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "https://app.premerealestate.com"}/api/dscr/match`, {
       method: "POST",
@@ -306,12 +398,12 @@ export async function notifyPremeAppSubmission(app: {
         const top = result.qualified?.[0]
         matchText = [
           `\u{1F3E6} *Lender match: ${top?.lender?.name || "Found"}*`,
-          `\u2022 Max LTV: ${top?.lender?.ltv?.purchase || "N/A"}%`,
+          `\u2022 Max LTV: ${top?.maxLtv ? (top.maxLtv * 100).toFixed(0) : "N/A"}%`,
           `\u2022 Min FICO: ${top?.lender?.min_fico || "N/A"}`,
           `\u2022 ${result.qualifiedCount} total lenders qualified`,
         ].join("\n")
       } else {
-        const reason = result.disqualified?.[0]?.reasons?.[0] || "No matching lenders found"
+        const reason = result.disqualified?.[0]?.issues?.[0]?.message || "No matching lenders found"
         matchText = `\u26A0\uFE0F *No lender match.* Reason: ${reason}`
       }
 
