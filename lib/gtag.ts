@@ -1,5 +1,7 @@
 export const GA_CONVERSION_ID = "AW-18002213129"
-export const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_ID || ""
+// .trim() guards against trailing-newline corruption in Vercel env values,
+// which gets inlined into the gtag <script> and breaks it with a syntax error
+export const GA4_MEASUREMENT_ID = (process.env.NEXT_PUBLIC_GA4_ID || "").trim()
 export const LEAD_FORM_LABEL = "sBpgCM6HlIscEInyj4hD"
 export const CALL_CLICK_LABEL = "K43bCNLH-YscEMjziYZD"
 

@@ -197,14 +197,36 @@ async function runDscrMatch(
   reason: string | null
 }> {
   try {
+    // Form option values → matcher enums (lib/dscr-matcher.ts LTV_KEY_MAP).
+    // Unmapped types (commercial, land, bridge, etc.) aren't DSCR products —
+    // skip the matcher and leave the row for manual review.
+    const PROPERTY_TYPE_MAP: Record<string, string> = {
+      "single-family": "singleFamily",
+      townhouse: "singleFamily",
+      condo: "nwCondo",
+      "multi-family": "34unit",
+      duplex: "duplex",
+    }
+    const LOAN_PURPOSE_MAP: Record<string, string> = {
+      purchase: "purchase",
+      refinance: "rt",
+      "cash-out-refinance": "cashout",
+    }
+    const propertyType = PROPERTY_TYPE_MAP[String(app.property_type ?? "").toLowerCase()]
+    const loanPurpose = LOAN_PURPOSE_MAP[String(app.loan_purpose ?? "").toLowerCase()]
+    if (!propertyType || !loanPurpose) {
+      return { qualifiedCount: 0, topLender: null, reason: "Outside standard DSCR products — we'll review manually." }
+    }
+
     const ficoMatch = /(\d+)/.exec(app.credit_score_range ?? "")
     const dscrApp = {
       state: app.property_state || "",
-      propertyType: app.property_type || "residential",
-      loanPurpose: app.loan_purpose || "Purchase",
+      propertyType,
+      loanPurpose,
       loanAmount: Number(app.loan_amount) || 0,
       fico: ficoMatch ? parseInt(ficoMatch[1], 10) : 0,
-      ltv: Math.min(80, Math.round(((Number(app.loan_amount) || 0) / (Number(app.property_value) || 1)) * 100)),
+      // Matcher compares LTV as a fraction (0.80), not a percent
+      ltv: Math.min(0.8, (Number(app.loan_amount) || 0) / (Number(app.property_value) || 1)),
     }
     const base = process.env.NEXT_PUBLIC_APP_URL || "https://app.premerealestate.com"
     const res = await fetch(`${base}/api/dscr/match`, {
@@ -218,9 +240,9 @@ async function runDscrMatch(
     const summary = {
       qualifiedCount: result.qualifiedCount ?? 0,
       topLender: top
-        ? { name: top?.lender?.name ?? null, min_fico: top?.lender?.min_fico ?? null, maxLtvPurchase: top?.lender?.ltv?.purchase ?? null }
+        ? { name: top?.lender?.name ?? null, min_fico: top?.lender?.min_fico ?? null, maxLtvPurchase: top?.maxLtv ?? null }
         : null,
-      reason: (result.disqualified?.[0]?.reasons?.[0] as string | undefined) ?? null,
+      reason: (result.disqualified?.[0]?.issues?.[0]?.message as string | undefined) ?? null,
     }
     await adminClient
       .from("loan_applications")
