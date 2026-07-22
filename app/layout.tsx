@@ -7,7 +7,9 @@ import { getBaseUrl } from "@/lib/config"
 
 
 const GA_CONVERSION_ID = "AW-18002213129"
-const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_ID || ""
+// .trim() strips trailing-newline corruption in the Vercel env value — without
+// it the newline lands inside the inlined gtag script and syntax-errors it
+const GA4_MEASUREMENT_ID = (process.env.NEXT_PUBLIC_GA4_ID || "").trim()
 
 const siteUrl = getBaseUrl()
 
