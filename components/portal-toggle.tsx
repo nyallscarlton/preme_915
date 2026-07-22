@@ -57,7 +57,9 @@ export function PortalToggle() {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => router.push(isOnBorrowerView ? homePortal : "/dashboard")}
+        // /portal, not /dashboard — middleware bounces admins from /dashboard
+        // straight back to /admin, which broke Borrower View for admins
+        onClick={() => router.push(isOnBorrowerView ? homePortal : "/portal")}
         className="border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-white bg-transparent gap-2"
       >
         <ArrowLeftRight className="h-3.5 w-3.5" />

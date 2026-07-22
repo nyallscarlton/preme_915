@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { DocumentsPanel } from "@/components/admin/documents-panel"
 import {
   Eye,
   MessageSquare,
@@ -1355,15 +1356,17 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
               </CardContent>
             </Card>
 
-            {/* Conditions & Documents Tracker */}
+            {/* Conditions Tracker — lender conditions only exist once the file
+                is with the lender, so the panel stays hidden before that */}
+            {["under_review", "approved", "funded"].includes(selectedApp.status) && (
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2">
                   <FileText className="h-5 w-5 text-[#997100]" />
-                  Conditions & Documents
+                  Lender Conditions
                 </CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  Track required documents and their status
+                  Conditions returned by the lender — track and clear them here
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1501,10 +1504,14 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                 )}
               </CardContent>
             </Card>
+            )}
           </div>
 
           {/* ═══ RIGHT SIDEBAR ═══ */}
           <div className="space-y-6">
+            {/* Pre-lender document package — borrower + admin uploads */}
+            <DocumentsPanel applicationId={selectedApp.dbId} />
+
             {/* Review Panel */}
             <Card className="bg-card border-border">
               <CardHeader>
