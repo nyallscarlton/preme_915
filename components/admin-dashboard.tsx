@@ -32,6 +32,7 @@ import { PortalToggle } from "@/components/portal-toggle"
 import { ApplicationsManagement } from "@/components/admin/applications-management"
 import { ApplicationsBoard } from "@/components/admin/applications-board"
 import { ArchiveList } from "@/components/admin/archive-list"
+import { SendAppDialog } from "@/components/admin/send-app-dialog"
 import { UsersManagement } from "@/components/admin/users-management"
 import { AdminMessaging } from "@/components/admin/admin-messaging"
 import { SystemSettings } from "@/components/admin/system-settings"
@@ -274,15 +275,18 @@ export function AdminDashboard() {
             <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
             <p className="text-muted-foreground">Manage loan applications and system operations</p>
           </div>
-          <Button
-            variant="outline"
-            onClick={fetchApplications}
-            disabled={isLoading}
-            className="border-border text-foreground hover:bg-muted bg-transparent"
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <SendAppDialog onSent={fetchApplications} />
+            <Button
+              variant="outline"
+              onClick={fetchApplications}
+              disabled={isLoading}
+              className="border-border text-foreground hover:bg-muted bg-transparent"
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* New application notification banner */}
