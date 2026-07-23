@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { StartChoice } from "@/components/StartChoice"
 import { useRouter, useSearchParams } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 
 export default function StartPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -12,8 +13,19 @@ export default function StartPage() {
   const nextUrl = searchParams.get("next") || "/apply"
 
   useEffect(() => {
-    setIsModalOpen(true)
-  }, [])
+    // Signed-in users never see the guest/signup chooser — straight to the
+    // application, which continues as their account with prefill
+    let cancelled = false
+    createClient()
+      .auth.getUser()
+      .then(({ data: { user } }) => {
+        if (cancelled) return
+        if (user) router.replace(nextUrl)
+        else setIsModalOpen(true)
+      })
+      .catch(() => setIsModalOpen(true))
+    return () => { cancelled = true }
+  }, [nextUrl, router])
 
   const handleModalClose = () => {
     setIsModalOpen(false)
