@@ -5,9 +5,10 @@ import { FileText } from "lucide-react"
 
 // Kanban columns in loan-lifecycle order — same stages as the pipeline board.
 const COLUMNS: { key: string; title: string; statuses: string[]; accent: string }[] = [
-  { key: "pre_qual", title: "Pre-Qual Review", statuses: ["pre_qualified"], accent: "border-t-amber-500" },
-  { key: "sent", title: "1003 Out", statuses: ["sent"], accent: "border-t-blue-500" },
-  { key: "submitted", title: "1003 Submitted", statuses: ["submitted"], accent: "border-t-purple-500" },
+  { key: "invited", title: "App Sent", statuses: ["invited"], accent: "border-t-gray-400" },
+  { key: "review", title: "App In — Review", statuses: ["pre_qualified", "app_submitted"], accent: "border-t-amber-500" },
+  { key: "sent", title: "1003 Out", statuses: ["sent", "opened"], accent: "border-t-blue-500" },
+  { key: "submitted", title: "1003 Signed", statuses: ["submitted"], accent: "border-t-purple-500" },
   { key: "under_review", title: "With Lender", statuses: ["under_review"], accent: "border-t-orange-500" },
   { key: "approved", title: "Approved / CTC", statuses: ["approved"], accent: "border-t-green-500" },
   { key: "funded", title: "Funded", statuses: ["funded"], accent: "border-t-emerald-600" },

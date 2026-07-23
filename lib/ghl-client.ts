@@ -266,6 +266,33 @@ export async function syncRetellChatToGhl(
   }
 }
 
+/**
+ * POST /contacts/upsert — find-or-create a contact by phone/email.
+ * Returns the GHL contact id. Used by team sends so every Riley SMS
+ * conversation has a contact + thread in GHL from message one.
+ */
+export async function upsertContact(args: {
+  firstName?: string
+  lastName?: string
+  phone?: string
+  email?: string
+  tags?: string[]
+}): Promise<GhlResult<{ contactId: string }>> {
+  const creds = getCreds()
+  if ("error" in creds) return { ok: false, error: creds.error }
+  const res = await ghlFetch<{ contact?: { id?: string }; id?: string }>("POST", "/contacts/upsert", {
+    locationId: creds.locationId,
+    firstName: args.firstName,
+    lastName: args.lastName,
+    phone: args.phone,
+    ...(args.email && !args.email.endsWith("@placeholder.preme") ? { email: args.email } : {}),
+    ...(args.tags?.length ? { tags: args.tags } : {}),
+  })
+  if (!res.ok) return { ok: false, error: res.error }
+  const contactId = (res.data as any)?.contact?.id || (res.data as any)?.id
+  return contactId ? { ok: true, data: { contactId } } : { ok: false, error: "upsert returned no contact id" }
+}
+
 /** PUT /contacts/{id} — update the native email field on a GHL contact. */
 export async function updateContactEmail(contactId: string, email: string): Promise<GhlResult> {
   return ghlFetch("PUT", `/contacts/${contactId}`, { email })

@@ -346,29 +346,29 @@ export const OBJECTIVE_METADATA: { [K in Objective]: ObjectiveMetadata } = {
   },
   stale_reintro: {
     whenFires:
-      "Touch 1 of the stale lead re-engagement workflow. Lead tagged stale_lead — went cold 30+ days ago, likely never got proper follow-up. First contact after the gap.",
+      "Touch 1 of the stale lead re-engagement workflow. Lead tagged stale_lead — went cold 30+ days ago after previously inquiring about DSCR / investment property financing. First contact after the gap.",
     toneGuidance:
-      "Warm, human, zero pitch. Acknowledge the gap honestly. Lead with curiosity — what happened? Are they still in the market? Sound like a real person checking in, not a sales sequence.",
+      "Warm, human, zero pitch. Reference the prior inquiry specifically — they reached out about financing an investment property. Acknowledge the gap honestly. One question: still looking, or did things change? If they confirm active interest, follow with the value prop: 38 wholesale DSCR lenders, match in under an hour, 5-minute pre-qual, costs nothing to find out. Sound like a real person checking in, not a sequence.",
     replyHandling:
-      "Any engagement ⇒ move to active re-engagement. 'Found someone' ⇒ acknowledge, close cleanly. STOP ⇒ hard-kill.",
+      "Still active / engaged ⇒ move to scenario probe + value prop + pre-qual drive. 'Found someone' / closed elsewhere ⇒ acknowledge cleanly, tag not_interested_closed_elsewhere, no further pitch. No longer investing ⇒ warm close, tag not_interested_no_longer_active. STOP ⇒ hard-kill.",
     payloadHints: [],
   },
   stale_missed_call: {
     whenFires:
       "Touch 3 of the stale lead workflow. Riley just attempted a call and went to VM. SMS follow-up after the missed call attempt.",
     toneGuidance:
-      "Brief, direct. Just tried to reach them. One ask — call or text back. No pitch. No pressure.",
+      "Brief, direct. Reference the prior inquiry — 'tried to reach you about your investment property financing.' One ask: call or text back when free. No pitch. No pressure. 1-2 sentences max.",
     replyHandling:
-      "Any reply ⇒ re-engage. Scheduling ⇒ callback_confirmation. STOP ⇒ hard-kill.",
+      "Any reply ⇒ re-engage immediately. Scheduling ⇒ callback_confirmation. STOP ⇒ hard-kill.",
     payloadHints: [],
   },
   stale_disqualify: {
     whenFires:
       "Touch 4 of the stale lead workflow. Lead has not responded after 3 days of re-engagement. Time for a direct qualifying question.",
     toneGuidance:
-      "Hormozi disqualifier frame. Give them permission to say no. 'Did you end up going with someone else? No hard feelings if so.' Direct, honest, not needy. A yes gets more responses than another check-in.",
+      "Hormozi disqualifier frame. Give them permission to say no. Core ask: 'Did you end up going with someone else? No hard feelings either way.' Direct, honest, not needy. A real question gets more responses than another check-in.",
     replyHandling:
-      "'Found someone' ⇒ acknowledge, close, tag not_interested. Engagement ⇒ re-enter active follow-up. STOP ⇒ hard-kill.",
+      "'Found someone' / closed elsewhere ⇒ acknowledge cleanly, tag not_interested_closed_elsewhere, close. No longer investing ⇒ warm close, tag not_interested_no_longer_active. Rates concern ⇒ acknowledge, pivot: our system matches you against 38 wholesale lenders to find the best available rate for your exact scenario — worth a 5-minute pre-qual to see the real number? Already with a lender ⇒ offer free parallel data point: if you haven't closed yet, costs nothing to compare. Market uncertainty ⇒ no pressure, door-left-open. Engagement / open to reconnect ⇒ re-enter active follow-up immediately. STOP ⇒ hard-kill.",
     payloadHints: [],
   },
   stale_breakup: {
@@ -528,9 +528,9 @@ export const FALLBACK_RENDERERS: {
   loan_app_submit_nudge: RENDER_LOAN_APP_SUBMIT_NUDGE,
   loan_app_send: RENDER_LOAN_APP_SEND,
   stale_reintro: (_p, name) =>
-    clip(`Hey ${name} — it's been a while since we talked about your financing. Still in the market or did things change on your end?${stopSuffix}`),
+    clip(`Hey ${name} — you reached out a while back about financing an investment property. Still looking, or did things change on your end?${stopSuffix}`),
   stale_missed_call: (_p, name) =>
-    clip(`Hey ${name} — just tried to reach you. Call or text back when you have a sec.${stopSuffix}`),
+    clip(`Hey ${name} — just tried to reach you about your investment property financing. Call or text back when you have a sec.${stopSuffix}`),
   stale_disqualify: (_p, name) =>
     clip(`Hey ${name} — did you end up going with someone else for your loan? No hard feelings either way — just want to make sure I'm not bugging you if timing's off.${stopSuffix}`),
   stale_breakup: (_p, name) =>

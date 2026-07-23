@@ -19,24 +19,24 @@ export async function GET(_req: NextRequest) {
   const { data } = await supabase
     .from("agent_costs")
     .select("*")
-    .gte("created_at", yesterday.toISOString())
-    .lt("created_at", today.toISOString())
+    .gte("timestamp", yesterday.toISOString())
+    .lt("timestamp", today.toISOString())
     .limit(10000)
 
   const rows = data || []
-  const total = rows.reduce((sum: number, r: any) => sum + Number(r.total_cost_usd), 0)
+  const total = rows.reduce((sum: number, r: any) => sum + Number(r.cost_usd), 0)
   const byAgent: Record<string, { sessions: number; cost: number }> = {}
   for (const r of rows) {
-    if (!byAgent[r.agent_name]) byAgent[r.agent_name] = { sessions: 0, cost: 0 }
-    byAgent[r.agent_name].sessions += 1
-    byAgent[r.agent_name].cost += Number(r.total_cost_usd)
+    if (!byAgent[r.agent]) byAgent[r.agent] = { sessions: 0, cost: 0 }
+    byAgent[r.agent].sessions += 1
+    byAgent[r.agent].cost += Number(r.cost_usd)
   }
 
   const projectedMonthly = total * 30
-  const agentNames = ["jay", "scout", "solomon", "lauren", "cto", "hh_ai_reply", "clover_ai_reply"]
+  const agentNames = ["jay", "chloe", "marcus", "solomon", "scout", "atlas", "hh_ai_reply", "clover_ai_reply"]
   const agentLabels: Record<string, string> = {
-    jay: "Jay", scout: "Scout", solomon: "Solomon", lauren: "Lauren",
-    cto: "CTO", hh_ai_reply: "HH AI replies", clover_ai_reply: "Clover AI replies",
+    jay: "Jay", chloe: "Chloe", marcus: "Marcus", solomon: "Solomon",
+    scout: "Scout", atlas: "Atlas", hh_ai_reply: "HH AI replies", clover_ai_reply: "Clover AI replies",
   }
 
   let lines = agentNames

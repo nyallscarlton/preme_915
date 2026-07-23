@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       user_id: user?.id || null,
       application_number: applicationNumber,
       guest_token: data.is_guest ? crypto.randomUUID() : null,
-      status: isPreQual ? "pre_qualified" : "submitted",
+      status: isPreQual ? "pre_qualified" : ("applicant_ssn" in data ? "submitted" : "app_submitted"),
       is_pre_qual: isPreQual,
       pre_qualified_at: isPreQual ? nowIso : null,
       submitted_at: isPreQual ? null : nowIso,

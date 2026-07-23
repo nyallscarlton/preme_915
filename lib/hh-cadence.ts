@@ -199,18 +199,18 @@ Write a reply email. Subject line should be a natural reply to their message.`
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        agent_name: "hh_ai_reply",
-        model: "claude-sonnet-4-6",
-        trigger_type: "cadence",
+        agent: "hh_ai_reply",
+        model: "anthropic/claude-sonnet-4.6",
         input_tokens: u.input_tokens,
-        cached_input_tokens: u.cache_read_input_tokens || 0,
+        cached_tokens: u.cache_read_input_tokens || 0,
         output_tokens: u.output_tokens,
-        input_cost_usd: inputCost + cachedCost,
-        output_cost_usd: outputCost,
-        session_fee_usd: 0,
-        total_cost_usd: total,
+        rate_input_per_million: p.input,
+        rate_output_per_million: p.output,
+        rate_cached_per_million: p.cached,
+        cost_usd: total,
+        business_id: "hurry_homes",
       }),
-    }).catch(() => {})
+    }).catch((err: unknown) => { console.error("[hh-cost-log]", err) })
   }
 
   return { subject, body }

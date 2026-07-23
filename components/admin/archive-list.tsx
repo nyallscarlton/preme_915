@@ -48,7 +48,7 @@ export function ArchiveList({
     setRestoring(app.dbId)
     try {
       // Back onto the board in the stage matching what kind of file it is
-      const status = app.raw?.is_pre_qual ? "pre_qualified" : "submitted"
+      const status = app.raw?.is_pre_qual ? "pre_qualified" : "app_submitted"
       await fetch(`/api/applications/${app.dbId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

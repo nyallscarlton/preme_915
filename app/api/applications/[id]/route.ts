@@ -284,7 +284,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         ...updateFields,
         ...(applicant_ssn_encrypted ? { applicant_ssn_encrypted } : {}),
         ...(entity_ein_encrypted ? { entity_ein_encrypted } : {}),
-        status: "submitted",
+        // Only a completed full 1003 counts as "submitted"; the short intake
+        // finishing lands in app_submitted (review column, awaiting approve)
+        status: isFullOneThirty ? "submitted" : "app_submitted",
         submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })

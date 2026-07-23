@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendPremeSms } from "@/lib/preme-sms"
+import { upsertContact, syncSmsToGhl } from "@/lib/ghl-client"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
       applicant_email: email,
       application_number: applicationNumber,
       guest_token: guestToken,
-      status: "sent",
+      status: "invited",
       is_pre_qual: false,
       is_guest: true,
       sent_via: "team_sms",
@@ -65,13 +66,34 @@ export async function POST(request: NextRequest) {
     `Takes about 5 minutes, you can sign right on your phone, and we'll get you moving right away. ` +
     `Reply here with any questions. Reply STOP to opt out.`
 
+  // GHL contact first — so the Riley thread exists in Conversations from
+  // message one, and inbound replies attach via the sms-memory webhook
+  let ghlContactId: string | null = null
+  const ghlRes = await upsertContact({
+    firstName,
+    lastName: name.split(" ").slice(1).join(" ") || undefined,
+    phone,
+    email,
+    tags: ["preme_lead", "app_invited"],
+  }).catch(() => ({ ok: false as const, error: "upsert threw" }))
+  if (ghlRes.ok && "data" in ghlRes && ghlRes.data) ghlContactId = ghlRes.data.contactId
+
   const sms = await sendPremeSms({
     toPhone: phone,
     message,
     firstName,
     source: "admin_send_app_link",
-    metadata: { application_id: application.id, sent_by: user.email || user.id },
+    metadata: {
+      application_id: application.id,
+      sent_by: user.email || user.id,
+      ...(ghlContactId ? { contact_id: ghlContactId } : {}),
+    },
   })
+
+  // Mirror the outbound into the GHL conversation thread
+  if (ghlContactId && sms.ok) {
+    await syncSmsToGhl(ghlContactId, "outbound", message).catch(() => {})
+  }
 
   return NextResponse.json({
     success: true,

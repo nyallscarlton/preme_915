@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase
     .from("agent_costs")
     .select("*")
-    .gte("created_at", since)
-    .order("created_at", { ascending: false })
+    .gte("timestamp", since)
+    .order("timestamp", { ascending: false })
     .limit(10000)
 
   if (error) {
@@ -41,13 +41,13 @@ export async function GET(request: NextRequest) {
   }
 
   const rows = data || []
-  const total = rows.reduce((sum: number, r: any) => sum + Number(r.total_cost_usd), 0)
+  const total = rows.reduce((sum: number, r: any) => sum + Number(r.cost_usd), 0)
   const byAgent: Record<string, { sessions: number; cost: number; tokens: number }> = {}
   for (const r of rows) {
-    if (!byAgent[r.agent_name]) byAgent[r.agent_name] = { sessions: 0, cost: 0, tokens: 0 }
-    byAgent[r.agent_name].sessions += 1
-    byAgent[r.agent_name].cost += Number(r.total_cost_usd)
-    byAgent[r.agent_name].tokens += (r.input_tokens || 0) + (r.output_tokens || 0)
+    if (!byAgent[r.agent]) byAgent[r.agent] = { sessions: 0, cost: 0, tokens: 0 }
+    byAgent[r.agent].sessions += 1
+    byAgent[r.agent].cost += Number(r.cost_usd)
+    byAgent[r.agent].tokens += (r.input_tokens || 0) + (r.output_tokens || 0)
   }
 
   const daysInWindow = (now.getTime() - new Date(since).getTime()) / (24 * 3600_000)

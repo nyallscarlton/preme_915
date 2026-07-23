@@ -53,16 +53,21 @@ type RetellMsg = { role: "agent" | "user"; content: string }
 
 async function fetchActiveChatMsgs(leadPhone: string): Promise<{ chatId: string; msgs: RetellMsg[]; metadata: Record<string, string> } | null> {
   try {
-    const res = await fetch("https://api.retellai.com/list-chat?limit=50&sort_order=descending", {
-      headers: { Authorization: `Bearer ${process.env.RETELL_API_KEY}` },
+    const res = await fetch("https://api.retellai.com/v3/list-chats", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.RETELL_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ limit: 50, sort_order: "descending" }),
     })
     if (!res.ok) return null
-    const chats = await res.json() as Array<{
-      chat_id: string; chat_status: string;
-      to_number?: string; from_number?: string;
-      message_with_tool_calls?: Array<{ role: string; content: string }>;
-      metadata?: Record<string, string>
-    }>
+    const body = await res.json() as {
+      items: Array<{
+        chat_id: string; chat_status: string;
+        to_number?: string; from_number?: string;
+        message_with_tool_calls?: Array<{ role: string; content: string }>;
+        metadata?: Record<string, string>
+      }>
+    }
+    const chats = body.items ?? []
     const match = chats.find(c =>
       c.chat_status === "ongoing" &&
       (c.to_number === leadPhone || c.from_number === leadPhone)

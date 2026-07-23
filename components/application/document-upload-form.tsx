@@ -45,8 +45,8 @@ export function DocumentUploadForm({
   applicationId,
   guestToken,
 }: DocumentUploadFormProps) {
-  const [uploadedDocs, setUploadedDocs] = useState<Record<string, UploadedDoc>>(
-    (initialData.uploadedDocs as Record<string, UploadedDoc>) || {}
+  const [uploadedDocs, setUploadedDocs] = useState<Record<string, UploadedDoc[]>>(
+    (initialData.uploadedDocs as Record<string, UploadedDoc[]>) || {}
   )
   const [uploading, setUploading] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
@@ -69,9 +69,9 @@ export function DocumentUploadForm({
       const { documents } = await res.json()
       if (!documents || !Array.isArray(documents)) return
 
-      const docsMap: Record<string, UploadedDoc> = { ...uploadedDocs }
+      const docsMap: Record<string, UploadedDoc[]> = {}
       for (const doc of documents as UploadedDoc[]) {
-        docsMap[doc.category] = doc
+        ;(docsMap[doc.category] ||= []).push(doc)
       }
       setUploadedDocs(docsMap)
       onDataChange({ uploadedDocs: docsMap })
@@ -142,7 +142,7 @@ export function DocumentUploadForm({
 
         const updatedDocs = {
           ...uploadedDocs,
-          [docId]: document as UploadedDoc,
+          [docId]: [...(uploadedDocs[docId] || []), document as UploadedDoc],
         }
         setUploadedDocs(updatedDocs)
         onDataChange({ uploadedDocs: updatedDocs })
@@ -154,13 +154,10 @@ export function DocumentUploadForm({
 
         const updatedDocs = {
           ...uploadedDocs,
-          [docId]: {
-            name: file.name,
-            path: "",
-            url: "",
-            category: docId,
-            created_at: new Date().toISOString(),
-          },
+          [docId]: [
+            ...(uploadedDocs[docId] || []),
+            { name: file.name, path: "", url: "", category: docId, created_at: new Date().toISOString() },
+          ],
         }
         setUploadedDocs(updatedDocs)
         onDataChange({ uploadedDocs: updatedDocs })
@@ -180,20 +177,24 @@ export function DocumentUploadForm({
     }
   }
 
-  const handleDelete = async (docId: string) => {
-    const doc = uploadedDocs[docId]
-    if (!doc) return
-
-    // If there's no path (local-only reference), just remove from state
-    if (!doc.path) {
-      const updatedDocs = { ...uploadedDocs }
-      delete updatedDocs[docId]
+  const handleDelete = async (docId: string, doc: UploadedDoc) => {
+    const removeLocal = () => {
+      const updatedDocs = {
+        ...uploadedDocs,
+        [docId]: (uploadedDocs[docId] || []).filter((d) => d !== doc && (doc.path ? d.path !== doc.path : true)),
+      }
+      if (updatedDocs[docId].length === 0) delete updatedDocs[docId]
       setUploadedDocs(updatedDocs)
       onDataChange({ uploadedDocs: updatedDocs })
+    }
+
+    // Local-only reference — nothing on the server to delete
+    if (!doc.path) {
+      removeLocal()
       return
     }
 
-    setDeleting(docId)
+    setDeleting(doc.path)
     setError("")
 
     try {
@@ -210,10 +211,7 @@ export function DocumentUploadForm({
         throw new Error(result.error || "Delete failed")
       }
 
-      const updatedDocs = { ...uploadedDocs }
-      delete updatedDocs[docId]
-      setUploadedDocs(updatedDocs)
-      onDataChange({ uploadedDocs: updatedDocs })
+      removeLocal()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete document.")
     } finally {
@@ -222,10 +220,9 @@ export function DocumentUploadForm({
   }
 
   const renderDocRow = (doc: { id: string; name: string; description: string }) => {
-    const uploaded = uploadedDocs[doc.id]
-    const isUploaded = !!uploaded
+    const uploadedList = uploadedDocs[doc.id] || []
+    const isUploaded = uploadedList.length > 0
     const isUploading = uploading === doc.id
-    const isDeleting = deleting === doc.id
     const progress = uploadProgress[doc.id]
 
     return (
@@ -238,12 +235,12 @@ export function DocumentUploadForm({
               {isUploaded && <CheckCircle className="h-4 w-4 text-green-600" />}
             </div>
             <p className="text-sm text-muted-foreground mt-1">{doc.description}</p>
-            {isUploaded && (
-              <div className="flex items-center space-x-2 mt-1">
-                <p className="text-xs text-green-600">{uploaded.name}</p>
-                {uploaded.url && (
+            {uploadedList.map((u) => (
+              <div key={u.path || u.name} className="flex items-center space-x-2 mt-1">
+                <p className="text-xs text-green-600">{u.name}</p>
+                {u.url && (
                   <a
-                    href={uploaded.url}
+                    href={u.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-blue-600 hover:underline inline-flex items-center"
@@ -252,8 +249,16 @@ export function DocumentUploadForm({
                     View
                   </a>
                 )}
+                <button
+                  onClick={() => handleDelete(doc.id, u)}
+                  disabled={deleting === u.path}
+                  className="text-red-500 hover:text-red-700"
+                  title="Remove"
+                >
+                  {deleting === u.path ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                </button>
               </div>
-            )}
+            ))}
             {isUploading && progress !== undefined && (
               <div className="mt-2 w-full max-w-xs">
                 <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
@@ -267,21 +272,6 @@ export function DocumentUploadForm({
             )}
           </div>
           <div className="flex items-center space-x-2">
-            {isUploaded && (
-              <Button
-                onClick={() => handleDelete(doc.id)}
-                variant="ghost"
-                size="sm"
-                disabled={isDeleting}
-                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-              >
-                {isDeleting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-              </Button>
-            )}
             <input
               type="file"
               ref={(el) => { fileInputRefs.current[doc.id] = el }}
@@ -312,8 +302,8 @@ export function DocumentUploadForm({
                 </>
               ) : isUploaded ? (
                 <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Replace
+                  <Upload className="mr-2 h-4 w-4" />
+                  Add Another
                 </>
               ) : (
                 <>
