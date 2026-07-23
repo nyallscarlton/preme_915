@@ -382,10 +382,12 @@ export default function LoanApplicationFullClient() {
 
         if (user) {
           setAuthChoice("account")
-          setCurrentStep(1)
 
           // Signed-in borrowers continue THEIR application, prefilled — the
           // ?app= param picks a specific one, otherwise their most recent.
+          // Data must land BEFORE the first step mounts (step components copy
+          // initialData into local state exactly once), hence the loading gate.
+          setIsLoadingToken(true)
           try {
             const appParam = searchParams.get("app")
             const res = await fetch(`/api/guest/verify-token${appParam ? `?app=${encodeURIComponent(appParam)}` : ""}`)
@@ -404,6 +406,9 @@ export default function LoanApplicationFullClient() {
             }
           } catch {
             // prefill is best-effort — worst case they start fresh
+          } finally {
+            setIsLoadingToken(false)
+            setCurrentStep(1)
           }
         }
       } catch (error) {
