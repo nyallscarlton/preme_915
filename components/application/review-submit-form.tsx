@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ArrowLeft, Send, Loader2 } from "lucide-react"
+import { ESignBlock } from "@/components/application/esign-block"
 
 interface ReviewSubmitFormProps {
   onPrevious: () => void
@@ -12,6 +13,7 @@ interface ReviewSubmitFormProps {
   formData: any
   isSubmitting?: boolean
   submissionError?: string | null
+  onDataChange?: (data: any) => void
 }
 
 export function ReviewSubmitForm({
@@ -20,8 +22,15 @@ export function ReviewSubmitForm({
   formData,
   isSubmitting,
   submissionError,
+  onDataChange,
 }: ReviewSubmitFormProps) {
   const [tcpaConsent, setTcpaConsent] = useState(false)
+  const [esign, setEsign] = useState<{ esignName: string; esignImage: string | null; esignConsent: boolean }>({
+    esignName: "",
+    esignImage: null,
+    esignConsent: false,
+  })
+  const esignComplete = !!(esign.esignName.trim() && esign.esignImage && esign.esignConsent)
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === "string" ? Number.parseFloat(amount) : amount
@@ -150,6 +159,19 @@ export function ReviewSubmitForm({
             </label>
           </div>
 
+          <ESignBlock
+            defaultName={`${formData.firstName || ""} ${formData.lastName || ""}`.trim()}
+            onChange={(data) => {
+              setEsign(data)
+              onDataChange?.({ _esign: data })
+            }}
+          />
+          {!esignComplete && (
+            <p className="text-center text-xs text-muted-foreground">
+              Type your name, draw your signature, and check the consent box to enable submission.
+            </p>
+          )}
+
           <div className="flex justify-between pt-6">
             <Button
               onClick={onPrevious}
@@ -163,7 +185,7 @@ export function ReviewSubmitForm({
             <Button
               onClick={onSubmit}
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !esignComplete}
             >
               {isSubmitting ? (
                 <>

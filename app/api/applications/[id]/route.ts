@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { persistEsign } from "@/lib/esign"
 import { notifyMCStatusChange } from "@/lib/mc-webhook"
 import { notifyMCNewApplication } from "@/lib/mc-webhook"
 import { sendStatusNotification, notifyPremeAppSubmission } from "@/lib/notifications"
@@ -259,6 +260,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       is_guest: _ig,
       _declarations,
       _reo_properties,
+      _esign,
       applicant_ssn,
       entity_ein,
       ...updateFields
@@ -322,6 +324,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     // (/apply) and other partial PUTs must NOT generate MISMO — gating on
     // isFullOneThirty (presence of applicant_ssn in the body) keeps that
     // promise. See related: validation block above.
+    // E-signature — persist BEFORE MISMO so the 1003 PDF carries it
+    await persistEsign(adminClient, id, _esign as any, request)
+
     const mismo = isFullOneThirty
       ? await (await import("@/lib/mismo"))
           .generateMISMO(id)
@@ -332,10 +337,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       : null
 
     // Fire-and-forget MC notification
-    notifyMCNewApplication(application).catch(() => {})
+    await notifyMCNewApplication(application).catch(() => {})
 
     // #preme Slack notification — now includes MISMO + PDF + FNM download buttons
-    notifyPremeAppSubmission({
+    await notifyPremeAppSubmission({
       ...application,
       mismo_xml_url: mismo?.mismoUrl ?? null,
       fnm_url: mismo?.fnmUrl ?? null,

@@ -243,6 +243,9 @@ export default function LoanApplicationFullClient() {
 
         // Guest flag
         is_guest: authChoice === "guest",
+
+        // Electronic signature (name + drawn image + ESIGN consent)
+        _esign: formData._esign || null,
       }
 
       console.log("[v0] Submitting application to API:", applicationData)
@@ -302,7 +305,7 @@ export default function LoanApplicationFullClient() {
         case 6: return <LiquidityInfoForm {...p} />
         case 7: return <ReoScheduleForm {...p} />
         case 8: return <DocumentUploadForm {...p} applicationId={existingApplicationId || undefined} guestToken={existingGuestToken || undefined} />
-        case 9: return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
+        case 9: return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} onDataChange={handleStepData} />
         default: return null
       }
     }
@@ -314,7 +317,7 @@ export default function LoanApplicationFullClient() {
       case 5: return <LiquidityInfoForm {...p} />
       case 6: return <ReoScheduleForm {...p} />
       case 7: return <DocumentUploadForm {...p} applicationId={existingApplicationId || undefined} guestToken={existingGuestToken || undefined} />
-      case 8: return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
+      case 8: return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} onDataChange={handleStepData} />
       default: return null
     }
   }
@@ -380,6 +383,28 @@ export default function LoanApplicationFullClient() {
         if (user) {
           setAuthChoice("account")
           setCurrentStep(1)
+
+          // Signed-in borrowers continue THEIR application, prefilled — the
+          // ?app= param picks a specific one, otherwise their most recent.
+          try {
+            const appParam = searchParams.get("app")
+            const res = await fetch(`/api/guest/verify-token${appParam ? `?app=${encodeURIComponent(appParam)}` : ""}`)
+            const data = await res.json()
+            if (data.ok && data.application) {
+              const app = data.application
+              setFormData((prev: Record<string, unknown>) => ({
+                ...app,
+                email: app.email && !app.email.endsWith("@placeholder.preme") ? app.email : "",
+                tcpaConsent: true,
+                ...prev,
+              }))
+              setExistingApplicationId(app.applicationId)
+              setExistingGuestToken(app.guestToken)
+              setApplicationNumber(app.applicationNumber)
+            }
+          } catch {
+            // prefill is best-effort — worst case they start fresh
+          }
         }
       } catch (error) {
         console.error("Error checking auth:", error)
@@ -387,7 +412,7 @@ export default function LoanApplicationFullClient() {
     }
 
     checkAuth()
-  }, [isGuestMode, token])
+  }, [isGuestMode, token, searchParams])
 
   useEffect(() => {
     const checkAuthGuard = async () => {

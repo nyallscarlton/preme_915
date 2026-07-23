@@ -110,6 +110,7 @@ export function CustomerDashboard() {
   // Map to the shape ApplicationsList expects
   const mappedApplications = applications.map((app) => ({
     id: app.application_number || app.id,
+    dbId: app.id,
     propertyAddress: [app.property_address, app.property_city, app.property_state]
       .filter(Boolean)
       .join(", ") || "No address",

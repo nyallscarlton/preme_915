@@ -71,6 +71,21 @@ export async function fetchLoanData(loanId: string): Promise<LoanData> {
   delete (loan as any).applicant_ssn_encrypted
   delete (loan as any).entity_ein_encrypted
 
+  // Drawn e-signature image (if the borrower signed electronically) — the
+  // URLA renderer stamps it into the Section 6 signature block
+  if ((appRow as any).esign_signature_path) {
+    try {
+      const { data: sigFile } = await sb.storage
+        .from("documents")
+        .download((appRow as any).esign_signature_path)
+      if (sigFile) {
+        ;(loan as any).esign_signature_png = new Uint8Array(await sigFile.arrayBuffer())
+      }
+    } catch (err) {
+      console.error("[fetchLoanData] esign signature download failed:", err)
+    }
+  }
+
   const declarations = (declarationsRes.data ?? []) as LoanDeclaration[]
   const primaryDeclaration = declarations.find((d) => d.borrower_id === null) ?? null
 

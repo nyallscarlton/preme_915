@@ -263,7 +263,20 @@ export function ApplicationsList({ applications }: ApplicationsListProps) {
                     <p className="text-muted-foreground">Submitted</p>
                     <p className="text-foreground font-semibold">{formatDate(app.submittedAt)}</p>
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2">
+                    {(app as any).dbId && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-[#997100] bg-[#997100] text-white hover:bg-[#b8850a]"
+                        asChild
+                      >
+                        <a href={`/apply-full?app=${(app as any).dbId}`}>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Review & Sign 1003
+                        </a>
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

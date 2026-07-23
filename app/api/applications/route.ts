@@ -7,6 +7,7 @@ import { notifyPremeAppSubmission, notifyPremePreQual } from "@/lib/notification
 import { toDscrApplication } from "@/lib/dscr-form-map"
 import { triggerApplicationFollowUp, cancelPendingFollowUps } from "@/lib/lead-followup"
 import { generateMISMO } from "@/lib/mismo"
+import { persistEsign } from "@/lib/esign"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
       : null
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { applicant_ssn, entity_ein, _declarations, _reo_properties, ...safe } = data
+    const { applicant_ssn, entity_ein, _declarations, _reo_properties, _esign, ...safe } = data
 
     const nowIso = new Date().toISOString()
     const applicationData = {
@@ -96,6 +97,9 @@ export async function POST(request: NextRequest) {
       const { error: reoErr } = await adminClient.from("loan_reo_properties").insert(rows)
       if (reoErr) console.error("[applications] REO insert error:", reoErr.message)
     }
+
+    // E-signature — persist BEFORE MISMO so the 1003 PDF carries it
+    await persistEsign(adminClient, application.id, _esign, request)
 
     // --- POST-INSERT ACTIONS (all fire-and-forget) ---
 

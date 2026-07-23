@@ -25,7 +25,7 @@ export async function renderURLA(data: LoanData): Promise<Uint8Array> {
   sec3_reo(ctx)
   sec4_loan_property(ctx)
   sec5_declarations(ctx)
-  sec6_acknowledgments(ctx)
+  await sec6_acknowledgments(ctx)
   sec7_hmda(ctx)
   sec8_originator(ctx)
   footer(ctx)
@@ -384,7 +384,7 @@ function sec5_declarations(ctx: RenderCtx): void {
   }
 }
 
-function sec6_acknowledgments(ctx: RenderCtx): void {
+async function sec6_acknowledgments(ctx: RenderCtx): Promise<void> {
   sectionTitle(ctx, "SECTION 6 — Acknowledgments and Agreements")
   const loan = ctx.data.loan
   const lines = [
@@ -402,6 +402,31 @@ function sec6_acknowledgments(ctx: RenderCtx): void {
     { label: "Arms-Length Indicator", value: loan.arms_length ? "Yes" : "No" },
     { label: "Signed Date", value: loan.applicant_signed_date },
   ])
+
+  // Borrower eSignature block (ESIGN/UETA) — drawn signature + audit line
+  const esignName = (loan as any).esign_name as string | undefined
+  if (esignName) {
+    const sigPng = (loan as any).esign_signature_png as Uint8Array | undefined
+    newLine(ctx, 8)
+    if (sigPng?.length) {
+      try {
+        const img = await ctx.pdf.embedPng(sigPng)
+        const w = 150
+        const h = (img.height / img.width) * w
+        ensureSpace(ctx, h + 30)
+        ctx.page.drawImage(img, { x: LEFT, y: ctx.y - h, width: w, height: h })
+        ctx.y -= h + 6
+      } catch {
+        // unparsable image — fall through to the text line
+      }
+    }
+    ensureSpace(ctx, 24)
+    const signedAt = (loan as any).esign_signed_at
+      ? new Date((loan as any).esign_signed_at).toLocaleString("en-US", { timeZone: "America/New_York" }) + " ET"
+      : ""
+    const ip = (loan as any).esign_ip ? ` · IP ${(loan as any).esign_ip}` : ""
+    drawWrapped(ctx, `Electronically signed by ${esignName}${signedAt ? ` on ${signedAt}` : ""}${ip} — signature captured with ESIGN/UETA consent.`, 8, 10)
+  }
 }
 
 function sec7_hmda(ctx: RenderCtx): void {

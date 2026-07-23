@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -7,21 +8,47 @@ export const runtime = "nodejs"
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const token = url.searchParams.get("token")
-
-  if (!token) {
-    return NextResponse.json({ ok: false, error: "Missing token" }, { status: 400 })
-  }
+  const appId = url.searchParams.get("app")
 
   try {
     const supabase = createAdminClient()
 
-    const { data: application, error } = await supabase
-      .from("loan_applications")
-      .select("*")
-      .eq("guest_token", token)
-      .single()
+    let application: Record<string, any> | null = null
 
-    if (error || !application) {
+    if (token) {
+      const { data } = await supabase
+        .from("loan_applications")
+        .select("*")
+        .eq("guest_token", token)
+        .single()
+      application = data
+    } else {
+      // No token — allow a signed-in borrower to load their own application
+      // (specific one via ?app=, otherwise their most recent)
+      const session = createClient()
+      const { data: { user } } = await session.auth.getUser()
+      if (!user) {
+        return NextResponse.json({ ok: false, error: "Missing token" }, { status: 400 })
+      }
+
+      if (appId) {
+        const { data } = await supabase.from("loan_applications").select("*").eq("id", appId).single()
+        const owned = data && (data.user_id === user.id || (user.email && data.applicant_email === user.email))
+        application = owned ? data : null
+      } else {
+        const { data } = await supabase
+          .from("loan_applications")
+          .select("*")
+          .or(`user_id.eq.${user.id}${user.email ? `,applicant_email.eq.${user.email}` : ""}`)
+          .not("status", "in", "(archived,rejected)")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        application = data
+      }
+    }
+
+    if (!application) {
       return NextResponse.json(
         { ok: false, error: "Invalid or expired access link" },
         { status: 404 }

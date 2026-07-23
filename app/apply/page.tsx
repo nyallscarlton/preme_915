@@ -141,6 +141,9 @@ export default function LoanApplicationPage() {
 
         // Guest flag
         is_guest: authChoice === "guest",
+
+        // Electronic signature (name + drawn image + ESIGN consent)
+        _esign: formData._esign || null,
       }
 
       console.log("[v0] Submitting application to API:", applicationData)
@@ -248,7 +251,7 @@ export default function LoanApplicationPage() {
             />
           )
         case 7:
-          return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
+          return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} onDataChange={handleStepData} />
         default:
           return null
       }
@@ -303,7 +306,7 @@ export default function LoanApplicationPage() {
             />
           )
         case 6:
-          return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} />
+          return <ReviewSubmitForm onPrevious={handlePrevious} onSubmit={handleSubmit} formData={formData} onDataChange={handleStepData} />
         default:
           return null
       }
