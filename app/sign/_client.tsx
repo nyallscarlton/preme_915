@@ -23,6 +23,7 @@ function Field({
   type = "text",
   placeholder,
   className = "",
+  error = false,
 }: {
   label: string
   value: string
@@ -30,16 +31,19 @@ function Field({
   type?: string
   placeholder?: string
   className?: string
+  error?: boolean
 }) {
   return (
-    <label className={`block ${className}`}>
-      <span className="block text-[10px] font-medium uppercase tracking-wide text-gray-500">{label}</span>
+    <label className={`block ${className}`} data-field-error={error || undefined}>
+      <span className={`block text-[10px] font-medium uppercase tracking-wide ${error ? "text-red-600" : "text-gray-500"}`}>
+        {label}{error ? " — required" : ""}
+      </span>
       <input
         type={type}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border-0 border-b border-gray-300 bg-transparent px-0 py-1 text-sm text-gray-900 focus:border-[#997100] focus:outline-none focus:ring-0"
+        className={`w-full border-0 border-b bg-transparent px-0 py-1 text-sm text-gray-900 focus:outline-none focus:ring-0 ${error ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-[#997100]"}`}
       />
     </label>
   )
@@ -148,8 +152,27 @@ export default function SignDocumentClient() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [missingKeys, setMissingKeys] = useState<string[]>([])
 
   const set = (k: string) => (v: string) => setF((prev) => ({ ...prev, [k]: v }))
+
+  const formatSsn = (raw: string) => {
+    const d = raw.replace(/\D/g, "").slice(0, 9)
+    if (d.length > 5) return `${d.slice(0, 3)}-${d.slice(3, 5)}-${d.slice(5)}`
+    if (d.length > 3) return `${d.slice(0, 3)}-${d.slice(3)}`
+    return d
+  }
+
+  // Mirrors the server's required-for-submit list — validate here first so
+  // the borrower sees exactly what's missing before anything is sent
+  const REQUIRED: { key: string; label: string }[] = [
+    { key: "firstName", label: "First Name" },
+    { key: "lastName", label: "Last Name" },
+    { key: "ssn", label: "Social Security No." },
+    { key: "dateOfBirth", label: "Date of Birth" },
+    { key: "propertyAddress", label: "Property Street Address" },
+    { key: "loanAmount", label: "Loan Amount" },
+  ]
   const g = (k: string) => (f[k] == null ? "" : String(f[k]))
 
   useEffect(() => {
@@ -196,6 +219,19 @@ export default function SignDocumentClient() {
 
   const handleSubmit = async () => {
     if (!applicationId) return
+
+    // Client-side check first — name exactly what's missing and jump to it
+    const missing = REQUIRED.filter(({ key }) => {
+      const v = f[key]
+      return v === null || v === undefined || String(v).trim() === "" || Number(v) === 0 && key === "loanAmount"
+    })
+    setMissingKeys(missing.map((m) => m.key))
+    if (missing.length > 0) {
+      setSubmitError(`Please complete: ${missing.map((m) => m.label).join(", ")}`)
+      setTimeout(() => document.querySelector("[data-field-error]")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50)
+      return
+    }
+
     setSubmitting(true)
     setSubmitError(null)
     try {
@@ -256,7 +292,12 @@ export default function SignDocumentClient() {
         body: JSON.stringify(payload),
       })
       const result = await res.json()
-      if (!res.ok || result.error) throw new Error(result.error || "Submission failed")
+      if (!res.ok || result.error) {
+        const detail = Array.isArray(result.missing) && result.missing.length
+          ? `Please complete: ${result.missing.join(", ")}`
+          : result.error || "Submission failed"
+        throw new Error(detail)
+      }
       setSubmitted(true)
       window.scrollTo({ top: 0, behavior: "smooth" })
     } catch (e) {
@@ -324,11 +365,11 @@ export default function SignDocumentClient() {
 
           <SectionHeader>SECTION 1 — Borrower Information</SectionHeader>
           <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-            <Field label="First Name" value={g("firstName")} onChange={set("firstName")} />
+            <Field label="First Name" value={g("firstName")} onChange={set("firstName")} error={missingKeys.includes("firstName")} />
             <Field label="Middle Name" value={g("middleName")} onChange={set("middleName")} />
-            <Field label="Last Name" value={g("lastName")} onChange={set("lastName")} />
-            <Field label="Date of Birth" type="date" value={g("dateOfBirth")} onChange={set("dateOfBirth")} />
-            <Field label="Social Security No." value={g("ssn")} onChange={set("ssn")} placeholder="###-##-####" />
+            <Field label="Last Name" value={g("lastName")} onChange={set("lastName")} error={missingKeys.includes("lastName")} />
+            <Field label="Date of Birth" type="date" value={g("dateOfBirth")} onChange={set("dateOfBirth")} error={missingKeys.includes("dateOfBirth")} />
+            <Field label="Social Security No." value={g("ssn")} onChange={(v) => set("ssn")(formatSsn(v))} placeholder="###-##-####" error={missingKeys.includes("ssn")} />
             <SelectField
               label="Marital Status"
               value={g("maritalStatus")}
@@ -377,7 +418,7 @@ export default function SignDocumentClient() {
 
           <SectionHeader>SECTION 3 — Loan & Subject Property</SectionHeader>
           <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-            <Field label="Loan Amount ($)" type="number" value={g("loanAmount")} onChange={set("loanAmount")} />
+            <Field label="Loan Amount ($)" type="number" value={g("loanAmount")} onChange={set("loanAmount")} error={missingKeys.includes("loanAmount")} />
             <SelectField
               label="Loan Purpose"
               value={g("loanPurpose")}
@@ -393,7 +434,7 @@ export default function SignDocumentClient() {
               ]}
             />
             <Field label="Est. Property Value ($)" type="number" value={g("propertyValue")} onChange={set("propertyValue")} />
-            <Field label="Property Street Address" value={g("propertyAddress")} onChange={set("propertyAddress")} className="col-span-2 sm:col-span-3" />
+            <Field label="Property Street Address" value={g("propertyAddress")} onChange={set("propertyAddress")} className="col-span-2 sm:col-span-3" error={missingKeys.includes("propertyAddress")} />
             <Field label="City" value={g("propertyCity")} onChange={set("propertyCity")} />
             <Field label="State" value={g("propertyState")} onChange={set("propertyState")} />
             <Field label="ZIP" value={g("propertyZip")} onChange={set("propertyZip")} />
