@@ -47,9 +47,9 @@ export async function sendFullAppLink(
 
   const firstName = app.applicant_first_name || (app.applicant_name || "").split(" ")[0] || "there"
   const base = getBaseUrl()
-  // Full MISMO 9-step form lives at /apply-full. /apply is the original
-  // simple 7-step form (used by Riley's flow + legacy resends).
-  const link = `${base}/apply-full?guest=1&token=${encodeURIComponent(guestToken)}`
+  // The 1003 now lives at /sign — the document-style prefilled, editable,
+  // e-signable experience. (Same message copy as before, new destination.)
+  const link = `${base}/sign?token=${encodeURIComponent(guestToken)}`
 
   let emailSent = false
   let smsSent = false

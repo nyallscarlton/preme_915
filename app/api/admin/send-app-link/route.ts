@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-  const link = `https://www.premerealestate.com/sign?token=${encodeURIComponent(guestToken)}`
+  // Initial (short) application — the full 1003 text comes later via the
+  // Approve flow (lib/send-full-app.ts), which is a separate message.
+  const link = `https://www.premerealestate.com/apply?guest=1&token=${encodeURIComponent(guestToken)}`
   const message =
     `Hey ${firstName}, this is Riley with Preme Home Loans — ${requestedBy} asked me to send over your application. ` +
     `Here's the link: ${link}\n\n` +
