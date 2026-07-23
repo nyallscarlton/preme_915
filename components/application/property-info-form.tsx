@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { AddressInput } from "@/components/ui/address-input"
 
@@ -20,8 +20,7 @@ export function PropertyInfoForm({ onNext, onPrevious, onDataChange, initialData
   const [formData, setFormData] = useState({
     propertyAddress: initialData.propertyAddress || "",
     propertyValue: initialData.propertyValue || "",
-    downPayment: initialData.downPayment || "",
-    propertyDescription: initialData.propertyDescription || "",
+    loanPurpose: initialData.loanPurpose || "",
     ...initialData,
   })
 
@@ -31,7 +30,7 @@ export function PropertyInfoForm({ onNext, onPrevious, onDataChange, initialData
     onDataChange(updatedData)
   }
 
-  const isFormValid = formData.propertyAddress && formData.propertyValue && formData.downPayment
+  const isFormValid = formData.propertyAddress && formData.propertyValue && formData.loanPurpose
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -66,31 +65,27 @@ export function PropertyInfoForm({ onNext, onPrevious, onDataChange, initialData
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="downPayment" className="text-foreground">
-                Down Payment Amount *
+              <Label htmlFor="loanPurpose" className="text-foreground">
+                Loan Purpose *
               </Label>
-              <Input
-                id="downPayment"
-                type="number"
-                placeholder="150000"
-                value={formData.downPayment}
-                onChange={(e) => handleInputChange("downPayment", e.target.value)}
-                className="bg-input border-border text-foreground focus:border-primary"
-              />
+              <Select value={formData.loanPurpose} onValueChange={(value) => handleInputChange("loanPurpose", value)}>
+                <SelectTrigger className="bg-input border-border text-foreground focus:border-primary">
+                  <SelectValue placeholder="What's this loan for?" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="purchase">Purchase</SelectItem>
+                  <SelectItem value="refinance">Refinance</SelectItem>
+                  <SelectItem value="cash-out-refinance">Cash-Out Refinance</SelectItem>
+                  <SelectItem value="construction">Construction</SelectItem>
+                  <SelectItem value="renovation">Renovation</SelectItem>
+                  <SelectItem value="investment">Investment Property</SelectItem>
+                  <SelectItem value="bridge-loan">Bridge Loan</SelectItem>
+                  <SelectItem value="debt-consolidation">Debt Consolidation</SelectItem>
+                  <SelectItem value="home-equity">Home Equity</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="propertyDescription" className="text-foreground">
-              Property Description (Optional)
-            </Label>
-            <Textarea
-              id="propertyDescription"
-              placeholder="Additional details about the property, condition, special features, etc."
-              value={formData.propertyDescription}
-              onChange={(e) => handleInputChange("propertyDescription", e.target.value)}
-              className="bg-input border-border text-foreground focus:border-primary min-h-[100px]"
-            />
           </div>
 
           <div className="flex justify-between pt-6">

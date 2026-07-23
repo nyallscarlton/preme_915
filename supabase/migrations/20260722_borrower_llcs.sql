@@ -45,3 +45,8 @@ CREATE TRIGGER bl_set_updated_at
 COMMIT;
 
 NOTIFY pgrst, 'reload schema';
+
+-- 2026-07-23 addendum (applied): purpose-specific loan fields
+ALTER TABLE preme.loan_applications
+  ADD COLUMN IF NOT EXISTS purchase_price numeric,
+  ADD COLUMN IF NOT EXISTS current_mortgage_balance numeric;

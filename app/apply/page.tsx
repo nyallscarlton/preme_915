@@ -113,6 +113,8 @@ export default function LoanApplicationPage() {
         loan_amount: Number.parseFloat(formData.loanAmount) || 0,
         loan_purpose: formData.loanPurpose || "",
         loan_type: formData.propertyType || "",
+        purchase_price: Number.parseFloat(formData.purchasePrice) || null,
+        current_mortgage_balance: formData.currentBalance !== undefined && formData.currentBalance !== "" ? Number.parseFloat(formData.currentBalance) || 0 : null,
 
         // Property info
         property_address: formData.propertyAddress || "",

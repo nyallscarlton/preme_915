@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     if (isPreQual) {
       const matchRes = await runDscrMatch(adminClient, application)
       // Slack alert so a quick-apply never sits unseen in the review queue
-      notifyPremePreQual(application, matchRes).catch(() => {})
+      await notifyPremePreQual(application, matchRes).catch(() => {})
       return NextResponse.json({
         success: true,
         application,
@@ -164,12 +164,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. MC notification
-    notifyMCNewApplication(application).catch(() => {})
+    await notifyMCNewApplication(application).catch(() => {})
 
     // 1b. #preme Slack notification + DSCR matcher — wait for MISMO so the
     //     post includes the download link
     const mismo = await mismoPromise
-    notifyPremeAppSubmission({
+    // Awaited — Vercel freezes the lambda once the response returns, so
+    // fire-and-forget sends were racing the freeze and randomly never firing
+    await notifyPremeAppSubmission({
       ...application,
       mismo_xml_url: mismo?.mismoUrl ?? null,
       fnm_url: mismo?.fnmUrl ?? null,
@@ -178,7 +180,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Confirmation email (immediate)
     if (applicantEmail && !applicantEmail.endsWith("@placeholder.preme")) {
-      sendApplicationConfirmationEmail({
+      await sendApplicationConfirmationEmail({
         email: applicantEmail,
         firstName,
         applicationNumber,
@@ -193,7 +195,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Create lead record + queue follow-up cadence (if phone provided)
     if (applicantPhone) {
-      createLeadAndQueueFollowUp(adminClient, {
+      await createLeadAndQueueFollowUp(adminClient, {
         firstName,
         lastName: applicantName.split(" ").slice(1).join(" ") || "",
         phone: applicantPhone,

@@ -29,6 +29,26 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
     onDataChange(updatedData)
   }
 
+  // EIN is always stored/displayed as XX-XXXXXXX
+  const formatEin = (raw: string) => {
+    const digits = raw.replace(/\D/g, "").slice(0, 9)
+    return digits.length > 2 ? `${digits.slice(0, 2)}-${digits.slice(2)}` : digits
+  }
+
+  const purpose: string = formData.loanPurpose || ""
+  const isPurchase = purpose === "purchase"
+  const isRefi = purpose === "refinance"
+  const isCashOut = purpose === "cash-out-refinance"
+
+  // LTV: against purchase price on purchases, estimated value otherwise
+  const ltvBasis = isPurchase
+    ? Number.parseFloat(formData.purchasePrice) || Number.parseFloat(formData.propertyValue) || 0
+    : Number.parseFloat(formData.propertyValue) || 0
+  const loanAmt = Number.parseFloat(formData.loanAmount) || 0
+  const ltv = ltvBasis > 0 && loanAmt > 0 ? (loanAmt / ltvBasis) * 100 : null
+  const downPayment = isPurchase && ltvBasis > 0 && loanAmt > 0 ? Math.max(0, ltvBasis - loanAmt) : null
+  const cashOut = isCashOut && loanAmt > 0 ? Math.max(0, loanAmt - (Number.parseFloat(formData.currentBalance) || 0)) : null
+
   const handleNext = () => {
     onNext()
   }
@@ -37,6 +57,8 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
     formData.loanAmount &&
     formData.loanPurpose &&
     formData.propertyType &&
+    (!isPurchase || formData.purchasePrice) &&
+    (!(isRefi || isCashOut) || formData.currentBalance !== "" && formData.currentBalance !== undefined) &&
     (formData.entityType === "individual" ||
       (formData.entityType === "entity" && (formData.entityLlcId || formData.entityLegalName)))
 
@@ -48,6 +70,39 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
           <CardDescription className="text-muted-foreground">Tell us about the loan you're seeking</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Purpose-specific context field — purpose itself is picked on the Property step */}
+          {isPurchase && (
+            <div className="space-y-2">
+              <Label htmlFor="purchasePrice" className="text-foreground">
+                Purchase Price *
+              </Label>
+              <Input
+                id="purchasePrice"
+                type="number"
+                placeholder="600000"
+                value={formData.purchasePrice || ""}
+                onChange={(e) => handleInputChange("purchasePrice", e.target.value)}
+                className="bg-input border-border text-foreground focus:border-primary"
+              />
+            </div>
+          )}
+          {(isRefi || isCashOut) && (
+            <div className="space-y-2">
+              <Label htmlFor="currentBalance" className="text-foreground">
+                Current Mortgage Balance *
+              </Label>
+              <Input
+                id="currentBalance"
+                type="number"
+                placeholder="320000"
+                value={formData.currentBalance || ""}
+                onChange={(e) => handleInputChange("currentBalance", e.target.value)}
+                className="bg-input border-border text-foreground focus:border-primary"
+              />
+              <p className="text-xs text-muted-foreground">Enter 0 if the property is owned free and clear</p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="loanAmount" className="text-foreground">
               Loan Amount *
@@ -60,6 +115,25 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
               onChange={(e) => handleInputChange("loanAmount", e.target.value)}
               className="bg-input border-border text-foreground focus:border-primary"
             />
+            {(ltv !== null || downPayment !== null || cashOut !== null) && (
+              <div className="flex flex-wrap gap-3 pt-1 text-xs">
+                {ltv !== null && (
+                  <span className={`rounded-full px-2.5 py-1 font-medium ${ltv > 80 ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"}`}>
+                    LTV {ltv.toFixed(1)}%{ltv > 80 ? " — most DSCR lenders cap at 80%" : ""}
+                  </span>
+                )}
+                {downPayment !== null && (
+                  <span className="rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
+                    Down payment ≈ ${downPayment.toLocaleString("en-US")}
+                  </span>
+                )}
+                {cashOut !== null && (
+                  <span className="rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
+                    Cash to you ≈ ${cashOut.toLocaleString("en-US")}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -81,28 +155,6 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="loanPurpose" className="text-foreground">
-              Loan Purpose *
-            </Label>
-            <Select value={formData.loanPurpose} onValueChange={(value) => handleInputChange("loanPurpose", value)}>
-              <SelectTrigger className="bg-input border-border text-foreground focus:border-primary">
-                <SelectValue placeholder="Select loan purpose" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="purchase">Purchase</SelectItem>
-                <SelectItem value="refinance">Refinance</SelectItem>
-                <SelectItem value="cash-out-refinance">Cash-Out Refinance</SelectItem>
-                <SelectItem value="construction">Construction</SelectItem>
-                <SelectItem value="renovation">Renovation</SelectItem>
-                <SelectItem value="investment">Investment Property</SelectItem>
-                <SelectItem value="bridge-loan">Bridge Loan</SelectItem>
-                <SelectItem value="debt-consolidation">Debt Consolidation</SelectItem>
-                <SelectItem value="home-equity">Home Equity</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
           {/* Ownership / vesting — personal name or an LLC (saved or new) */}
           <div className="space-y-2">
@@ -168,8 +220,9 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
                     <Label className="text-foreground">EIN</Label>
                     <Input
                       placeholder="12-3456789"
+                      inputMode="numeric"
                       value={formData.entityEin || ""}
-                      onChange={(e) => handleInputChange("entityEin", e.target.value)}
+                      onChange={(e) => handleInputChange("entityEin", formatEin(e.target.value))}
                       className="bg-input border-border text-foreground focus:border-primary"
                     />
                   </div>
