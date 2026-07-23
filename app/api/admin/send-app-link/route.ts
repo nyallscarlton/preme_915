@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json()
   const name = String(body.name || "").trim()
+  const requestedBy = String(body.requestedBy || "").trim() || "our team"
   const phoneDigits = String(body.phone || "").replace(/\D/g, "")
   if (!name || phoneDigits.length < 10) {
     return NextResponse.json({ error: "Name and a valid phone number are required" }, { status: 400 })
@@ -55,10 +56,11 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-  const link = `https://www.premerealestate.com/apply-full?guest=1&token=${encodeURIComponent(guestToken)}`
+  const link = `https://www.premerealestate.com/sign?token=${encodeURIComponent(guestToken)}`
   const message =
-    `Hey ${firstName}, it's Riley with Preme Home Loans. Here's your loan application — ` +
-    `it's pre-filled where we could, takes about 5 minutes, and you can sign right on your phone: ${link}\n\n` +
+    `Hey ${firstName}, this is Riley with Preme Home Loans — ${requestedBy} asked me to send over your application. ` +
+    `Here's the link: ${link}\n\n` +
+    `Takes about 5 minutes, you can sign right on your phone, and we'll get you moving right away. ` +
     `Reply here with any questions. Reply STOP to opt out.`
 
   const sms = await sendPremeSms({

@@ -55,6 +55,14 @@ export async function GET(request: Request) {
       )
     }
 
+    // Account-created applications may lack a guest_token; the /sign flow
+    // submits via PUT which authenticates with it — mint one on demand
+    if (!application.guest_token) {
+      const minted = crypto.randomUUID()
+      await supabase.from("loan_applications").update({ guest_token: minted }).eq("id", application.id)
+      application.guest_token = minted
+    }
+
     // Track first open
     if (!application.first_opened_at) {
       await supabase

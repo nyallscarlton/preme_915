@@ -16,6 +16,7 @@ export function SendAppDialog({ onSent }: { onSent?: () => void }) {
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
   const [email, setEmail] = useState("")
+  const [requestedBy, setRequestedBy] = useState("Nyalls")
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<{ link: string; smsSent: boolean; applicationNumber: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +38,7 @@ export function SendAppDialog({ onSent }: { onSent?: () => void }) {
       const res = await fetch("/api/admin/send-app-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, email }),
+        body: JSON.stringify({ name, phone, email, requestedBy }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Send failed")
@@ -106,6 +107,13 @@ export function SendAppDialog({ onSent }: { onSent?: () => void }) {
               <div className="space-y-1.5">
                 <Label className="text-foreground">Email (optional)</Label>
                 <Input placeholder="jane@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-input border-border" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-foreground">Who's this from?</Label>
+                <Input value={requestedBy} onChange={(e) => setRequestedBy(e.target.value)} className="bg-input border-border" />
+                <p className="text-xs text-muted-foreground">
+                  Riley's text reads: "{requestedBy || "our team"} asked me to send over your application."
+                </p>
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <Button
