@@ -12,6 +12,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getBaseUrl } from "@/lib/config"
 import { sendPremeSms, PREME_SMS_FROM } from "@/lib/preme-sms"
+import { ensureShortLink } from "@/lib/short-link"
 
 export type SendMethod = "email" | "sms" | "both"
 
@@ -47,9 +48,9 @@ export async function sendFullAppLink(
 
   const firstName = app.applicant_first_name || (app.applicant_name || "").split(" ")[0] || "there"
   const base = getBaseUrl()
-  // The 1003 now lives at /sign — the document-style prefilled, editable,
-  // e-signable experience. (Same message copy as before, new destination.)
-  const link = `${base}/sign?token=${encodeURIComponent(guestToken)}`
+  // The 1003 lives at /sign; the borrower gets their short evergreen link
+  // (one clean tappable line in SMS, always routes to their current step)
+  const link = await ensureShortLink(admin, app.id)
 
   let emailSent = false
   let smsSent = false

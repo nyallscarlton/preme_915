@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendPremeSms } from "@/lib/preme-sms"
 import { upsertContact, syncSmsToGhl } from "@/lib/ghl-client"
+import { ensureShortLink } from "@/lib/short-link"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
@@ -57,9 +58,9 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-  // Initial (short) application — the full 1003 text comes later via the
-  // Approve flow (lib/send-full-app.ts), which is a separate message.
-  const link = `https://www.premerealestate.com/apply?guest=1&token=${encodeURIComponent(guestToken)}`
+  // One evergreen short link per borrower — routes to the initial app now,
+  // and to the 1003 sign page automatically once they're approved.
+  const link = await ensureShortLink(admin, application.id)
   const message =
     `Hey ${firstName}, this is Riley with Preme Home Loans — ${requestedBy} asked me to send over your application. ` +
     `Here's the link: ${link}\n\n` +
