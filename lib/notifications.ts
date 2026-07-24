@@ -307,6 +307,9 @@ export async function notifyPremeAppSubmission(app: {
   const amount = app.loan_amount ? `$${Number(app.loan_amount).toLocaleString("en-US")}` : "N/A"
   // www, not app subdomain — app.* rewrites /admin/* into the pipeline UI (404)
   const portalLink = `https://www.premerealestate.com/admin?app=${app.id || ""}`
+  // Stable, re-signing download links — raw storage URLs expire in 15 min
+  const urlaStable = app.id ? `https://www.premerealestate.com/api/applications/${app.id}/loan-file?type=urla` : null
+  const mismoStable = app.id ? `https://www.premerealestate.com/api/applications/${app.id}/loan-file?type=mismo` : null
 
   const isSigned = !!(app as any).esign_name
   const textLines = [
@@ -335,23 +338,20 @@ export async function notifyPremeAppSubmission(app: {
     ]
     if (app.mismo_xml_url || app.urla_pdf_url) {
       const elements: unknown[] = []
-      if (app.urla_pdf_url) {
+      if (app.urla_pdf_url && urlaStable) {
         elements.push({
           type: "button",
           text: { type: "plain_text", text: "Download 1003 PDF" },
-          url: app.urla_pdf_url,
+          url: urlaStable,
           style: "primary",
         })
       }
-      if (app.mismo_xml_url) {
+      if (app.mismo_xml_url && mismoStable) {
         elements.push({
           type: "button",
           text: { type: "plain_text", text: "Download MISMO XML" },
-          url: app.mismo_xml_url,
+          url: mismoStable,
         })
-      }
-      if (app.fnm_url) {
-        elements.push({ type: "button", text: { type: "plain_text", text: "FNM" }, url: app.fnm_url })
       }
       elements.push({
         type: "button",

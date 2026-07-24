@@ -78,6 +78,24 @@ export async function sendPremeSms(args: PremeSmsArgs): Promise<PremeSmsResult> 
     })
     const chatId = (chat as any).chat_id || (chat as any).id || null
     console.log(`[preme-sms] ${args.source} → ${args.toPhone}: chat_id=${chatId}`)
+
+    // Log to contact_interactions so the portal's Communication Thread shows
+    // every outbound, regardless of which caller sent it. Fire-safe.
+    try {
+      const { createAdminClient } = await import("./supabase/admin")
+      const digits = args.toPhone.replace(/\D/g, "")
+      await createAdminClient().from("contact_interactions").insert({
+        phone: digits.startsWith("1") ? `+${digits}` : `+1${digits}`,
+        channel: "sms",
+        direction: "outbound",
+        content: args.message,
+        summary: `Riley SMS (${args.source})`,
+        metadata: { source: args.source, chat_id: chatId, ...(args.metadata || {}) },
+      })
+    } catch (logErr) {
+      console.error("[preme-sms] contact_interactions log failed:", logErr)
+    }
+
     return { ok: true, chatId, from: PREME_SMS_FROM }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
