@@ -308,8 +308,11 @@ export async function notifyPremeAppSubmission(app: {
   // www, not app subdomain — app.* rewrites /admin/* into the pipeline UI (404)
   const portalLink = `https://www.premerealestate.com/admin?app=${app.id || ""}`
 
+  const isSigned = !!(app as any).esign_name
   const textLines = [
-    `\u{1F4CB} *New application submitted*`,
+    isSigned
+      ? `\u270D\uFE0F *1003 SIGNED — ${name}* (${(app as any).application_number || ""})`
+      : `\u{1F4CB} *New application submitted*`,
     `\u2022 Name: ${name}`,
     `\u2022 Phone: ${phone}`,
     `\u2022 Email: ${email}`,

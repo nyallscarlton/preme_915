@@ -28,8 +28,16 @@ interface DocFile {
   created_at: string
 }
 
+interface GeneratedFile {
+  name: string
+  url: string
+  signed: boolean
+  created_at: string | null
+}
+
 export function DocumentsPanel({ applicationId }: { applicationId: string }) {
   const [docs, setDocs] = useState<DocFile[]>([])
+  const [generated, setGenerated] = useState<GeneratedFile[]>([])
   const [loading, setLoading] = useState(true)
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -41,6 +49,7 @@ export function DocumentsPanel({ applicationId }: { applicationId: string }) {
       if (!res.ok) throw new Error("Failed to load documents")
       const data = await res.json()
       setDocs(data.documents || [])
+      setGenerated(data.generated || [])
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load documents")
     } finally {
@@ -109,6 +118,28 @@ export function DocumentsPanel({ applicationId }: { applicationId: string }) {
         ) : (
           <>
             {error && <p className="text-xs text-red-500">{error}</p>}
+
+            {generated.length > 0 && (
+              <div className="rounded-md border border-[#997100]/50 bg-[#997100]/5 px-3 py-2">
+                <p className="mb-1.5 text-xs font-semibold text-foreground">Loan file</p>
+                {generated.map((gf) => (
+                  <a
+                    key={gf.name}
+                    href={gf.url}
+                    target="_blank"
+                    rel="noopener"
+                    className="flex items-center justify-between gap-2 py-1 text-xs text-blue-500 hover:underline"
+                  >
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <ExternalLink className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{gf.name}</span>
+                    </span>
+                    {gf.signed && <Badge className="shrink-0 bg-green-100 text-green-800 hover:bg-green-100">Signed</Badge>}
+                  </a>
+                ))}
+              </div>
+            )}
+
             {DOC_SLOTS.map((slot) => {
               const slotDocs = docs.filter((d) => d.category === slot.id)
               const has = slotDocs.length > 0

@@ -178,7 +178,42 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, documents })
+    // Generated loan files (signed 1003 PDF, MISMO, FNM) live in the
+    // preme-loan-files bucket with paths on the application row — surface
+    // them alongside the uploads so the portal Documents panel has ONE view
+    const generated: Array<{ name: string; url: string; signed: boolean; created_at: string | null }> = []
+    try {
+      const { data: appRow } = await adminClient
+        .from("loan_applications")
+        .select("urla_pdf_path, mismo_xml_path, esign_name, esign_signed_at, urla_generated_at")
+        .eq("id", applicationId)
+        .single()
+      if (appRow?.urla_pdf_path) {
+        const { data: signedUrl } = await adminClient.storage
+          .from("preme-loan-files")
+          .createSignedUrl(appRow.urla_pdf_path, 60 * 60)
+        if (signedUrl?.signedUrl) {
+          generated.push({
+            name: appRow.esign_name ? `1003 — SIGNED by ${appRow.esign_name}` : "1003 (unsigned draft)",
+            url: signedUrl.signedUrl,
+            signed: !!appRow.esign_name,
+            created_at: appRow.esign_signed_at || appRow.urla_generated_at || null,
+          })
+        }
+      }
+      if (appRow?.mismo_xml_path) {
+        const { data: signedUrl } = await adminClient.storage
+          .from("preme-loan-files")
+          .createSignedUrl(appRow.mismo_xml_path, 60 * 60)
+        if (signedUrl?.signedUrl) {
+          generated.push({ name: "MISMO 3.4 XML (lender file)", url: signedUrl.signedUrl, signed: false, created_at: appRow.urla_generated_at || null })
+        }
+      }
+    } catch (err) {
+      console.error("[documents] generated-files lookup failed:", err)
+    }
+
+    return NextResponse.json({ success: true, documents, generated })
   } catch (error) {
     console.error("[documents] GET error:", error)
     return NextResponse.json({ error: "Failed to list documents" }, { status: 500 })
