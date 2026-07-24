@@ -46,7 +46,8 @@ export async function GET(
 
     if (intError) {
       console.error("[interactions] Query error:", intError)
-      return NextResponse.json({ interactions: [] })
+      // Surface the reason — silent empties hid a real prod failure here
+      return NextResponse.json({ interactions: [], queryError: intError.message })
     }
 
     return NextResponse.json({
