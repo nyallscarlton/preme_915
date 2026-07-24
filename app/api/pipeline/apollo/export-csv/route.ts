@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createZentrxClient } from "@/lib/supabase/admin"
 
+export const dynamic = "force-dynamic"
+
 /**
  * GET /api/pipeline/apollo/export-csv?metro=dallas
  *

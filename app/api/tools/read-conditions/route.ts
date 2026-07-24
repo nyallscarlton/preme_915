@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 /**
  * Preme Home Loans — Retell Custom Tool: Read Conditions
  *

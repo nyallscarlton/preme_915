@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
+export const dynamic = "force-dynamic"
+
 // GET /api/dscr/lenders — Fetch all active DSCR lenders
 // Admin/service-role only — never exposed to borrowers
 export async function GET() {

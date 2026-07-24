@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { searchContractors } from "@/lib/apollo"
 
+export const dynamic = "force-dynamic"
+
 // GET /api/pipeline/apollo/search?metro=dallas&page=1
 // Search Apollo for water damage restoration contractors by metro
 export async function GET(request: NextRequest) {

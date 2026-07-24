@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { matchAllLenders, type DscrApplication, type DscrLender } from "@/lib/dscr-matcher"
 
+export const dynamic = "force-dynamic"
+
 // POST /api/dscr/match — Run lender matching engine
 // Admin/service-role only — never exposed to borrowers
 export async function POST(req: NextRequest) {

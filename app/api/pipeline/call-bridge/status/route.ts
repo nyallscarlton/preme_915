@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createZentrxClient } from "@/lib/supabase/admin"
 
+export const dynamic = "force-dynamic"
+
 /**
  * POST /api/pipeline/call-bridge/status
  * Twilio calls this when the bridge call completes.

@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
+export const dynamic = "force-dynamic"
+
 // Use the anon key for admin operations since service role key is not a valid JWT
 // This route verifies the user's session first, then creates their own profile
 export async function POST(request: Request) {

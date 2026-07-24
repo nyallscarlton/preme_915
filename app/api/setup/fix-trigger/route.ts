@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
+export const dynamic = "force-dynamic"
+
 // One-time setup endpoint to fix the profiles trigger
 // The trigger was inserting into 'id' instead of 'user_id'
 export async function POST(request: Request) {

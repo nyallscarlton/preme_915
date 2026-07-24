@@ -3,6 +3,8 @@ import { LENDER_PORTALS } from '@/lib/browser/portal-config'
 import type { Condition, LoanStatus } from '@/lib/browser/types'
 import { scrapeCache } from '../status/route'
 
+export const dynamic = "force-dynamic"
+
 interface ConditionWithLoan extends Condition {
   loanNumber: string
   borrowerName: string

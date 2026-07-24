@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 /**
  * One-time setup route to create the call_reviews table.
  * DELETE THIS FILE after running once.

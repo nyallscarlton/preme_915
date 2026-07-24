@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { storeInteraction } from "@/lib/memory"
 import Retell from "retell-sdk"
 
+export const dynamic = "force-dynamic"
+
 /**
  * GET /api/cron/app-followup
  * Checks for applications that haven't been opened, started but not submitted,

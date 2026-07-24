@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
+export const dynamic = "force-dynamic"
+
 /**
  * POST /api/pipeline/valuation
  * Get estimated property value using Zillow autocomplete + zpid detail page.

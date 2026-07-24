@@ -3,6 +3,8 @@ import { LENDER_PORTALS } from '@/lib/browser/portal-config'
 import type { LoanStatus } from '@/lib/browser/types'
 import { scrapeCache } from '../status/route'
 
+export const dynamic = "force-dynamic"
+
 /**
  * GET /api/portals/loans
  * Returns all tracked loans with their current portal statuses,

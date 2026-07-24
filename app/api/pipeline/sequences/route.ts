@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createZentrxClient } from "@/lib/supabase/admin"
 
+export const dynamic = "force-dynamic"
+
 export async function PATCH(request: NextRequest) {
   const body = await request.json()
   const { type, id } = body

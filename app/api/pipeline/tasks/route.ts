@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createZentrxClient } from "@/lib/supabase/admin"
 
+export const dynamic = "force-dynamic"
+
 // GET /api/pipeline/tasks — Get pending/upcoming tasks
 export async function GET(request: NextRequest) {
   const supabase = createZentrxClient()

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 /**
  * Twilio Recording Status Webhook
  * Updates the lead_messages entry with the recording URL when ready.

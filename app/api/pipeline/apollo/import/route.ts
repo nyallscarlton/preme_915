@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { createZentrxClient } from "@/lib/supabase/admin"
 import type { ApolloContact } from "@/lib/apollo"
 
+export const dynamic = "force-dynamic"
+
 // POST /api/pipeline/apollo/import
 // Import selected Apollo contacts as prospected buyers
 export async function POST(request: NextRequest) {

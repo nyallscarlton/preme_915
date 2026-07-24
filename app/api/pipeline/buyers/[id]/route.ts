@@ -4,6 +4,8 @@ import { createZentrxClient } from "@/lib/supabase/admin"
 const pauseBuyer = async (id: string, reason: string) => ({ paused: true, id, reason })
 const resumeBuyer = async (id: string) => ({ paused: false, id })
 
+export const dynamic = "force-dynamic"
+
 // GET /api/pipeline/buyers/[id] — Buyer detail with recent calls and transactions
 export async function GET(
   request: NextRequest,

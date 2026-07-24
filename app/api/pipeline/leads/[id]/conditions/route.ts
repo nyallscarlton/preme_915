@@ -9,6 +9,8 @@ import {
   CONDITION_TEMPLATES,
 } from "@/lib/conditions"
 
+export const dynamic = "force-dynamic"
+
 // GET /api/pipeline/leads/[id]/conditions — conditions + lender matches
 export async function GET(
   _request: NextRequest,

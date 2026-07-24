@@ -5,6 +5,8 @@ import { storeInteraction } from "@/lib/memory"
 import crypto from "crypto"
 import Retell from "retell-sdk"
 
+export const dynamic = "force-dynamic"
+
 // loan_applications lives in the `preme` schema, not `zentryx`
 function createPremeClient() {
   return createSupabaseClient(

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { createZentrxClient } from "@/lib/supabase/admin"
 import { storeInteraction } from "@/lib/memory"
 
+export const dynamic = "force-dynamic"
+
 /**
  * POST /api/pipeline/call-bridge/recording
  * Twilio calls this when a recording is ready.

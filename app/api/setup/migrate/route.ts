@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 /**
  * One-time migration endpoint. Creates the call_reviews table.
  * Self-destructs after successful run (returns instructions to delete).

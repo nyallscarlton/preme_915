@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
+export const dynamic = "force-dynamic"
+
 /**
  * GET /api/pipeline/call-bridge/twiml
  * TwiML that plays when admin picks up: "Press 1 to connect to [lead name]"

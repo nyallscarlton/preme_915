@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { createZentrxClient } from "@/lib/supabase/admin"
 import Retell from "retell-sdk"
 
+export const dynamic = "force-dynamic"
+
 // GET /api/pipeline/leads/[id] — Full lead detail with timeline
 export async function GET(
   request: NextRequest,

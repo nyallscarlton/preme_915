@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { LENDER_PORTALS, getPortalConfig, getPortalCredentials } from '@/lib/browser/portal-config'
 import type { PortalConnectionStatus, PortalScrapeResult } from '@/lib/browser/types'
 
+export const dynamic = "force-dynamic"
+
 /**
  * In-memory cache of latest scrape results.
  * In production, replace with database persistence (Supabase / Prisma).

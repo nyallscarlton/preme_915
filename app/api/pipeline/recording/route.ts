@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
+export const dynamic = "force-dynamic"
+
 /**
  * GET /api/pipeline/recording?url=...
  * Proxies Twilio recording URLs that require authentication.

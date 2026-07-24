@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 /**
  * Twilio Call Status Webhook
  * Updates the lead_messages entry when a direct call completes.
