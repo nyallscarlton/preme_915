@@ -903,7 +903,7 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                     </Badge>
                     {!isEditing ? (
                       <>
-                        <SendFullAppButton applicationId={selectedApp.dbId} status={selectedApp.status} />
+                        <SendFullAppButton applicationId={selectedApp.dbId} status={selectedApp.status} sentAt={selectedApp.raw?.pre_qual_to_full_sent_at ?? null} />
                         <MismoDownloadsBar
                           applicationId={selectedApp.dbId}
                           status={selectedApp.status}
@@ -1530,10 +1530,13 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
-                      <SelectItem value="submitted">Submitted</SelectItem>
-                      <SelectItem value="under_review">Under Review</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="invited">App Sent (invite out)</SelectItem>
+                      <SelectItem value="app_submitted">App In — Review</SelectItem>
+                      <SelectItem value="sent">1003 Out</SelectItem>
+                      <SelectItem value="submitted">1003 Signed</SelectItem>
+                      <SelectItem value="under_review">With Lender</SelectItem>
+                      <SelectItem value="approved">Approved / CTC — emails borrower "loan approved"</SelectItem>
+                      <SelectItem value="rejected">Rejected — emails borrower</SelectItem>
                       <SelectItem value="on_hold">On Hold</SelectItem>
                       <SelectItem value="archived">Archived</SelectItem>
                     </SelectContent>
@@ -1843,19 +1846,19 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
  * the canonical entry point for issuing the 1003. Two buttons doing the same
  * thing is confusing.
  */
-function SendFullAppButton({ applicationId, status }: { applicationId: string; status: string }) {
+function SendFullAppButton({ applicationId, status, sentAt }: { applicationId: string; status: string; sentAt?: string | null }) {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [result, setResult] = useState<{ email: boolean; sms: boolean } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const isPreQual = status === "pre_qualified"
-  // Green primary when row is awaiting the first manual 1003 issuance,
-  // gold when this is a resend on an already-sent row.
-  const primaryClass = isPreQual
-    ? "bg-green-600 hover:bg-green-700 text-white"
-    : "bg-[#997100] hover:bg-[#b8850a] text-black"
-  const primaryLabel = isPreQual ? "Send Full 1003 Link" : "Resend Full 1003 Link"
+  // "Send" vs "Resend" is about whether the 1003 was EVER sent to this
+  // borrower (pre_qual_to_full_sent_at) — not about their status.
+  const everSent = !!sentAt
+  const primaryClass = everSent
+    ? "bg-transparent border border-[#997100] text-[#997100] hover:bg-[#997100] hover:text-black"
+    : "bg-green-600 hover:bg-green-700 text-white"
+  const primaryLabel = everSent ? "Resend 1003 Link" : "Approve & Send Full 1003"
 
   async function send(method: "email" | "sms" | "both") {
     setSending(true); setError(null); setResult(null)
@@ -1886,9 +1889,9 @@ function SendFullAppButton({ applicationId, status }: { applicationId: string; s
           className={primaryClass}
           onClick={() => send("both")}
           disabled={sending}
-          title={isPreQual
-            ? "Manually issues the full MISMO 1003 application link to the borrower via email + SMS. Use after you've reviewed the DSCR match."
-            : "Re-sends the borrower their full 1003 link via email + SMS"}
+          title={everSent
+            ? "Re-sends the borrower their full 1003 link via email + SMS"
+            : "Approves the file and texts + emails the borrower their prefilled, signable 1003 link"}
         >
           {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : sent ? <CheckCircle className="h-4 w-4 mr-1" /> : <Send className="h-4 w-4 mr-1" />}
           {sent ? "Sent" : primaryLabel}

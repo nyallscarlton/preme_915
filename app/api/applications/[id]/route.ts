@@ -107,12 +107,19 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const oldStatus = app?.status || "unknown"
     const statusChanged = "status" in body && body.status !== oldStatus
 
-    const { data: updated, error } = await adminClient
-      .from("loan_applications")
-      .update(updateData)
-      .eq("id", id)
-      .select()
-      .single()
+    // Atomic dedupe for status changes: only match the row if the status is
+    // actually different, so rapid duplicate PATCHes (double-clicks, retries)
+    // can't fire the borrower notification more than once.
+    let query = adminClient.from("loan_applications").update(updateData).eq("id", id)
+    if (statusChanged) query = query.neq("status", body.status)
+    const { data: updatedRows, error } = await query.select()
+    const updated = updatedRows?.[0] ?? null
+
+    if (statusChanged && !error && !updated) {
+      // Someone else already applied this exact status — treat as success, no re-notify
+      const { data: current } = await adminClient.from("loan_applications").select().eq("id", id).single()
+      return NextResponse.json({ success: true, application: current, deduped: true })
+    }
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
