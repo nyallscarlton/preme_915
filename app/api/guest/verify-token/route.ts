@@ -88,6 +88,7 @@ export async function GET(request: Request) {
       applicationNumber: application.application_number,
       guestToken: application.guest_token,
       status: application.status,
+      docRequest: application.doc_request || null,
       isPreQual: application.is_pre_qual === true,
       submittedAt: application.submitted_at || application.created_at,
       preQualifiedAt: application.pre_qualified_at,

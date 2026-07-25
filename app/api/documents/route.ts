@@ -182,12 +182,14 @@ export async function GET(request: NextRequest) {
     // preme-loan-files bucket with paths on the application row — surface
     // them alongside the uploads so the portal Documents panel has ONE view
     const generated: Array<{ name: string; url: string; signed: boolean; created_at: string | null }> = []
+    let docRequest: unknown = null
     try {
       const { data: appRow } = await adminClient
         .from("loan_applications")
-        .select("urla_pdf_path, mismo_xml_path, esign_name, esign_signed_at, urla_generated_at")
+        .select("urla_pdf_path, mismo_xml_path, esign_name, esign_signed_at, urla_generated_at, doc_request")
         .eq("id", applicationId)
         .single()
+      docRequest = (appRow as any)?.doc_request ?? null
       if (appRow?.urla_pdf_path) {
         const { data: signedUrl } = await adminClient.storage
           .from("preme-loan-files")
@@ -213,7 +215,7 @@ export async function GET(request: NextRequest) {
       console.error("[documents] generated-files lookup failed:", err)
     }
 
-    return NextResponse.json({ success: true, documents, generated })
+    return NextResponse.json({ success: true, documents, generated, docRequest })
   } catch (error) {
     console.error("[documents] GET error:", error)
     return NextResponse.json({ error: "Failed to list documents" }, { status: 500 })
