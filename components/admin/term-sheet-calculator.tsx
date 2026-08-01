@@ -247,7 +247,7 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
             ) : (
               <Num label="Payoff Balance" value={base.currentBalance} onChange={setB("currentBalance")} step={1000} />
             )}
-            <Num label="Property Value" value={base.propertyValue} onChange={setB("propertyValue")} step={1000} />
+            {!isFlip && <Num label="Property Value" value={base.propertyValue} onChange={setB("propertyValue")} step={1000} />}
             <Num label="Monthly Rent" value={base.monthlyRent} onChange={setB("monthlyRent")} step={50} />
             <Num label="Annual Taxes" value={base.annualTaxes} onChange={setB("annualTaxes")} step={100} />
             <Num label="Annual Insurance" value={base.annualInsurance} onChange={setB("annualInsurance")} step={100} />

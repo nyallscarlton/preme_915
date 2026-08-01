@@ -119,9 +119,9 @@ export function computeScenario(i: TermSheetInputs, label: string): ScenarioResu
   const rehabHoldback = isFlip ? ((i.pctRehabFinanced ?? 100) / 100) * (i.rehabBudget || 0) : 0
   const totalLoan = i.loanAmount + rehabHoldback
 
-  // LTV keys off appraised/est. VALUE, not purchase price — on under-market
-  // buys the loan sizes from value, which is what shrinks the down payment
-  const valueBasis = i.propertyValue || i.purchasePrice
+  // LTV keys off appraised/est. VALUE for DSCR products; flips ignore
+  // as-is value entirely — their world is purchase price and ARV
+  const valueBasis = isFlip ? i.purchasePrice : i.propertyValue || i.purchasePrice
   const ltv = valueBasis > 0 ? (i.loanAmount / valueBasis) * 100 : 0
   const projectCost = (i.purchasePrice || i.propertyValue || 0) + (isFlip ? i.rehabBudget || 0 : 0)
   const ltc = isShortTerm && projectCost > 0 ? (totalLoan / projectCost) * 100 : null
