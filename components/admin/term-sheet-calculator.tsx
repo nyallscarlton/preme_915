@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -89,6 +89,36 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
     { label: "Balanced", ratePercent: 7.625, brokerPoints: 2.25, lenderPoints: 1.0 },
     { label: "Lower Cash", ratePercent: 7.99, brokerPoints: 2.0, lenderPoints: 0 },
   ])
+
+  // Reopen where the last term sheet left off — product, inputs, and levers
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => {
+    if (!open || hydrated) return
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/applications/${app.id}/term-sheet`)
+        const data = await res.json()
+        if (data.latest?.inputs) {
+          const { ratePercent: _r, brokerPoints: _b, lenderPoints: _l, ...savedBase } = data.latest.inputs
+          setBase((prev) => ({ ...prev, ...savedBase }))
+          if (Array.isArray(data.latest.scenarios) && data.latest.scenarios.length === 3) {
+            setLevers(
+              data.latest.scenarios.map((sc: any) => ({
+                label: sc.label,
+                ratePercent: sc.ratePercent,
+                brokerPoints: sc.brokerPoints,
+                lenderPoints: sc.lenderPoints,
+              }))
+            )
+          }
+        }
+      } catch {
+        // no saved sheet — file defaults stand
+      } finally {
+        setHydrated(true)
+      }
+    })()
+  }, [open, hydrated, app.id])
 
   const [sending, setSending] = useState<"pdf" | "send" | null>(null)
   const [result, setResult] = useState<{ msg: string; pdfUrl?: string | null } | null>(null)

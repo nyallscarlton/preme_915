@@ -19,6 +19,23 @@ async function requireAdmin() {
 }
 
 /**
+ * GET — latest saved term sheet for this application (hydrates the
+ * calculator so it reopens exactly where the last conversation ended).
+ */
+export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireAdmin()
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const { data } = await auth.admin
+    .from("term_sheets")
+    .select("inputs, scenarios, created_at")
+    .eq("application_id", params.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return NextResponse.json({ latest: data || null })
+}
+
+/**
  * POST — generate a term sheet from the live calculator and (optionally)
  * send it to the borrower via SMS + email with a stable download link.
  * Body: { inputs: TermSheetInputs (base), scenarios: [{label, ratePercent,
