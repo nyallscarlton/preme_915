@@ -120,6 +120,28 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
     })()
   }, [open, hydrated, app.id])
 
+  // Target LTV links value ⇄ loan: change value → loan follows the LTV;
+  // type a loan → LTV back-solves. Down payment always = value − loan.
+  const [ltvPct, setLtvPct] = useState<number>(() => {
+    const v = Number(app.property_value) || 0
+    const l = Number(app.loan_amount) || 0
+    return v > 0 && l > 0 ? Math.round((l / v) * 1000) / 10 : 80
+  })
+
+  const setPropertyValue = (v: number) =>
+    setBase((prev) => ({ ...prev, propertyValue: v, loanAmount: Math.round((v * ltvPct) / 100) }))
+  const setLtv = (pct: number) => {
+    setLtvPct(pct)
+    setBase((prev) => ({ ...prev, loanAmount: Math.round(((prev.propertyValue || prev.purchasePrice) * pct) / 100) }))
+  }
+  const setLoanAmount = (l: number) => {
+    setBase((prev) => {
+      const basis = prev.propertyValue || prev.purchasePrice
+      if (basis > 0) setLtvPct(Math.round((l / basis) * 1000) / 10)
+      return { ...prev, loanAmount: l }
+    })
+  }
+
   const [sending, setSending] = useState<"pdf" | "send" | null>(null)
   const [result, setResult] = useState<{ msg: string; pdfUrl?: string | null } | null>(null)
 
@@ -219,13 +241,14 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
 
           {/* Deal basics */}
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-            <Num label="Loan Amount" value={base.loanAmount} onChange={setB("loanAmount")} step={1000} />
+            <Num label="Loan Amount" value={base.loanAmount} onChange={setLoanAmount} step={1000} />
+            <Num label="Target LTV" suffix="%" value={ltvPct} onChange={setLtv} step={1} />
             {isPurchase || isShortTerm ? (
               <Num label={isFlip ? "Purchase Price" : "Purchase Price / Basis"} value={base.purchasePrice} onChange={setB("purchasePrice")} step={1000} />
             ) : (
               <Num label="Payoff Balance" value={base.currentBalance} onChange={setB("currentBalance")} step={1000} />
             )}
-            <Num label="Property Value" value={base.propertyValue} onChange={setB("propertyValue")} step={1000} />
+            <Num label="Property Value" value={base.propertyValue} onChange={setPropertyValue} step={1000} />
             <Num label="Monthly Rent" value={base.monthlyRent} onChange={setB("monthlyRent")} step={50} />
             <Num label="Annual Taxes" value={base.annualTaxes} onChange={setB("annualTaxes")} step={100} />
             <Num label="Annual Insurance" value={base.annualInsurance} onChange={setB("annualInsurance")} step={100} />
