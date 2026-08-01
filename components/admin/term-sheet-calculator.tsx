@@ -128,6 +128,20 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
   })()
   const lenderName = app.pre_qual_lender_match?.topLender?.name || null
 
+  // Flip structure: advance = % of purchase price (85% default = 15% down);
+  // rehab rides on top via draws; total capped at 70% ARV (red when over)
+  const [pctPurchaseFinanced, setPctPurchaseFinanced] = useState(85)
+  const setFlipPrice = (v: number) =>
+    setBase((prev) => ({
+      ...prev,
+      purchasePrice: v,
+      ...(prev.purpose === "fix-flip" ? { loanAmount: Math.round((v * pctPurchaseFinanced) / 100) } : {}),
+    }))
+  const setPctFinanced = (pct: number) => {
+    setPctPurchaseFinanced(pct)
+    setBase((prev) => ({ ...prev, loanAmount: Math.round(((prev.purchasePrice || 0) * pct) / 100) }))
+  }
+
   const [sending, setSending] = useState<"pdf" | "send" | null>(null)
   const [result, setResult] = useState<{ msg: string; pdfUrl?: string | null } | null>(null)
 
@@ -229,7 +243,7 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
             <Num label="Loan Amount" value={base.loanAmount} onChange={setB("loanAmount")} step={1000} />
             {isPurchase || isShortTerm ? (
-              <Num label={isFlip ? "Purchase Price" : "Purchase Price / Basis"} value={base.purchasePrice} onChange={setB("purchasePrice")} step={1000} />
+              <Num label={isFlip ? "Purchase Price" : "Purchase Price / Basis"} value={base.purchasePrice} onChange={isFlip ? setFlipPrice : setB("purchasePrice")} step={1000} />
             ) : (
               <Num label="Payoff Balance" value={base.currentBalance} onChange={setB("currentBalance")} step={1000} />
             )}
@@ -255,6 +269,7 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
               {isFlip && <Num label="Rehab Budget" value={base.rehabBudget} onChange={setB("rehabBudget")} step={5000} />}
               {isFlip && <Num label="ARV (after repair)" value={base.arv} onChange={setB("arv")} step={5000} />}
+              {isFlip && <Num label="% Purchase Financed" value={pctPurchaseFinanced} onChange={setPctFinanced} step={5} />}
               {isFlip && <Num label="% Rehab Financed" value={base.pctRehabFinanced} onChange={setB("pctRehabFinanced")} step={5} />}
               <Num label="Term (months)" value={base.termMonths} onChange={setB("termMonths")} step={1} />
               <Num label="Est. Hold (months)" value={base.holdMonths} onChange={setB("holdMonths")} step={1} />
@@ -263,6 +278,23 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
 
           {/* LTV readout — computed, never typed */}
           {(() => {
+            if (isFlip) {
+              const totalLoan = base.loanAmount + ((base.pctRehabFinanced || 100) / 100) * (base.rehabBudget || 0)
+              const arvLtv = base.arv > 0 ? (totalLoan / base.arv) * 100 : null
+              const dpPct = base.purchasePrice > 0 ? Math.max(0, 100 - (base.loanAmount / base.purchasePrice) * 100) : null
+              const over = arvLtv != null && arvLtv > 70.05
+              return (
+                <div className={`flex items-center justify-between rounded-md border px-3 py-2 ${over ? "border-red-500 bg-red-500/10" : "border-green-600/50 bg-green-500/5"}`}>
+                  <span className={`text-sm font-semibold ${over ? "text-red-500" : "text-green-500"}`}>
+                    {arvLtv != null ? `${arvLtv.toFixed(1)}% of ARV${over ? " — ABOVE 70% cap" : ""}` : "Enter ARV"}
+                    {dpPct != null ? ` · ${dpPct.toFixed(0)}% down on purchase` : ""}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Flip max ~70% ARV{base.arv > 0 ? ` · max total loan $${Math.round(base.arv * 0.7).toLocaleString("en-US")}` : ""}
+                  </span>
+                </div>
+              )
+            }
             const basis = base.propertyValue || base.purchasePrice
             const ltvNow = basis > 0 && base.loanAmount > 0 ? (base.loanAmount / basis) * 100 : null
             if (ltvNow == null) return null
