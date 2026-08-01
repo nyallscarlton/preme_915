@@ -44,7 +44,9 @@ export async function renderTermSheetPdf(args: {
   // Scenario table
   const i = args.inputs
   const cols = [230, 342, 454] // x for each scenario column
-  const isPurchase = i.purpose === "purchase"
+  // Mirrors engine: flips and bridge loans without a payoff are acquisitions
+  const isPurchase =
+    i.purpose === "purchase" || i.purpose === "fix-flip" || (i.purpose === "bridge" && !(i.currentBalance > 0))
 
   page.drawRectangle({ x: LEFT - 4, y: y - 4, width: RIGHT - LEFT + 8, height: 16, color: rgb(0.96, 0.92, 0.82) })
   args.scenarios.forEach((s, idx) => text(s.label, cols[idx], 9, bold))
