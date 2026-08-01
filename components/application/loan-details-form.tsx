@@ -40,10 +40,9 @@ export function LoanDetailsForm({ onNext, onPrevious, onDataChange, initialData 
   const isRefi = purpose === "refinance"
   const isCashOut = purpose === "cash-out-refinance"
 
-  // LTV: against purchase price on purchases, estimated value otherwise
-  const ltvBasis = isPurchase
-    ? Number.parseFloat(formData.purchasePrice) || Number.parseFloat(formData.propertyValue) || 0
-    : Number.parseFloat(formData.propertyValue) || 0
+  // LTV always keys off estimated property VALUE (loan sizes from value;
+  // purchase price only drives the cash-to-bring math)
+  const ltvBasis = Number.parseFloat(formData.propertyValue) || Number.parseFloat(formData.purchasePrice) || 0
   const loanAmt = Number.parseFloat(formData.loanAmount) || 0
   const ltv = ltvBasis > 0 && loanAmt > 0 ? (loanAmt / ltvBasis) * 100 : null
   const downPayment = isPurchase && ltvBasis > 0 && loanAmt > 0 ? Math.max(0, ltvBasis - loanAmt) : null

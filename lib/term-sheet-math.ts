@@ -119,8 +119,10 @@ export function computeScenario(i: TermSheetInputs, label: string): ScenarioResu
   const rehabHoldback = isFlip ? ((i.pctRehabFinanced ?? 100) / 100) * (i.rehabBudget || 0) : 0
   const totalLoan = i.loanAmount + rehabHoldback
 
-  const priceBasis = isPurchase ? i.purchasePrice || i.propertyValue : i.propertyValue
-  const ltv = priceBasis > 0 ? (i.loanAmount / priceBasis) * 100 : 0
+  // LTV keys off appraised/est. VALUE, not purchase price — on under-market
+  // buys the loan sizes from value, which is what shrinks the down payment
+  const valueBasis = i.propertyValue || i.purchasePrice
+  const ltv = valueBasis > 0 ? (i.loanAmount / valueBasis) * 100 : 0
   const projectCost = (i.purchasePrice || i.propertyValue || 0) + (isFlip ? i.rehabBudget || 0 : 0)
   const ltc = isShortTerm && projectCost > 0 ? (totalLoan / projectCost) * 100 : null
   const arvLtv = isFlip && i.arv > 0 ? (totalLoan / i.arv) * 100 : null
