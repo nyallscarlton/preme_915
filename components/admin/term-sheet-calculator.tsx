@@ -10,6 +10,7 @@ import {
   stateFeeDefaults,
   TERM_SHEET_DISCLAIMER,
   type TermSheetInputs,
+  type LoanProduct,
 } from "@/lib/term-sheet-math"
 
 const money = (n: number) => `${n < 0 ? "-" : ""}$${Math.abs(Math.round(n)).toLocaleString("en-US")}`
@@ -48,14 +49,18 @@ interface Lever { label: string; ratePercent: number; brokerPoints: number; lend
 export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
   const [open, setOpen] = useState(false)
 
-  const purpose: TermSheetInputs["purpose"] =
-    app.loan_purpose === "purchase" ? "purchase" : app.loan_purpose === "cash-out-refinance" ? "cash-out-refinance" : "refinance"
+  const initialPurpose: LoanProduct =
+    app.loan_purpose === "purchase" ? "purchase"
+    : app.loan_purpose === "cash-out-refinance" ? "cash-out-refinance"
+    : app.loan_purpose === "bridge-loan" ? "bridge"
+    : app.loan_purpose === "renovation" || app.loan_purpose === "construction" ? "fix-flip"
+    : "refinance"
   const state = (app.property_state || "GA").toUpperCase().slice(0, 2)
   const loanAmount = Number(app.loan_amount) || 0
 
   const feeDefaults = stateFeeDefaults(state, loanAmount)
   const [base, setBase] = useState<Omit<TermSheetInputs, "ratePercent" | "brokerPoints" | "lenderPoints">>({
-    purpose,
+    purpose: initialPurpose,
     state,
     purchasePrice: Number(app.purchase_price) || Number(app.property_value) || 0,
     propertyValue: Number(app.property_value) || 0,
@@ -65,8 +70,12 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
     annualTaxes: Number(app.annual_property_tax) || Math.round((Number(app.property_value) || 0) * 0.012),
     annualInsurance: Math.round(((Number(app.property_value) || 0) * 0.005) || 1200),
     monthlyHoa: Number(app.hoa_monthly) || 0,
-    termMonths: 360,
+    termMonths: ["bridge", "fix-flip"].includes(initialPurpose) ? 12 : 360,
     interestOnly: false,
+    rehabBudget: 0,
+    arv: 0,
+    pctRehabFinanced: 100,
+    holdMonths: 6,
     sellerCredit: 0,
     lenderFlatFees: 1495,
     ...feeDefaults,
@@ -124,6 +133,26 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
   }
 
   const isPurchase = base.purpose === "purchase"
+  const isShortTerm = base.purpose === "bridge" || base.purpose === "fix-flip"
+  const isFlip = base.purpose === "fix-flip"
+
+  const switchProduct = (p: LoanProduct) => {
+    setBase((prev) => ({ ...prev, purpose: p, termMonths: p === "bridge" || p === "fix-flip" ? 12 : 360 }))
+    // Short-term money prices differently — reset scenario rates to the product's range
+    if (p === "bridge" || p === "fix-flip") {
+      setLevers([
+        { label: "Lower Rate", ratePercent: 10.5, brokerPoints: 2.5, lenderPoints: 2 },
+        { label: "Balanced", ratePercent: 11.25, brokerPoints: 2.25, lenderPoints: 1.5 },
+        { label: "Lower Cash", ratePercent: 12.25, brokerPoints: 2.0, lenderPoints: 1 },
+      ])
+    } else {
+      setLevers([
+        { label: "Lower Rate", ratePercent: 7.375, brokerPoints: 2.5, lenderPoints: 1.5 },
+        { label: "Balanced", ratePercent: 7.625, brokerPoints: 2.25, lenderPoints: 1.0 },
+        { label: "Lower Cash", ratePercent: 7.99, brokerPoints: 2.0, lenderPoints: 0 },
+      ])
+    }
+  }
 
   return (
     <>
@@ -145,11 +174,24 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
             </DialogTitle>
           </DialogHeader>
 
+          {/* Product switcher */}
+          <div className="flex flex-wrap gap-1.5">
+            {([["purchase","Purchase"],["refinance","Rate/Term Refi"],["cash-out-refinance","Cash-Out Refi"],["bridge","Bridge / Hard Money"],["fix-flip","Fix & Flip"]] as [LoanProduct,string][]).map(([v,l]) => (
+              <button
+                key={v}
+                onClick={() => switchProduct(v)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition ${base.purpose === v ? "bg-[#997100] text-black" : "border border-border text-muted-foreground hover:text-foreground"}`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+
           {/* Deal basics */}
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
             <Num label="Loan Amount" value={base.loanAmount} onChange={setB("loanAmount")} step={1000} />
-            {isPurchase ? (
-              <Num label="Purchase Price" value={base.purchasePrice} onChange={setB("purchasePrice")} step={1000} />
+            {isPurchase || isShortTerm ? (
+              <Num label={isFlip ? "Purchase Price" : "Purchase Price / Basis"} value={base.purchasePrice} onChange={setB("purchasePrice")} step={1000} />
             ) : (
               <Num label="Payoff Balance" value={base.currentBalance} onChange={setB("currentBalance")} step={1000} />
             )}
@@ -171,6 +213,16 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
             )}
           </div>
 
+          {isShortTerm && (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+              {isFlip && <Num label="Rehab Budget" value={base.rehabBudget} onChange={setB("rehabBudget")} step={5000} />}
+              {isFlip && <Num label="ARV (after repair)" value={base.arv} onChange={setB("arv")} step={5000} />}
+              {isFlip && <Num label="% Rehab Financed" value={base.pctRehabFinanced} onChange={setB("pctRehabFinanced")} step={5} />}
+              <Num label="Term (months)" value={base.termMonths} onChange={setB("termMonths")} step={1} />
+              <Num label="Est. Hold (months)" value={base.holdMonths} onChange={setB("holdMonths")} step={1} />
+            </div>
+          )}
+
           {/* Scenario columns */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {scenarios.map((s, idx) => (
@@ -189,8 +241,11 @@ export function TermSheetCalculator({ app }: { app: Record<string, any> }) {
                   )}
                   <div className="flex justify-between"><span>Points + lender fees</span><span className="text-foreground">{money(s.brokerFee + s.lenderPointsCost + s.lenderFlatFees)}</span></div>
                   <div className="flex justify-between"><span>Title/3rd party + prepaids</span><span className="text-foreground">{money(s.thirdPartyFees + s.prepaids)}</span></div>
-                  {isPurchase && <div className="flex justify-between"><span>Down payment</span><span className="text-foreground">{money(s.downPayment)}</span></div>}
-                  {!isPurchase && <div className="flex justify-between"><span>Payoff</span><span className="text-foreground">{money(s.payoff)}</span></div>}
+                  {(isPurchase || isShortTerm) && <div className="flex justify-between"><span>Down payment</span><span className="text-foreground">{money(s.downPayment)}</span></div>}
+                  {!isPurchase && !isShortTerm && <div className="flex justify-between"><span>Payoff</span><span className="text-foreground">{money(s.payoff)}</span></div>}
+                  {isFlip && s.rehabHoldback > 0 && <div className="flex justify-between"><span>Rehab via draws</span><span className="text-foreground">{money(s.rehabHoldback)}</span></div>}
+                  {isFlip && <div className="flex justify-between"><span>Total loan {s.arvLtv != null ? `· ${s.arvLtv.toFixed(0)}% ARV` : ""}{s.ltc != null ? ` · ${s.ltc.toFixed(0)}% LTC` : ""}</span><span className="text-foreground">{money(s.totalLoan)}</span></div>}
+                  {isShortTerm && s.holdingCost != null && <div className="flex justify-between"><span>Est. carry ({base.holdMonths} mo)</span><span className="text-foreground">{money(s.holdingCost)}</span></div>}
                 </div>
                 <div className="mt-3 rounded-md bg-[#997100] px-3 py-2 text-center">
                   <p className="text-[10px] font-medium uppercase tracking-wide text-black/70">

@@ -57,13 +57,22 @@ export async function renderTermSheetPdf(args: {
   }
 
   const S = args.scenarios
+  const isShortTerm = i.purpose === "bridge" || i.purpose === "fix-flip"
   row("Loan Amount / LTV", S.map((s) => `${money(i.loanAmount)}  (${s.ltv.toFixed(1)}%)`))
+  if (i.purpose === "fix-flip" && S[0].rehabHoldback > 0) {
+    row("Rehab Holdback (via draws)", S.map((s) => money(s.rehabHoldback)))
+    row("Total Loan / ARV LTV / LTC", S.map((s) => `${money(s.totalLoan)}${s.arvLtv != null ? ` · ${s.arvLtv.toFixed(0)}% ARV` : ""}${s.ltc != null ? ` · ${s.ltc.toFixed(0)}% LTC` : ""}`))
+  }
   row("Interest Rate", S.map((s) => `${s.ratePercent.toFixed(3)}%`))
-  row(`Term / ${i.interestOnly ? "Interest-Only" : "Amortization"}`, S.map(() => `${Math.round(i.termMonths / 12)} yr${i.interestOnly ? " IO" : " fixed"}`))
+  row(
+    isShortTerm ? "Term / Structure" : `Term / ${i.interestOnly ? "Interest-Only" : "Amortization"}`,
+    S.map(() => (isShortTerm ? `${i.termMonths} mo interest-only` : `${Math.round(i.termMonths / 12)} yr${i.interestOnly ? " IO" : " fixed"}`))
+  )
   row("Monthly P&I", S.map((s) => money(s.monthlyPI)))
   row("Est. Taxes + Ins + HOA (mo)", S.map((s) => money(s.monthlyPITIA - s.monthlyPI)))
   row("Total Monthly Payment", S.map((s) => money(s.monthlyPITIA)), true)
   if (S[0].dscr != null) row("DSCR (rent ÷ payment)", S.map((s) => (s.dscr == null ? "—" : s.dscr.toFixed(2))))
+  if (S[0].holdingCost != null) row("Est. Interest Carry (hold)", S.map((s) => (s.holdingCost == null ? "—" : money(s.holdingCost))))
   line(4)
 
   row("Broker Origination (Preme)", S.map((s) => `${s.brokerPoints.toFixed(2)} pts — ${money(s.brokerFee)}`))

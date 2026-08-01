@@ -172,6 +172,8 @@ export function DscrCalculator() {
   const [propertyType, setPropertyType] = useState("single-family")
   const [loanPurpose, setLoanPurpose] = useState("purchase")
   const [propertyState, setPropertyState] = useState("GA")
+  const [rehabBudget, setRehabBudget] = useState("")
+  const [arv, setArv] = useState("")
 
   // Parsed values
   const pv = parseCurrencyInput(propertyValue)
@@ -191,7 +193,10 @@ export function DscrCalculator() {
     const cashOutAdj = loanPurpose === "cash-out" ? 0.125 : 0
     const strAdj = propertyType === "str" ? 0.25 : 0
 
-    const estimatedRate = baseRate + dscrAdj + creditAdj + ltvAdj + cashOutAdj + strAdj
+    const isShortTermProduct = loanPurpose === "fix-flip" || loanPurpose === "bridge"
+    const estimatedRate = isShortTermProduct
+      ? 11.25 + creditAdj // hard money pricing: low-10s to mid-12s
+      : baseRate + dscrAdj + creditAdj + ltvAdj + cashOutAdj + strAdj
     const rateLow = Math.max(estimatedRate - 0.25, 5.0)
     const rateHigh = estimatedRate + 0.25
 
@@ -207,7 +212,12 @@ export function DscrCalculator() {
     const scenario = la > 0
       ? computeScenario(
           {
-            purpose: loanPurpose === "purchase" ? "purchase" : loanPurpose === "cash-out" ? "cash-out-refinance" : "refinance",
+            purpose:
+              loanPurpose === "purchase" ? "purchase"
+              : loanPurpose === "cash-out" ? "cash-out-refinance"
+              : loanPurpose === "fix-flip" ? "fix-flip"
+              : loanPurpose === "bridge" ? "bridge"
+              : "refinance",
             state: propertyState,
             purchasePrice: pv,
             propertyValue: pv,
@@ -217,8 +227,12 @@ export function DscrCalculator() {
             annualTaxes: Math.round(pv * 0.012),
             annualInsurance: Math.max(1000, Math.round(pv * 0.005)),
             monthlyHoa: 0,
-            termMonths: 360,
+            termMonths: loanPurpose === "fix-flip" || loanPurpose === "bridge" ? 12 : 360,
             interestOnly: false,
+            rehabBudget: parseCurrencyInput(rehabBudget),
+            arv: parseCurrencyInput(arv),
+            pctRehabFinanced: 100,
+            holdMonths: 6,
             sellerCredit: 0,
             ratePercent: estimatedRate,
             brokerPoints: 2.25,
@@ -245,7 +259,7 @@ export function DscrCalculator() {
       closingCostHigh,
       qualification,
     }
-  }, [pv, la, rent, expenses, creditScore, propertyType, loanPurpose, propertyState])
+  }, [pv, la, rent, expenses, creditScore, propertyType, loanPurpose, propertyState, rehabBudget, arv])
 
   const hasInputs = pv > 0 && la > 0 && rent > 0 && expenses > 0
 
@@ -363,9 +377,41 @@ export function DscrCalculator() {
                       <SelectItem value="purchase" className="text-white hover:bg-gray-800">Purchase</SelectItem>
                       <SelectItem value="rate-term" className="text-white hover:bg-gray-800">Rate/Term Refinance</SelectItem>
                       <SelectItem value="cash-out" className="text-white hover:bg-gray-800">Cash-Out Refinance</SelectItem>
+                      <SelectItem value="fix-flip" className="text-white hover:bg-gray-800">Fix &amp; Flip</SelectItem>
+                      <SelectItem value="bridge" className="text-white hover:bg-gray-800">Bridge / Hard Money</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Fix & Flip extras */}
+                {loanPurpose === "fix-flip" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-300">Rehab Budget</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <Input
+                          value={rehabBudget}
+                          onChange={(e) => setRehabBudget(e.target.value)}
+                          placeholder="60,000"
+                          className="bg-[#111] border-gray-700 text-white pl-7 focus:ring-[#997100]/20"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-300">After-Repair Value (ARV)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <Input
+                          value={arv}
+                          onChange={(e) => setArv(e.target.value)}
+                          placeholder="400,000"
+                          className="bg-[#111] border-gray-700 text-white pl-7 focus:ring-[#997100]/20"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </Card>
           </div>
@@ -449,6 +495,12 @@ export function DscrCalculator() {
                   <div className="flex justify-between"><span>Points &amp; lender fees (est.)</span><span className="text-gray-200">{formatCurrency(calc.scenario.brokerFee + calc.scenario.lenderPointsCost + calc.scenario.lenderFlatFees)}</span></div>
                   <div className="flex justify-between"><span>Title, appraisal &amp; gov (est.)</span><span className="text-gray-200">{formatCurrency(calc.scenario.thirdPartyFees)}</span></div>
                   <div className="flex justify-between"><span>Prepaids &amp; escrows (est.)</span><span className="text-gray-200">{formatCurrency(calc.scenario.prepaids)}</span></div>
+                  {calc.scenario.rehabHoldback > 0 && (
+                    <div className="flex justify-between"><span>Rehab funded via draws</span><span className="text-gray-200">{formatCurrency(calc.scenario.rehabHoldback)}</span></div>
+                  )}
+                  {calc.scenario.holdingCost != null && (
+                    <div className="flex justify-between"><span>Est. carry (~6 mo interest)</span><span className="text-gray-200">{formatCurrency(calc.scenario.holdingCost)}</span></div>
+                  )}
                   <p className="pt-1 text-[11px] text-gray-500">
                     Plus ~{formatCurrency(calc.scenario.reservesSuggested)} in reserves most lenders want to see in your account (not spent at closing).
                   </p>
