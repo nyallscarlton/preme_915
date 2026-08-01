@@ -134,7 +134,9 @@ export function computeScenario(i: TermSheetInputs, label: string): ScenarioResu
   const dscr = !isShortTerm && pitia > 0 && i.monthlyRent > 0 ? i.monthlyRent / pitia : null
   const holdingCost = isShortTerm ? pitia * Math.max(1, i.holdMonths || 6) : null
 
-  const downPayment = isPurchase ? Math.max(0, (i.purchasePrice || 0) - i.loanAmount) : 0
+  // Down payment keys off property VALUE (how DSCR lenders quote: "20% down"
+  // = 80% LTV of value), per Nyalls — not off the contract price
+  const downPayment = isPurchase ? Math.max(0, (valueBasis || 0) - i.loanAmount) : 0
   // Points on total committed loan (incl. rehab holdback) — hard-money norm
   const pointsBasis = isShortTerm ? totalLoan : i.loanAmount
   const brokerFee = (i.brokerPoints / 100) * pointsBasis
