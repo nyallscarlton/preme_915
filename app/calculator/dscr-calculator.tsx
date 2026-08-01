@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { computeScenario, stateFeeDefaults } from "@/lib/term-sheet-math"
 import Link from "next/link"
 import { Navigation } from "@/components/shared/navigation"
 import { Button } from "@/components/ui/button"
@@ -170,6 +171,7 @@ export function DscrCalculator() {
   const [creditScore, setCreditScore] = useState("720-739")
   const [propertyType, setPropertyType] = useState("single-family")
   const [loanPurpose, setLoanPurpose] = useState("purchase")
+  const [propertyState, setPropertyState] = useState("GA")
 
   // Parsed values
   const pv = parseCurrencyInput(propertyValue)
@@ -200,7 +202,39 @@ export function DscrCalculator() {
 
     const qualification = getQualificationStatus(dscr, creditScore, ltv)
 
+    // Detailed cash-to-close estimate (shared engine with the broker term sheet)
+    const fees = stateFeeDefaults(propertyState, la)
+    const scenario = la > 0
+      ? computeScenario(
+          {
+            purpose: loanPurpose === "purchase" ? "purchase" : loanPurpose === "cash-out" ? "cash-out-refinance" : "refinance",
+            state: propertyState,
+            purchasePrice: pv,
+            propertyValue: pv,
+            loanAmount: la,
+            currentBalance: 0,
+            monthlyRent: rent,
+            annualTaxes: Math.round(pv * 0.012),
+            annualInsurance: Math.max(1000, Math.round(pv * 0.005)),
+            monthlyHoa: 0,
+            termMonths: 360,
+            interestOnly: false,
+            sellerCredit: 0,
+            ratePercent: estimatedRate,
+            brokerPoints: 2.25,
+            lenderPoints: 1,
+            lenderFlatFees: 1495,
+            ...fees,
+            escrowMonthsTaxes: 3,
+            escrowMonthsInsurance: 2,
+            prepaidInterestDays: 15,
+          },
+          "estimate"
+        )
+      : null
+
     return {
+      scenario,
       dscr,
       ltv,
       estimatedRate,
@@ -211,7 +245,7 @@ export function DscrCalculator() {
       closingCostHigh,
       qualification,
     }
-  }, [pv, la, rent, expenses, creditScore, propertyType, loanPurpose])
+  }, [pv, la, rent, expenses, creditScore, propertyType, loanPurpose, propertyState])
 
   const hasInputs = pv > 0 && la > 0 && rent > 0 && expenses > 0
 
@@ -387,15 +421,39 @@ export function DscrCalculator() {
               <p className="text-xs text-gray-500 mt-1">Principal &amp; interest only, excludes escrow</p>
             </Card>
 
-            {/* Closing Costs */}
-            <Card className="bg-[#111] border-gray-800 p-5">
-              <span className="text-sm font-medium text-gray-400">Est. Closing Costs</span>
-              <p className="text-2xl font-bold text-white mt-1">
-                {hasInputs
-                  ? `${formatCurrency(calc.closingCostLow)} – ${formatCurrency(calc.closingCostHigh)}`
-                  : "—"}
+            {/* Cash to Close */}
+            <Card className="bg-[#111] border-[#997100]/60 border p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-400">
+                  {loanPurpose === "purchase" ? "Est. Cash to Close" : calc.scenario && calc.scenario.cashToClose < 0 ? "Est. Cash to You" : "Est. Cash to Close"}
+                </span>
+                <select
+                  value={propertyState}
+                  onChange={(e) => setPropertyState(e.target.value)}
+                  className="rounded border border-gray-700 bg-black px-2 py-1 text-xs text-gray-300"
+                >
+                  <option value="GA">GA</option>
+                  <option value="IL">IL</option>
+                  <option value="FL">FL</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <p className="text-3xl font-bold text-[#997100] mt-1">
+                {hasInputs && calc.scenario ? formatCurrency(Math.abs(calc.scenario.cashToClose)) : "—"}
               </p>
-              <p className="text-xs text-gray-500 mt-1">2–5% of loan amount (title, appraisal, lender fees, prepaids)</p>
+              {hasInputs && calc.scenario && (
+                <div className="mt-3 space-y-1 border-t border-gray-800 pt-3 text-xs text-gray-400">
+                  {loanPurpose === "purchase" && (
+                    <div className="flex justify-between"><span>Down payment</span><span className="text-gray-200">{formatCurrency(calc.scenario.downPayment)}</span></div>
+                  )}
+                  <div className="flex justify-between"><span>Points &amp; lender fees (est.)</span><span className="text-gray-200">{formatCurrency(calc.scenario.brokerFee + calc.scenario.lenderPointsCost + calc.scenario.lenderFlatFees)}</span></div>
+                  <div className="flex justify-between"><span>Title, appraisal &amp; gov (est.)</span><span className="text-gray-200">{formatCurrency(calc.scenario.thirdPartyFees)}</span></div>
+                  <div className="flex justify-between"><span>Prepaids &amp; escrows (est.)</span><span className="text-gray-200">{formatCurrency(calc.scenario.prepaids)}</span></div>
+                  <p className="pt-1 text-[11px] text-gray-500">
+                    Plus ~{formatCurrency(calc.scenario.reservesSuggested)} in reserves most lenders want to see in your account (not spent at closing).
+                  </p>
+                </div>
+              )}
             </Card>
 
             {/* Qualification */}

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { DocumentsPanel } from "@/components/admin/documents-panel"
+import { TermSheetCalculator } from "@/components/admin/term-sheet-calculator"
 import {
   Eye,
   MessageSquare,
@@ -903,6 +904,7 @@ export function ApplicationsManagement({ applications, onRefresh, initialSelecte
                     </Badge>
                     {!isEditing ? (
                       <>
+                        <TermSheetCalculator app={{ ...(selectedApp.raw || {}), id: selectedApp.dbId, applicant_name: selectedApp.applicantName }} />
                         <SendFullAppButton applicationId={selectedApp.dbId} status={selectedApp.status} sentAt={selectedApp.raw?.pre_qual_to_full_sent_at ?? null} />
                         <MismoDownloadsBar
                           applicationId={selectedApp.dbId}
