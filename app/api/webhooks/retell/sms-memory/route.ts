@@ -154,10 +154,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Return dynamic variables for the agent
+    // Return dynamic variables for the agent.
+    // lead_phone is REQUIRED: Riley's update_lead_info / update_lead_status tools
+    // template {{lead_phone}} into their arguments. Without it she sends the
+    // literal string and the tool answers "Invalid phone number" — so she could
+    // read memory over SMS but never write to it. Verified failing live
+    // 2026-08-01 when she tried to save a loan-amount change mid-thread.
     return NextResponse.json({
       chat_inbound: {
-        dynamic_variables: { conversation_history: conversationHistory },
+        dynamic_variables: {
+          conversation_history: conversationHistory,
+          lead_phone: leadPhone,
+        },
       },
     })
   }
@@ -222,6 +230,9 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({
-    retell_llm_dynamic_variables: { conversation_history: conversationHistory },
+    retell_llm_dynamic_variables: {
+      conversation_history: conversationHistory,
+      lead_phone: leadPhone,
+    },
   })
 }
