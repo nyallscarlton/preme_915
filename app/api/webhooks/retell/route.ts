@@ -685,6 +685,88 @@ export async function POST(request: NextRequest) {
 
         break
       }
+
+      // ── SMS conversations ────────────────────────────────────────────
+      // Riley's voice and text agents share one LLM, but only voice was ever
+      // written back here — so she remembered every call and forgot every text.
+      // Proven live 2026-08-01: mid-call she said "I don't have visibility into
+      // the text thread." This closes that half of the loop.
+      case "chat_ended":
+      case "chat_analyzed": {
+        const chat = body.chat ?? {}
+        const chatId: string = chat.chat_id || ""
+        // Whichever party isn't us is the contact.
+        const OURS = new Set(["+14709425787", "+14709167713"])
+        const phone: string =
+          [chat.to_number, chat.from_number].find((n: string) => n && !OURS.has(n)) || ""
+        const transcript: string = chat.transcript || ""
+        if (!chatId || !phone || !transcript.trim()) break
+
+        try {
+          const adminSb = createAdminClient()
+          const summary = chat.chat_analysis?.chat_summary || ""
+          const metadata = {
+            chat_id: chatId,
+            channel: "sms",
+            transcript,
+            summary,
+            sentiment: chat.chat_analysis?.user_sentiment,
+            successful: chat.chat_analysis?.chat_successful,
+          }
+          // Idempotent: chat_ended and chat_analyzed both fire for one thread.
+          const { data: existing } = await adminSb
+            .from("lead_messages")
+            .select("id")
+            .eq("type", "sms")
+            .filter("metadata->>chat_id", "eq", chatId)
+
+          const leadId =
+            chat.metadata?.lead_id ||
+            (
+              await adminSb.from("leads").select("id").eq("phone", phone).limit(1).maybeSingle()
+            ).data?.id ||
+            null
+
+          const messageBody = `💬 SMS conversation${summary ? `\n\n${summary}` : ""}\n\n${transcript}`
+          if (existing && existing.length > 0) {
+            await adminSb
+              .from("lead_messages")
+              .update({ body: messageBody, metadata })
+              .eq("id", existing[0].id)
+          } else if (leadId) {
+            await adminSb.from("lead_messages").insert({
+              lead_id: leadId,
+              direction: "outbound",
+              type: "sms",
+              body: messageBody,
+              from_number: chat.from_number || "+14709425787",
+              to_number: chat.to_number || phone,
+              status: "completed",
+              metadata,
+            })
+          }
+
+          // Same structured-memory extractors the voice path uses, tagged as the
+          // SMS channel so `*_updated_channel` stays truthful about where a fact
+          // came from.
+          const d = chat.chat_analysis?.custom_analysis_data ?? {}
+          await Promise.allSettled([
+            d.loan_amount ? upsertLoanAmount(phone, Number(d.loan_amount), "sms") : null,
+            d.property_address ? upsertPropertyAddress(phone, String(d.property_address), "sms") : null,
+            d.property_type ? upsertPropertyType(phone, String(d.property_type), "sms") : null,
+            d.loan_type ? upsertLoanType(phone, String(d.loan_type), "sms") : null,
+            d.loan_purpose ? upsertLoanPurpose(phone, String(d.loan_purpose), "sms") : null,
+            d.credit_range ? upsertCreditRange(phone, String(d.credit_range), "sms") : null,
+            d.timeline ? upsertTimeline(phone, String(d.timeline), "sms") : null,
+            d.contact_email ? upsertEmail(phone, String(d.contact_email), "sms") : null,
+          ].filter(Boolean) as Promise<void>[])
+
+          console.log(`[retell-preme] SMS memory written for ${phone} (chat ${chatId})`)
+        } catch (err) {
+          console.error("[retell-preme] Failed to write SMS memory:", err)
+        }
+        break
+      }
     }
 
     return NextResponse.json({ ok: true })
