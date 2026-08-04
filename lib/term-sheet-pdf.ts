@@ -95,9 +95,13 @@ export async function renderTermSheetPdf(args: {
   line(2)
 
   page.drawRectangle({ x: LEFT - 4, y: y - 5, width: RIGHT - LEFT + 8, height: 18, color: rgb(0.6, 0.44, 0) })
-  text(isPurchase ? "ESTIMATED CASH TO CLOSE" : "EST. CASH TO CLOSE (negative = cash to you)", LEFT, 9.5, bold, rgb(1, 1, 1))
+  text(isPurchase ? "ESTIMATED CASH TO CLOSE" : "EST. CASH TO CLOSE", LEFT, 9.5, bold, rgb(1, 1, 1))
   S.forEach((s, idx) => text(money(s.cashToClose), cols[idx], 10, bold, rgb(1, 1, 1)))
   line(24)
+  if (!isPurchase) {
+    text("Negative amount = estimated cash back to you at closing.", LEFT, 7, font, GRAY)
+    line(11)
+  }
 
   row("Reserves to document (~6 mo)", S.map((s) => money(s.reservesSuggested)), false, GRAY)
   line(8)
