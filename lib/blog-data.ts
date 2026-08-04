@@ -12,6 +12,298 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    title: "The Best DSCR Lenders for Real Estate Investors in 2026 (Honest Comparison)",
+    slug: "best-dscr-lenders-2026",
+    excerpt:
+      "Kiavi, Griffin Funding, Easy Street Capital, Lima One, CoreVest, Angel Oak, and Preme — an honest, criteria-based comparison of seven real DSCR lenders, including who each one is actually best for and where each one falls short.",
+    date: "2026-08-04",
+    readTime: "12 min read",
+    tags: ["DSCR Loans", "Lender Comparison", "Investor Education"],
+    keywords: [
+      "best DSCR lenders 2026",
+      "DSCR lender comparison",
+      "Kiavi vs Griffin Funding vs Lima One",
+      "top DSCR loan companies",
+      "DSCR loan rates 2026",
+    ],
+    metaDescription:
+      "Honest 2026 comparison of the best DSCR lenders: Kiavi, Griffin Funding, Easy Street Capital, Lima One, CoreVest, Angel Oak, and Preme Home Loans. Who each is best for, strengths, and tradeoffs.",
+    content: `## An Honest Comparison — Including Full Disclosure
+
+Most "best DSCR lender" lists are written by one of the lenders on the list, and they bury that fact. We'll say it up front: this article is published by Preme Home Loans, and we appear at #7. We've tried to make this the fairest comparison you'll find anyway — because if you're financing a rental property, the right lender depends on your deal, not on whose blog you landed on. For several borrower profiles below, the honest answer is one of our competitors.
+
+Everything stated about other lenders comes from their own public websites as of August 2026. Advertised "rates starting at" figures are best-case scenarios — they typically assume top-tier credit, lower leverage, discount points, and a multi-year prepayment penalty. Your quoted rate will almost always be higher than the teaser.
+
+## How We Compared DSCR Lenders
+
+If you're new to the product, start with our primer on [what a DSCR loan is](/blog/what-is-a-dscr-loan). For this comparison, we weighed the factors that actually change your outcome as a borrower:
+
+- **Leverage and flexibility:** Maximum LTV, minimum credit score, minimum DSCR, and how the lender handles edge cases (sub-1.0 ratios, first-timers, entities).
+- **Pricing transparency:** Not just the teaser rate — whether you can see the full cost of the loan, including points and cash-to-close, before you commit.
+- **Speed:** Time from application to funded, and whether pre-qualification is same-day.
+- **Short-term rental treatment:** Whether Airbnb/VRBO income qualifies, and on what data.
+- **Scalability:** Portfolio loans, loan count limits, and entity vesting.
+
+## 1. Kiavi — Best-Known Tech Platform for High-Volume Investors
+
+Kiavi is one of the biggest names in investor lending, with a heavily automated online platform spanning fix-and-flip and DSCR rental loans across most of the country (48 states plus D.C. at last count).
+
+**Best for:** Experienced flippers and rental investors who want a slick, self-serve online process from a large, established lender.
+
+**Positioning:** As of this writing, Kiavi advertises rental loan rates starting at 5.875% with up to 80% LTV on single-family, PUD, 2-4 unit, and condo properties, and no prepayment penalty after year three. Its platform includes a compare mode that shows loan options side by side before you commit.
+
+**Strengths:** Scale, technology, and breadth. Kiavi's soft-pull initial quote and online workflow are genuinely convenient, and the company's volume means underwriting is well-oiled for standard deals.
+
+**Tradeoffs:** A platform built for volume is optimized for the middle of the fairway. Unusual deals — very small loan amounts, unique properties, hairy title situations — can be a poor fit, and you're working a queue, not a deal team.
+
+## 2. Griffin Funding — Best for Low or No DSCR Ratios
+
+Griffin Funding is a nationwide non-QM lender with one of the widest DSCR credit boxes in the market.
+
+**Best for:** Investors whose property doesn't cash flow on paper — sub-1.0 DSCR deals — or who need a large loan amount.
+
+**Positioning:** Griffin advertises DSCR loans from $100K to $4.5M, a 620 minimum credit score, no minimum DSCR requirement (including a no-ratio program), up to 80% LTV on cash-out refinances, and closings in as few as 6 days (they state their average is 34 days). Advertised starting rates as of this writing: 5.375% on a 1-year ARM and 6.375% on 30-year fixed products — again, best-case pricing.
+
+**Strengths:** Flexibility. If a property runs at a short-term deficit or you want leverage that stricter lenders won't touch, Griffin's menu of programs is hard to beat. They also offer a broad non-QM lineup (bank statement loans, asset-based loans) if DSCR isn't the right tool.
+
+**Tradeoffs:** Wide menus mean pricing varies a lot by scenario — no-ratio and sub-1.0 programs carry meaningfully higher rates and lower leverage than the headline numbers. The 6-day close is the exception, not the norm, by their own published average.
+
+## 3. Easy Street Capital — Best for Short-Term Rentals
+
+Austin-based Easy Street Capital's EasyRent program has built a deliberate specialty: DSCR loans for Airbnb and VRBO properties, including in markets other lenders avoid.
+
+**Best for:** STR operators — especially in vacation, tertiary, or rural markets where most DSCR lenders cut leverage or decline outright.
+
+**Positioning:** Easy Street advertises up to 80% LTV on short-term rentals in all markets, a 620 minimum guarantor credit score, and notably does not penalize pricing when a property doesn't cash flow as a long-term rental. Prepayment penalty options run from a 5-year/5% structure down to none, with roughly a point of rate difference between the extremes.
+
+**Strengths:** Genuine STR underwriting expertise. Their public content on structuring DSCR deals (prepay tradeoffs, ARM vs. fixed) is some of the most transparent in the industry.
+
+**Tradeoffs:** A specialist's strength is also its boundary — if your portfolio is standard long-term rentals, generalist lenders may price more aggressively, and Easy Street is smaller than the institutional names on this list.
+
+## 4. Lima One Capital — Best for BRRRR and Full-Lifecycle Investors
+
+Lima One covers the whole investor lifecycle — fix-and-flip, new construction, and rental — which makes it a natural fit for BRRRR investors who want one lender from purchase through refinance.
+
+**Best for:** Investors running the BRRRR playbook or consolidating multiple rentals into portfolio loans.
+
+**Positioning:** Lima One advertises single-family rental loans from $85K to $2.5M, rates as low as 6%, up to 80% LTV on purchase and rate-and-term refinance (75% on cash-out), properties from 1-9 units, and portfolio loans for two or more properties. Minimum FICO is 660, and loans must close in an LLC or similar entity.
+
+**Strengths:** Continuity. Financing the flip and the refi with the same lender removes friction at the BRRRR exit, and their portfolio products are legitimate scaling tools. Foreign nationals are eligible.
+
+**Tradeoffs:** The 660 credit floor is higher than most competitors' 620, and required entity vesting rules out investors who want to hold in a personal name. Pricing and process reflect an institutional shop — thorough, not fast.
+
+## 5. CoreVest — Best for Large Portfolios
+
+CoreVest is the institutional heavyweight of this list, reporting over $7 billion in loans funded, with products built for investors operating at scale.
+
+**Best for:** Investors with five or more properties who want to consolidate into a single portfolio loan — or borrow $1M to $50M+ against a stabilized rental book.
+
+**Positioning:** CoreVest offers 30-year single-asset DSCR loans from $75K to $2M+ at up to 80% of value, and portfolio loans on 5+ properties from $500K to $50M+ at up to 75% of value on 5, 7, or 10-year terms. Their STR product requires five or more short-term rentals with 12+ months of operating history.
+
+**Strengths:** Capacity and structure. Nobody else on this list closes a $30M portfolio refinance as routine business. Blanket loans, institutional documentation, and long track record.
+
+**Tradeoffs:** Institutional process means institutional pace and paperwork. If you're buying your first or fifth rental, CoreVest's machinery is oversized for the job — their sweet spot starts where most individual investors' portfolios end.
+
+## 6. Angel Oak — Best-Known Non-QM Brand (via Mortgage Brokers)
+
+Angel Oak Mortgage Solutions is one of the largest non-QM lenders in the country, and its Investor Cash Flow (DSCR) program is a staple of the wholesale channel — meaning you typically access it through a mortgage broker rather than directly.
+
+**Best for:** Investors who already work with a mortgage broker and want an established non-QM balance sheet behind their loan.
+
+**Positioning:** Angel Oak's DSCR program runs from $100K to $3 million, offers 5/6 ARM, 7/6 ARM, and 30-year fixed structures, requires no personal income or employment documentation, and caps borrowers at five loans with Angel Oak (exceptions considered).
+
+**Strengths:** Institutional credibility and consistent guidelines. Angel Oak helped build the modern non-QM market, and brokers know exactly how their files underwrite.
+
+**Tradeoffs:** The broker channel adds a layer between you and the lender — good brokers add value, but you're not comparing terms directly. The five-loan cap can also bind for scaling investors.
+
+## 7. Preme Home Loans — Best for Speed and Term-Sheet Transparency
+
+This is us, so read this section with that in mind. We built Preme around the two complaints we heard most from investors: quoting takes too long, and the real cost of the loan stays hidden until you're too deep to walk.
+
+**Best for:** Investors who need to move fast on a deal — and who want to see the full cost of every option in writing before committing.
+
+**Positioning:** Preme offers DSCR, fix-and-flip, and bridge loans with no tax returns or W-2s — qualification runs on the property's cash flow. Pre-qualification is same-day at [premerealestate.com/prequalify](/prequalify), and closings typically run 7-14 days. DSCR rates typically start in the mid-7s, and our origination fee typically runs 2-2.5 points. We publish that here because we'd rather you see real numbers than a teaser you'll never get.
+
+**Strengths:** Speed and transparency. Every borrower gets a portal with three side-by-side term-sheet scenarios showing the complete cash-to-close on each — rate, points, reserves, everything — so you compare structures the way you'd compare deals. First-time investors are welcome, self-employed borrowers are the norm, and LLC vesting is supported.
+
+**Tradeoffs:** We're newer and smaller than the institutional players above. We don't have Kiavi's automation budget, CoreVest's $50M portfolio capacity, or Angel Oak's decade of non-QM securitizations. If you need a $30M blanket loan, call CoreVest. If you need a term sheet today and a closing next week, that's the lane we built for.
+
+## The Bottom Line
+
+- **High-volume, tech-first process:** Kiavi
+- **Sub-1.0 or no-ratio DSCR deals:** Griffin Funding
+- **Short-term rentals, especially in vacation markets:** Easy Street Capital
+- **BRRRR and lifecycle lending:** Lima One Capital
+- **Large portfolios and blanket loans:** CoreVest
+- **Broker-channel non-QM:** Angel Oak
+- **Speed and transparent side-by-side term sheets:** Preme Home Loans
+
+Whoever you pick, get at least two written quotes and compare total cash-to-close — not just the rate. Points, prepayment penalties, and reserve requirements move the real cost of a DSCR loan more than a quarter point of rate ever will.
+
+## Frequently Asked Questions
+
+### Who is the best DSCR lender in 2026?
+
+There is no single best DSCR lender — there's a best lender for your deal. STR-heavy portfolio? Easy Street. Sub-1.0 DSCR? Griffin. Fifty units to consolidate? CoreVest. Competitive purchase with a tight closing window? That's the profile we built Preme for.
+
+### What DSCR rates should I expect in 2026?
+
+Advertised starting rates across major lenders currently sit in the high-5s to mid-6s, but those assume top credit, low leverage, points, and a prepayment penalty. Most real-world DSCR quotes land 1-2% above the teaser depending on your credit score, LTV, DSCR ratio, and prepay structure. At Preme, typical rates start in the mid-7s — quoted with full costs shown, not discovered at closing.
+
+### Do DSCR lenders verify income or employment?
+
+No. DSCR lenders qualify the property, not your paycheck — no tax returns, no W-2s, no employment verification. Lenders still pull credit and verify liquid reserves. See our guide for [self-employed investors using DSCR loans](/blog/self-employed-dscr-no-tax-returns).
+
+### How much do DSCR loans cost in fees?
+
+Expect origination fees of 1-3 points depending on the lender and deal, plus appraisal, title, and legal costs. Preme's origination typically runs 2-2.5 points, disclosed on every term sheet alongside the complete cash-to-close. When comparing lenders, always ask for the all-in figure — a lower rate with more points frequently costs more.
+
+### Can a first-time investor get a DSCR loan?
+
+Yes, with most lenders on this list — though some price experience into the deal. Preme works with first-timers regularly; see our guide on [getting a DSCR loan as a first-time investor](/blog/first-time-investor-dscr-loan).
+
+---
+
+**Want to see where you actually stand?** Get a same-day pre-qualification from Preme Home Loans — no tax returns, no hard credit pull, and a transparent three-scenario term sheet showing your full cash-to-close.
+
+[Get Pre-Qualified in Minutes](/prequalify) or call [(470) 942-5787](tel:+14709425787).
+
+*PREME Home Loans | NMLS 2560616 | Equal Housing Lender*`,
+  },
+  {
+    title: "DSCR Loans in Florida: The 2026 Investor's Guide",
+    slug: "dscr-loans-florida",
+    excerpt:
+      "Florida is one of the biggest DSCR markets in the country — but doc stamps, intangible tax, insurance costs, and condo rules change the math. Here's what investors need to know to qualify and close in the Sunshine State.",
+    date: "2026-08-04",
+    readTime: "10 min read",
+    tags: ["DSCR Loans", "Florida", "Local Market", "Short-Term Rentals"],
+    keywords: [
+      "DSCR loans Florida",
+      "Florida DSCR lender",
+      "investment property loans Florida",
+      "Airbnb DSCR loan Florida",
+      "Florida rental property financing",
+    ],
+    metaDescription:
+      "Complete 2026 guide to DSCR loans in Florida. Doc stamp and intangible taxes, insurance and flood zones, condo rules, STR qualification, cash-out LTV limits, and same-day pre-qualification.",
+    content: `## Why Florida Is a Top Market for DSCR Lending
+
+Florida sits alongside Texas and Georgia at the top of nearly every DSCR lender's volume charts, and for good reason. The state combines relentless population growth, zero state income tax, landlord-friendly law, and the largest short-term rental economy in the country. For a loan product that qualifies on property cash flow rather than personal income, that mix is close to ideal.
+
+The no-state-income-tax point matters twice for investors. Your rental profits aren't taxed at the state level, and the same tax climate keeps pulling in the new residents who fill your units. Add tourism markets that support nightly rates long-term rents can't touch, and Florida gives DSCR borrowers more ways to hit a strong ratio than almost any other state.
+
+But Florida also has quirks that first-time buyers from other states don't see coming: transfer taxes on the loan itself, insurance costs that can make or break a ratio, and a condo market with its own rulebook. This guide covers all of it.
+
+## How DSCR Loans Work in Florida
+
+The mechanics of a [DSCR loan](/blog/what-is-a-dscr-loan) don't change at the state line: the lender divides the property's monthly rental income by its full monthly payment (principal, interest, taxes, insurance, and association dues — PITIA). A ratio at or above 1.0 means the property carries itself. No tax returns, no W-2s, no employment verification.
+
+What changes in Florida is the cost structure underneath that ratio. Two line items deserve special attention: closing taxes that most states don't charge, and insurance premiums that run well above the national average. Both are covered below, because both belong in your deal analysis before you write an offer.
+
+## Florida-Specific Costs Every DSCR Borrower Should Model
+
+### Documentary Stamp Tax on the Note
+
+Florida charges a documentary stamp tax of about $0.35 per $100 of the loan amount on promissory notes — and when the note is secured by Florida real estate, there's no cap. On a $200,000 DSCR loan, that's roughly $700 due at closing. It's not a lender fee and no lender can waive it; it's a state tax that belongs in your cash-to-close math from day one.
+
+### Intangible Tax on the Mortgage
+
+Florida also levies a one-time nonrecurring intangible tax of 2 mills — $0.002 per dollar — on the mortgage amount. That same $200,000 loan adds about $400. Combined with doc stamps, Florida's state-level closing taxes on a $200K loan run around $1,100. Preme's term sheets show these in the full cash-to-close figure, so there's no surprise at the closing table.
+
+### Insurance and Flood Zones
+
+Insurance is the single biggest DSCR variable in Florida. Wind and hurricane exposure push premiums far above national norms, and properties in FEMA flood zones (much of coastal Florida) need separate flood coverage on top. Because insurance sits inside PITIA, every dollar of premium directly lowers your DSCR ratio.
+
+Practical rules of thumb:
+
+- **Get a real insurance quote before you go under contract.** A guessed premium is the most common reason Florida DSCR deals die in underwriting.
+- **Check the flood zone early.** A zone requiring flood insurance can add thousands per year to PITIA.
+- **Favor newer roofs and construction.** Post-2002 building code construction and newer roofs materially lower premiums — and therefore raise your ratio.
+- **Inland often beats coastal on ratio.** Orlando and inland Jacksonville submarkets frequently pencil better than beachfront on DSCR, even at lower rents.
+
+### Condo Considerations
+
+Florida's condo market carries extra scrutiny since the 2021 Surfside collapse. Statewide milestone structural inspections and reserve funding requirements have pushed association dues and special assessments up sharply in older buildings. For DSCR borrowers that matters three ways: higher dues lower your ratio, buildings with deferred maintenance or pending assessments can fail lender review, and many Florida condos are non-warrantable (a problem for conventional loans, though many DSCR lenders — Preme included — can finance non-warrantable condos case by case). Before contracting on a condo, pull the association's budget, reserve study, and any milestone inspection reports.
+
+## Best Florida Markets for DSCR Investors
+
+### Orlando and Central Florida
+
+The theme-park economy makes greater Orlando one of the strongest short-term rental markets in America, with entire zoned STR communities around Kissimmee and Davenport built for vacation rentals. Long-term demand is equally deep, driven by steady in-migration and a diversifying job base. Inland location also means comparatively manageable insurance.
+
+### Tampa Bay
+
+Tampa, St. Petersburg, and the surrounding metro combine strong population growth with a broad employment base — finance, healthcare, port logistics. Long-term rentals in working-class suburban submarkets frequently produce the metro's best ratios; waterfront properties carry the insurance burden discussed above.
+
+### Jacksonville
+
+Florida's largest city by area remains one of its most affordable major metros. Lower entry prices with solid rents make Jacksonville a favorite for investors targeting ratio over appreciation, and its inland neighborhoods keep insurance closer to national norms than most of coastal Florida.
+
+### Palm Bay and the Space Coast
+
+The Space Coast's aerospace boom has turned Palm Bay, Melbourne, and Titusville into a genuine growth story, with affordable single-family stock and rental demand from a fast-growing technical workforce — plus beach-driven STR demand along the coast.
+
+### Southwest Florida (Fort Myers, Cape Coral, Sarasota)
+
+Popular with both retirees and vacationers, Southwest Florida offers strong seasonal STR income. Model insurance carefully here — hurricane exposure is real and priced accordingly.
+
+## Cash-Out Refinances in Florida
+
+Florida investors sitting on equity — appreciation has been substantial across the state — commonly use DSCR cash-out refinances to fund the next acquisition. The rule of thumb: most DSCR lenders cap cash-out refinances around 75% LTV, roughly five points below purchase or rate-and-term leverage. Expect seasoning requirements (commonly 3-6 months of ownership before a lender will use appraised value rather than purchase price) and remember that doc stamps and intangible tax apply to the new loan. The property must still clear the DSCR threshold at the new, larger payment.
+
+## Qualifying Short-Term Rentals and Airbnbs
+
+Florida is the country's largest STR market, and DSCR is the dominant financing tool for it — but lenders handle STR income differently:
+
+- **Existing STRs with history:** Twelve months of actual revenue (Airbnb/VRBO statements or a trailing-12 P&L) is the strongest file.
+- **New STR purchases:** Many lenders, Preme included, can use market rent projections or data from sources like AirDNA when there's no operating history.
+- **Conservative haircuts:** Some lenders qualify STRs on long-term market rent even if you'll run it nightly — which protects you if regulations change, but lowers the qualifying ratio.
+
+One Florida-specific caution: STR rules are set locally. Orlando proper restricts short-term rentals while neighboring Kissimmee has entire STR-zoned communities; Miami Beach enforces some of the strictest rules in the state. Verify zoning before you underwrite nightly income. For a deeper dive, see our guide to [DSCR loans for Airbnb and short-term rentals](/blog/short-term-rental-dscr-loans-airbnb).
+
+## LLC Vesting for Florida Rentals
+
+Most Florida investors hold rentals in LLCs for liability separation, and DSCR loans are built for it. Preme closes Florida DSCR loans vested in LLCs as standard practice — single-member, multi-member, or Florida-registered foreign entities. Because these are business-purpose loans underwritten on the property, entity vesting doesn't complicate qualification the way it does with conventional financing. Have your articles of organization, operating agreement, and EIN letter ready; it's the lightest documentation lift in the file.
+
+## Getting a DSCR Loan in Florida: The Process
+
+1. **Pre-qualify online (same day).** Submit the property address, purchase price or value, and expected rent at [premerealestate.com/prequalify](/prequalify). No tax returns, no W-2s.
+2. **Compare three term-sheet scenarios.** Your borrower portal shows three structures side by side — each with the complete cash-to-close, including Florida doc stamps and intangible tax.
+3. **Lock and process.** Appraisal ordered, insurance bound (start those quotes early), title opened.
+4. **Close in 7-14 days.** Typical Preme timeline from application to funding — fast enough to compete with cash offers in Florida's market.
+
+## Frequently Asked Questions
+
+### Are DSCR loans available everywhere in Florida?
+
+Yes — DSCR lending is active statewide, from the Panhandle to the Keys. What varies is the cost side: insurance, flood zones, and condo association health affect how individual deals pencil, particularly in coastal markets.
+
+### How does Florida's insurance market affect DSCR qualification?
+
+Directly. Insurance is part of PITIA, the denominator of your DSCR ratio, and Florida premiums are among the highest in the nation. A property that would ratio at 1.25 in Georgia can fall below 1.0 in a Florida flood zone on insurance alone. Always underwrite with a real quote, not an estimate.
+
+### What are doc stamps and intangible tax on a Florida DSCR loan?
+
+Florida charges documentary stamp tax of about $0.35 per $100 of the note plus a one-time intangible tax of 2 mills ($0.002 per dollar) on the mortgage. Together they add roughly $1,100 in state taxes on a $200,000 loan — costs every lender's borrowers pay, but not every lender shows clearly up front.
+
+### Can I get a DSCR loan for a Florida Airbnb?
+
+Yes. Properties with 12 months of operating history qualify on actual revenue; new purchases can often qualify on market rent projections or STR data. Confirm local STR zoning first — rules vary dramatically between neighboring Florida cities.
+
+### How much can I cash out with a Florida DSCR refinance?
+
+Most DSCR lenders cap cash-out refinances around 75% LTV, subject to the property still meeting the DSCR threshold at the new payment. Seasoning requirements of 3-6 months are common before appraised value can be used.
+
+---
+
+**Buying or refinancing Florida rental property?** Preme Home Loans finances DSCR, fix-and-flip, and bridge deals across Florida with same-day pre-qualification, transparent three-scenario term sheets showing your full cash-to-close — Florida taxes included — and closings in 7-14 days.
+
+[Get Pre-Qualified for Your Florida Deal](/prequalify) or call [(470) 942-5787](tel:+14709425787).
+
+*PREME Home Loans | NMLS 2560616 | Equal Housing Lender*`,
+  },
+  {
     title: "What Is a DSCR Loan? The Investor's Guide to No-Income-Verification Lending",
     slug: "what-is-a-dscr-loan",
     excerpt:
