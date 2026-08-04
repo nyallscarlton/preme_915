@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useAddressSuggestions } from "@/components/ui/address-input"
 
 export default function SellPage() {
   const [ref, setRef] = useState<string | null>(null)
@@ -15,6 +16,7 @@ export default function SellPage() {
     timeline: "",
     asking_price: "",
   })
+  const addr = useAddressSuggestions()
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -82,14 +84,40 @@ export default function SellPage() {
 
           <label style={styles.label}>
             Property address *
-            <input
-              style={styles.input}
-              type="text"
-              required
-              value={form.property_address}
-              onChange={(e) => setForm({ ...form, property_address: e.target.value })}
-              placeholder="1234 Main St, Atlanta, GA 30303"
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                style={{ ...styles.input, width: "100%", boxSizing: "border-box" }}
+                type="text"
+                required
+                value={form.property_address}
+                onChange={(e) => {
+                  setForm({ ...form, property_address: e.target.value })
+                  addr.onInput(e.target.value)
+                }}
+                onBlur={addr.onBlur}
+                onFocus={addr.onFocus}
+                placeholder="1234 Main St, Atlanta, GA 30303"
+                autoComplete="off"
+              />
+              {addr.showSuggestions && addr.suggestions.length > 0 && (
+                <div style={styles.suggestionList}>
+                  {addr.suggestions.map((s) => (
+                    <button
+                      key={s.place_id}
+                      type="button"
+                      style={styles.suggestionItem}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setForm((f) => ({ ...f, property_address: s.description }))
+                        addr.pick(s)
+                      }}
+                    >
+                      {s.description}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </label>
 
           <label style={styles.label}>
@@ -196,4 +224,30 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   error: { background: "#fee", color: "#900", padding: 10, borderRadius: 6, fontSize: 14 },
+  suggestionList: {
+    position: "absolute" as const,
+    top: "100%",
+    left: 0,
+    right: 0,
+    zIndex: 50,
+    marginTop: 4,
+    background: "#fff",
+    border: "1px solid #ccc",
+    borderRadius: 8,
+    maxHeight: 240,
+    overflowY: "auto" as const,
+    boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+  },
+  suggestionItem: {
+    display: "block",
+    width: "100%",
+    textAlign: "left" as const,
+    padding: "10px 14px",
+    background: "none",
+    border: 0,
+    borderBottom: "1px solid #eee",
+    cursor: "pointer",
+    fontSize: 14,
+    color: "#111",
+  },
 }

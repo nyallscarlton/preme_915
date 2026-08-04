@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { AddressInput } from "@/components/ui/address-input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, ArrowRight, Plus, Trash2, Home } from "lucide-react"
@@ -93,7 +94,7 @@ export function ReoScheduleForm({ onNext, onPrevious, onDataChange, initialData 
               </button>
               <div className="space-y-2">
                 <Label>Street Address</Label>
-                <Input value={r.address_line1} onChange={(e) => set(i, "address_line1", e.target.value)} placeholder="123 Rental St" />
+                <AddressInput id={`reoAddress-${i}`} placeholder="123 Rental St" value={r.address_line1} onChange={(v) => set(i, "address_line1", v)} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="space-y-2 md:col-span-2"><Label>City</Label><Input value={r.city} onChange={(e) => set(i, "city", e.target.value)} /></div>

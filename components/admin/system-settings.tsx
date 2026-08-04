@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { AddressInput } from "@/components/ui/address-input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
@@ -114,11 +115,12 @@ export function SystemSettings() {
               <Label htmlFor="companyAddress" className="text-foreground">
                 Company Address
               </Label>
-              <Textarea
+              <AddressInput
                 id="companyAddress"
+                placeholder="Company address"
                 value={settings.companyAddress}
-                onChange={(e) => handleSettingChange("companyAddress", e.target.value)}
-                className="bg-card border-border text-foreground"
+                onChange={(v) => handleSettingChange("companyAddress", v)}
+                className="bg-card"
               />
             </div>
           </CardContent>

@@ -14,6 +14,7 @@ import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Loader2, CheckCircle, Lock } from "lucide-react"
 import { ESignBlock } from "@/components/application/esign-block"
+import { useAddressSuggestions } from "@/components/ui/address-input"
 
 // ── document-styled inputs ────────────────────────────────────────────────
 function Field({
@@ -45,6 +46,60 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         className={`w-full border-0 border-b bg-transparent px-0 py-1 text-sm text-gray-900 focus:outline-none focus:ring-0 ${error ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-[#997100]"}`}
       />
+    </label>
+  )
+}
+
+/** Field with Google address autocomplete — same document styling. */
+function AddressField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  className = "",
+  error = false,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  className?: string
+  error?: boolean
+}) {
+  const addr = useAddressSuggestions(onChange)
+  return (
+    <label className={`relative block ${className}`} data-field-error={error || undefined}>
+      <span className={`block text-[10px] font-medium uppercase tracking-wide ${error ? "text-red-600" : "text-gray-500"}`}>
+        {label}{error ? " — required" : ""}
+      </span>
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        autoComplete="off"
+        onChange={(e) => {
+          onChange(e.target.value)
+          addr.onInput(e.target.value)
+        }}
+        onBlur={addr.onBlur}
+        onFocus={addr.onFocus}
+        className={`w-full border-0 border-b bg-transparent px-0 py-1 text-sm text-gray-900 focus:outline-none focus:ring-0 ${error ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-[#997100]"}`}
+      />
+      {addr.showSuggestions && addr.suggestions.length > 0 && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+          {addr.suggestions.map((s) => (
+            <button
+              key={s.place_id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => addr.pick(s)}
+              className="block w-full border-b border-gray-100 px-3 py-2 text-left text-sm text-gray-900 last:border-b-0 hover:bg-gray-50"
+            >
+              {s.description}
+            </button>
+          ))}
+        </div>
+      )}
     </label>
   )
 }
@@ -388,7 +443,7 @@ export default function SignDocumentClient() {
                 { v: "NonPermanentResidentAlien", l: "Non-Permanent Resident" },
               ]}
             />
-            <Field label="Current Street Address" value={g("address")} onChange={set("address")} className="col-span-2 sm:col-span-3" />
+            <AddressField label="Current Street Address" value={g("address")} onChange={set("address")} className="col-span-2 sm:col-span-3" />
             <Field label="City" value={g("city")} onChange={set("city")} />
             <Field label="State" value={g("state")} onChange={set("state")} />
             <Field label="ZIP" value={g("zipCode")} onChange={set("zipCode")} />
@@ -434,7 +489,7 @@ export default function SignDocumentClient() {
               ]}
             />
             <Field label="Est. Property Value ($)" type="number" value={g("propertyValue")} onChange={set("propertyValue")} />
-            <Field label="Property Street Address" value={g("propertyAddress")} onChange={set("propertyAddress")} className="col-span-2 sm:col-span-3" error={missingKeys.includes("propertyAddress")} />
+            <AddressField label="Property Street Address" value={g("propertyAddress")} onChange={set("propertyAddress")} className="col-span-2 sm:col-span-3" error={missingKeys.includes("propertyAddress")} />
             <Field label="City" value={g("propertyCity")} onChange={set("propertyCity")} />
             <Field label="State" value={g("propertyState")} onChange={set("propertyState")} />
             <Field label="ZIP" value={g("propertyZip")} onChange={set("propertyZip")} />

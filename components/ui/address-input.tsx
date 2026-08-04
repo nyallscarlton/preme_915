@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { MapPin } from "lucide-react"
 
-interface AddressSuggestion {
+export interface AddressSuggestion {
   place_id: string
   description: string
   structured_formatting: {
@@ -16,9 +16,74 @@ interface AddressSuggestion {
   }
 }
 
+/**
+ * Headless address-autocomplete state for inputs that keep their own styling
+ * (sell page, 1003 sign form). Debounces, aborts stale requests, and hides
+ * the list on blur with a click-grace delay — same behavior as AddressInput.
+ */
+export function useAddressSuggestions(onPick?: (description: string) => void) {
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout>()
+  const abortRef = useRef<AbortController>()
+
+  const fetchSuggestions = async (input: string) => {
+    if (input.length < 3) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+    if (abortRef.current) abortRef.current.abort()
+    abortRef.current = new AbortController()
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/address-autocomplete?q=${encodeURIComponent(input)}`, {
+        signal: abortRef.current.signal,
+      })
+      const data: AddressSuggestion[] = response.ok ? await response.json() : []
+      setSuggestions(data)
+      setShowSuggestions(data.length > 0)
+    } catch (err: any) {
+      if (err?.name !== "AbortError") setSuggestions([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const onInput = (value: string) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    timeoutRef.current = setTimeout(() => fetchSuggestions(value), 350)
+  }
+
+  const pick = (s: AddressSuggestion) => {
+    setShowSuggestions(false)
+    setSuggestions([])
+    onPick?.(s.description)
+  }
+
+  const onBlur = () => {
+    setTimeout(() => setShowSuggestions(false), 200)
+  }
+
+  const onFocus = () => {
+    if (suggestions.length > 0) setShowSuggestions(true)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      if (abortRef.current) abortRef.current.abort()
+    }
+  }, [])
+
+  return { suggestions, showSuggestions, isLoading, onInput, pick, onBlur, onFocus }
+}
+
 interface AddressInputProps {
   id: string
-  label: string
+  /** Omit to render the bare input (for grid forms that supply their own label). */
+  label?: string
   placeholder: string
   value: string
   onChange: (value: string) => void
@@ -133,9 +198,11 @@ export function AddressInput({
 
   return (
     <div className="space-y-2 relative">
-      <Label htmlFor={id} className="text-foreground">
-        {label} {required && "*"}
-      </Label>
+      {label && (
+        <Label htmlFor={id} className="text-foreground">
+          {label} {required && "*"}
+        </Label>
+      )}
       <div className="relative">
         <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input

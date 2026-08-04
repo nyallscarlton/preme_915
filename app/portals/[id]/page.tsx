@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { AddressInput } from "@/components/ui/address-input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import {
@@ -562,10 +563,11 @@ export default function PortalLoanDetailPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Property Address</Label>
-                      <Input
-                        value={editForm.property_address}
-                        onChange={(e) => setEditForm((f) => ({ ...f, property_address: e.target.value }))}
+                      <AddressInput
+                        id="portalPropertyAddress"
                         placeholder="Enter property address"
+                        value={editForm.property_address}
+                        onChange={(v) => setEditForm((f) => ({ ...f, property_address: v }))}
                       />
                     </div>
                     <div className="space-y-2">

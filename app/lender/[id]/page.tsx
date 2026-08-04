@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
+import { AddressInput } from "@/components/ui/address-input"
 import {
   Select,
   SelectContent,
@@ -845,7 +846,7 @@ export default function LenderApplicationDetail() {
                     <div className="col-span-2">
                       <p className="text-xs text-muted-foreground">Property Address</p>
                       {isEditing ? (
-                        <Input value={getFieldValue("property_address") || ""} onChange={(e) => setField("property_address", e.target.value)} className="bg-muted border-border text-foreground mt-1" />
+                        <div className="mt-1"><AddressInput id="lenderPropertyAddress" placeholder="Property address" value={getFieldValue("property_address") || ""} onChange={(v) => setField("property_address", v)} className="bg-muted" /></div>
                       ) : (
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-foreground">{fullAddress || "—"}</p>

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { AddressInput } from "@/components/ui/address-input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, ArrowRight, Shield, Building2 } from "lucide-react"
@@ -98,7 +99,7 @@ export function VestingEntityForm({ onNext, onPrevious, onDataChange, initialDat
               </div>
               <div className="space-y-2">
                 <Label>Entity Registered Address</Label>
-                <Input value={formData.entityAddress} onChange={(e) => update("entityAddress", e.target.value)} placeholder="200 Peachtree NE" />
+                <AddressInput id="entityAddress" placeholder="200 Peachtree NE" value={formData.entityAddress} onChange={(v) => update("entityAddress", v)} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-2">

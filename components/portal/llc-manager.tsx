@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { AddressInput } from "@/components/ui/address-input"
 import { Label } from "@/components/ui/label"
 import { Building2, ExternalLink, Loader2, Plus, Trash2, Upload, X } from "lucide-react"
 
@@ -172,7 +173,7 @@ export function LlcManager() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-foreground">Business address</Label>
-                <Input value={form.address} placeholder="123 Main St" onChange={(e) => setForm({ ...form, address: e.target.value })} className="bg-input border-border" />
+                <AddressInput id="llcAddress" placeholder="123 Main St" value={form.address} onChange={(v) => setForm({ ...form, address: v })} />
               </div>
             </div>
             <Button onClick={save} disabled={saving || !form.legal_name.trim()} className="bg-[#997100] text-black hover:bg-[#b8850a]">
