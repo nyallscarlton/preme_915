@@ -637,6 +637,40 @@ export async function POST(request: NextRequest) {
                 },
               })
             }
+
+            // --- GHL sync: every Preme call (in + out) must show on the GHL
+            // contact too, not just the portal thread. Fire-safe; upserts the
+            // contact so organic portal leads (no GHL record yet) get one.
+            if (!isTraining) {
+              try {
+                const { findContactByPhone, upsertContact, addContactNote } = await import("@/lib/ghl-client")
+                let ghlContactId: string | null = null
+                const found = await findContactByPhone(leadPhone)
+                if (found) {
+                  ghlContactId = found.id
+                } else {
+                  const nameParts = (callerName || "").split(" ")
+                  const created = await upsertContact({
+                    phone: leadPhone,
+                    firstName: nameParts[0] || "Unknown",
+                    lastName: nameParts.slice(1).join(" ") || "Caller",
+                    tags: ["preme_portal_call"],
+                  })
+                  if (created.ok && created.data) ghlContactId = created.data.contactId
+                }
+                if (ghlContactId) {
+                  const dir = call.direction === "outbound" ? "Outbound" : "Inbound"
+                  const durS = Math.round((call.duration_ms || 0) / 1000)
+                  const note =
+                    `📞 ${dir} call (${durS}s) — Riley/Preme line\n` +
+                    `Summary: ${call.call_analysis?.call_summary || "(no summary)"}\n` +
+                    `Call ID: ${call.call_id}`
+                  await addContactNote(ghlContactId, note)
+                }
+              } catch (err) {
+                console.error("[retell-preme] GHL call sync failed:", err)
+              }
+            }
           }
         } catch {
           // Non-fatal
